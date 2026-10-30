@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sanemi Space</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #111111;
+            --sub-text: #666666;
+            --border-color: #cccccc;
+            --app-icon-bg: #eaeaea;
+            --font-size: 14px;
+            --custom-font: "宋体", SimSun, STSong, serif;
+            --bubble-bg: var(--app-icon-bg);
+            --my-bubble-bg: var(--text-color);
+            --my-bubble-text: var(--card-bg);
+            --chat-bg: var(--card-bg);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #f0f0f0;
+            --sub-text: #aaaaaa;
+            --border-color: #333333;
+            --app-icon-bg: #2a2a2a;
+            --bubble-bg: #2a2a2a;
+            --my-bubble-bg: #f0f0f0;
+            --my-bubble-text: #121212;
+            --chat-bg: #1e1e1e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--custom-font);
+            font-size: var(--font-size);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: fixed;
+            width: 100vw;
+        }
+
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeOut 1s ease 1s forwards;
+        }
+
+        .splash-text {
+            font-size: 24px;
+            letter-spacing: 4px;
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
+
+        /* 手机全屏容器适配 */
+        .phone-container {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            background-color: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .desktop-header {
+            padding: max(20px, env(safe-area-inset-top)) 20px 10px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .desktop-grid {
+            flex: 1;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: 90px;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .app-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .app-icon-box {
+            width: 64px;
+            height: 64px;
+            background-color: var(--app-icon-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .app-icon-box svg {
+            width: 30px;
+            height: 30px;
+            stroke: var(--text-color);
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        .app-name {
+            font-size: 12px;
+            color: var(--sub-text);
+            text-align: center;
+        }
+
+        .red-dot {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff3b30;
+            border-radius: 50%;
+            border: 1px solid var(--card-bg);
+        }
+
+        .sub-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--card-bg);
+            transform: translateY(100%);
+            transition: transform 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .sub-page.active {
+            transform: translateY(0);
+        }
+
+        .sub-page-header {
+            padding: max(16px, env(safe-area-inset-top)) 20px 16px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .sub-page-title {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            margin-right: 24px;
+        }
+
+        .sub-page-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            outline: none;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            background-color: var(--text-color);
+            color: var(--card-bg);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* 蜜语样式 */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            justify-content: space-between;
+            background-color: var(--chat-bg);
+            background-size: cover;
+            background-position: center;
+            padding: 10px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .mood-bar {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--sub-text);
+            background: var(--card-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 10px;
+        }
+
+        .message-row {
+            display: flex;
+            width: 100%;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .message-row.incoming { justify-content: flex-start; }
+        .message-row.outgoing { justify-content: flex-end; }
+
+        .message-content-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 75%;
+        }
+
+        .message-row.outgoing .message-content-wrapper { align-items: flex-end; }
+
+        .message-sender-name {
+            font-size: 10px;
+            color: var(--sub-text);
+            margin-bottom: 2px;
+        }
+
+        .avatar-box {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--app-icon-bg);
+            flex-shrink: 0;
+        }
+
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        .message-bubble {
+            padding: 10px 14px;
+            border-radius: 12px;
+            line-height: 1.4;
+            word-break: break-all;
+            border: 1px solid var(--border-color);
+        }
+
+        .message-row.incoming .message-bubble { background-color: var(--bubble-bg); color: var(--text-color); }
+        .message-row.outgoing .message-bubble { background-color: var(--my-bubble-bg); color: var(--my-bubble-text); }
+
+        .chat-img-msg { max-width: 120px; border-radius: 8px; border: 1px solid var(--border-color); }
+
+        .chat-bottom-area {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background-color: var(--card-bg);
+            padding: 6px 8px;
+            border-top: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: env(safe-area-inset-bottom);
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .typing-indicator {
+            font-size: 12px;
+            color: var(--sub-text);
+            height: 18px;
+            font-style: italic;
+            padding-left: 4px;
+        }
+
+        /* 移动端视频通话悬浮窗 */
+        .video-modal {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            width: 200px;
+            height: 240px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            resize: both;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        [data-theme="dark"] .video-modal {
+            background: rgba(30, 30, 30, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        .video-header {
+            padding: 6px 10px;
+            background: rgba(120, 120, 120, 0.12);
+            color: #666666;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+            user-select: none;
+            border-bottom: 1px solid var(--border-color);
+        }
+        [data-theme="dark"] .video-header {
+            background: rgba(80, 80, 80, 0.25);
+            color: #aaaaaa;
+        }
+        .video-header:active { cursor: grabbing; }
+        .video-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            font-size: 13px;
+            background: #000;
+            gap: 8px;
+            padding: 8px;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .video-body img { width: 100%; height: 100%; object-fit: cover; }
+
+        .video-placeholder-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            filter: blur(8px) brightness(0.7);
+            transform: scale(1.1);
+            z-index: 1;
+        }
+        .video-placeholder-content {
+            position: relative;
+            z-index: 2;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.3);
+            padding: 6px 12px;
+            border-radius: 8px;
+        }
+
+        .emoji-picker {
+            position: absolute;
+            bottom: 60px;
+            left: 10px;
+            right: 10px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 50;
+        }
+        .emoji-item {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .setting-group {
+            border: 1px solid var(--border-color);
+            padding: 14px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .setting-label {
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <div class="splash-text">Sanemi</div>
+    </div>
+
+    <div class="phone-container" id="phoneContainer">
+        
+        <div class="desktop-header">
+            <button class="icon-btn" id="themeToggle" title="日夜切换">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </button>
+        </div>
+
+        <div class="desktop-grid" id="desktopGrid"></div>
+
+        <div class="sub-page" id="subPage">
+            <div class="sub-page-header">
+                <button class="back-btn" id="backBtn" onclick="closeApp()">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    返回
+                </button>
+                <div class="sub-page-title" id="subPageTitle">应用标题</div>
+            </div>
+            <div class="sub-page-content" id="subPageContent"></div>
+        </div>
+
+        <div id="phoneVideoLayer"></div>
+
+    </div>
+
+    <script>
+        let cardLibrary = JSON.parse(localStorage.getItem('cardLibrary')) || [
+            { id: 1, content: '今天过得怎么样？' },
+            { id: 2, content: '今天天气很好。' },
+            { id: 3, content: '别担心，有我在。' },
+            { id: 4, content: '听从你内心的声音。' },
+            { id: 5, content: '抱抱我嘛~' }
+        ];
+
+        let chatMessages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+        let letters = JSON.parse(localStorage.getItem('lettersData')) || [];
+        let anniversaries = JSON.parse(localStorage.getItem('anniversariesData')) || [
+            { id: 1, name: '相识纪念日', date: '2025-01-01' },
+            { id: 2, name: '恋爱纪念日', date: '2025-02-14' },
+            { id: 3, name: '订婚纪念日', date: '2025-05-20' },
+            { id: 4, name: '结婚纪念日', date: '2025-10-01' },
+            { id: 5, name: '对方生日', date: '1995-06-15' },
+            { id: 6, name: '我的生日', date: '1995-08-20' }
+        ];
+
+        let settings = JSON.parse(localStorage.getItem('siteSettings')) || {
+            fontSize: '14px',
+            customFont: '"宋体", SimSun, STSong, serif',
+            readNotBack: false,
+            myAvatar: '',
+            partnerAvatar: '',
+            myName: '我',
+            partnerName: '对方',
+            chatBg: '',
+            hasUnreadLetter: false,
+            replyDelay: '2-5',
+            moodPhrases: '今天心情不错, 想你了, 正在发呆, 喝杯咖啡吧',
+            emojis: []
+        };
+
+        let tempSettings = JSON.parse(JSON.stringify(settings));
+
+        function saveData() {
+            localStorage.setItem('cardLibrary', JSON.stringify(cardLibrary));
+            localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
+            localStorage.setItem('lettersData', JSON.stringify(letters));
+            localStorage.setItem('anniversariesData', JSON.stringify(anniversaries));
+            localStorage.setItem('siteSettings', JSON.stringify(settings));
+            applySettings();
+        }
+
+        function applySettings() {
+            document.documentElement.style.setProperty('--font-size', settings.fontSize);
+            document.documentElement.style.setProperty('--custom-font', settings.customFont);
+            if (settings.chatBg) {
+                document.documentElement.style.setProperty('--chat-bg', `url(${settings.chatBg})`);
+            } else {
+                document.documentElement.style.setProperty('--chat-bg', 'var(--card-bg)');
+            }
+        }
+        applySettings();
+
+        function renderDesktop() {
+            const grid = document.getElementById('desktopGrid');
+            if(!grid) return;
+            grid.innerHTML = '';
+            
+            const apps = [
+                { id: 'chat', name: '蜜语', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>' },
+                { id: 'cards', name: '字卡', icon: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line>' },
+                { id: 'letters', name: '锦书', icon: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>', hasRedDot: settings.hasUnreadLetter },
+                { id: 'anniversary', name: '良辰', icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>' },
+                { id: 'settings', name: '系统', icon: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' }
+            ];
+
+            apps.forEach(app => {
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'app-icon';
+                iconDiv.innerHTML = `
+                    <div class="app-icon-box">
+                        <svg viewBox="0 0 24 24">${app.icon}</svg>
+                        ${app.hasRedDot ? '<div class="red-dot"></div>' : ''}
+                    </div>
+                    <div class="app-name">${app.name}</div>
+                `;
+                iconDiv.onclick = () => openApp(app.id, app.name);
+                grid.appendChild(iconDiv);
+            });
+        }
+        renderDesktop();
+
+        function openApp(appId, appName) {
+            const subPage = document.getElementById('subPage');
+            const titleEl = document.getElementById('subPageTitle');
+            const contentEl = document.getElementById('subPageContent');
+            if(!subPage || !titleEl || !contentEl) return;
+
+            titleEl.innerText = appName;
+            contentEl.innerHTML = '';
+
+            if (appId === 'chat') {
+                initChat(contentEl);
+                checkPartnerInitiateCall();
+            }
+            else if (appId === 'cards') initCards(contentEl);
+            else if (appId === 'letters') {
+                settings.hasUnreadLetter = false;
+                saveData();
+                renderDesktop();
+                initLetters(contentEl);
+            }
+            else if (appId === 'anniversary') initAnniversary(contentEl);
+            else if (appId === 'settings') {
+                tempSettings = JSON.parse(JSON.stringify(settings));
+                initSettings(contentEl);
+            }
+
+            subPage.classList.add('active');
+        }
+
+        function closeApp() {
+            const subPage = document.getElementById('subPage');
+            if(subPage) subPage.classList.remove('active');
+            renderDesktop();
+        }
+
+        function getPartnerMood() {
+            const phrases = settings.moodPhrases.split(',').map(s => s.trim()).filter(Boolean);
+            if (phrases.length === 0) return '状态良好';
+            const hoursIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 2)) % phrases.length;
+            return phrases[hoursIndex];
+        }
+
+        // --- 1. 蜜语模块 ---
+        function initChat(container) {
+            container.innerHTML = `
+                <div class="chat-container" id="chatContainer">
+                    <div class="mood-bar">
+                        <span><strong>${getPartnerMood()}</strong></span>
+                    </div>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    
+                    <div class="chat-bottom-area">
+                        <div class="typing-indicator" id="typingIndicator"></div>
+                        <div class="chat-input-area">
+                            <button class="icon-btn" style="width:32px;height:32px;flex-shrink:0;" title="视频" onclick="startVideoCall()">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                            </button>
+                            <input type="text" id="chatInput" placeholder="输入消息..." onkeydown="if(event.key==='Enter') sendUserMessage()">
+                            <button class="icon-btn" style="width:32px;height:32px;flex-shrink:0;" title="表情" onclick="toggleEmojiPicker()">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path></svg>
+                            </button>
+                            <button class="btn" style="padding:6px 12px;flex-shrink:0;" onclick="sendUserMessage()">发送</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            updateChatMessages();
+            checkPartnerActiveMessage();
+        }
+
+        function startVideoCall() {
+            const phoneLayer = document.getElementById('phoneVideoLayer');
+            if(!phoneLayer) return;
+            
+            let modal = document.getElementById('videoModal');
+            if(modal) modal.remove();
+
+            modal = document.createElement('div');
+            modal.id = 'videoModal';
+            modal.className = 'video-modal';
+            
+            let placeholderHTML = settings.partnerAvatar ? 
+                `<div class="video-placeholder-bg" style="background-image: url('${settings.partnerAvatar}')"></div><div class="video-placeholder-content">视频连线中...</div>` : 
+                `<div style="color:#aaa;">视频连线中...</div>`;
+
+            modal.innerHTML = `
+                <div class="video-header" id="videoModalHeader">
+                    <span>视频通话 - ${settings.partnerName}</span>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最小化" onclick="toggleMinimizeVideo(this)">—</span>
+                        <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最大化" onclick="toggleFullScreenVideo(this)">□</span>
+                        <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="关闭" onclick="document.getElementById('videoModal').remove()">✕</span>
+                    </div>
+                </div>
+                <div class="video-body" id="videoBodyContent">
+                    ${placeholderHTML}
+                </div>
+            `;
+            phoneLayer.appendChild(modal);
+            makeDraggableInPhoneBox(modal, document.getElementById('videoModalHeader'));
+
+            setTimeout(() => {
+                const bodyContent = document.getElementById('videoBodyContent');
+                if(!bodyContent) return;
+
+                const rand = Math.random();
+                if (rand < 0.7) {
+                    bodyContent.innerHTML = settings.partnerAvatar ? 
+                        `<img src="${settings.partnerAvatar}"><div style="position:absolute; bottom:6px; font-size:11px; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px;">通话中...</div>` : 
+                        `【已接通】<br>正在与 ${settings.partnerName} 视频通话中...`;
+                } else if (rand < 0.8) {
+                    bodyContent.innerHTML = `对方忙线中<br><span style="font-size:10px; color:#aaa;">“当前线路正忙，请稍后再拨~”</span>`;
+                } else if (rand < 0.9) {
+                    bodyContent.innerHTML = `暂时无法接通<br><span style="font-size:10px; color:#aaa;">对方当前网络不佳或不在手机旁</span>`;
+                } else {
+                    bodyContent.innerHTML = `对方拒绝通话<br><span style="font-size:11px; color:#ffcccc; margin-top:4px;">“老婆我现在不太方便，等一下哦”</span>`;
+                }
+            }, 3000);
+        }
+
+        function toggleMinimizeVideo(el) {
+            const modal = document.getElementById('videoModal');
+            const body = document.getElementById('videoBodyContent');
+            if(!modal || !body) return;
+            if (body.style.display === 'none') {
+                body.style.display = 'flex';
+                modal.style.height = '240px';
+                el.innerText = '—';
+            } else {
+                body.style.display = 'none';
+                modal.style.height = 'auto';
+                el.innerText = '＋';
+            }
+        }
+
+        let isVideoFullScreen = false;
+        function toggleFullScreenVideo(el) {
+            const modal = document.getElementById('videoModal');
+            if(!modal) return;
+            if (!isVideoFullScreen) {
+                modal.dataset.prevStyle = modal.style.cssText;
+                modal.style.top = '10px';
+                modal.style.left = '10px';
+                modal.style.width = 'calc(100% - 20px)';
+                modal.style.height = 'calc(100% - 20px)';
+                isVideoFullScreen = true;
+                el.innerText = '🗗';
+            } else {
+                if(modal.dataset.prevStyle) {
+                    modal.style.cssText = modal.dataset.prevStyle;
+                } else {
+                    modal.style.top = '60px';
+                    modal.style.left = '20px';
+                    modal.style.width = '200px';
+                    modal.style.height = '240px';
+                }
+                isVideoFullScreen = false;
+                el.innerText = '□';
+            }
+        }
+
+        function makeDraggableInPhoneBox(elmnt, header) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            header.onmousedown = dragMouseDown;
+            header.ontouchstart = dragMouseDown;
+
+            function dragMouseDown(e) {
+                if (isVideoFullScreen) return;
+                e = e || window.event;
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                pos3 = clientX;
+                pos4 = clientY;
+                document.onmouseup = closeDragElement;
+                document.ontouchend = closeDragElement;
+                document.onmousemove = elementDrag;
+                document.ontouchmove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                if (isVideoFullScreen) return;
+                e = e || window.event;
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                pos1 = pos3 - clientX;
+                pos2 = pos4 - clientY;
+                pos3 = clientX;
+                pos4 = clientY;
+
+                let newTop = elmnt.offsetTop - pos2;
+                let newLeft = elmnt.offsetLeft - pos1;
+
+                const phoneBox = document.getElementById('phoneContainer');
+                if (phoneBox) {
+                    const maxTop = phoneBox.clientHeight - elmnt.clientHeight - 10;
+                    const maxLeft = phoneBox.clientWidth - elmnt.clientWidth - 10;
+                    if (newTop < 10) newTop = 10;
+                    if (newTop > maxTop) newTop = maxTop;
+                    if (newLeft < 10) newLeft = 10;
+                    if (newLeft > maxLeft) newLeft = maxLeft;
+                }
+
+                elmnt.style.top = newTop + "px";
+                elmnt.style.left = newLeft + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.ontouchend = null;
+                document.onmousemove = null;
+                document.ontouchmove = null;
+            }
+        }
+
+        let callTimeoutTimer = null;
+        function checkPartnerInitiateCall() {
+            if (Math.random() < 0.1) {
+                const phoneLayer = document.getElementById('phoneVideoLayer');
+                if(!phoneLayer) return;
+                let modal = document.getElementById('videoModal');
+                if(modal) modal.remove();
+
+                modal = document.createElement('div');
+                modal.id = 'videoModal';
+                modal.className = 'video-modal';
+                modal.innerHTML = `
+                    <div class="video-header" id="videoModalHeader">
+                        <span>${settings.partnerName} 的来电</span>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最小化" onclick="toggleMinimizeVideo(this)">—</span>
+                            <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最大化" onclick="toggleFullScreenVideo(this)">□</span>
+                            <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="关闭" onclick="document.getElementById('videoModal').remove()">✕</span>
+                        </div>
+                    </div>
+                    <div class="video-body" id="videoBodyContent">
+                        <div>${settings.partnerName} 邀请你进行视频通话...</div>
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="btn" style="background:#34c759; padding:4px 10px; font-size:12px;" onclick="acceptCall()">接受</button>
+                            <button class="btn" style="background:#ff3b30; padding:4px 10px; font-size:12px;" onclick="document.getElementById('videoModal').remove()">拒绝</button>
+                        </div>
+                    </div>
+                `;
+                phoneLayer.appendChild(modal);
+                makeDraggableInPhoneBox(modal, document.getElementById('videoModalHeader'));
+
+                if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+                callTimeoutTimer = setTimeout(() => {
+                    const activeModal = document.getElementById('videoModal');
+                    if (activeModal) activeModal.remove();
+                }, 60000);
+            }
+        }
+
+        function acceptCall() {
+            if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+            const body = document.getElementById('videoBodyContent');
+            if(body) {
+                body.innerHTML = settings.partnerAvatar ? 
+                    `<img src="${settings.partnerAvatar}"><div style="position:absolute; bottom:6px; font-size:11px; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px;">通话中...</div>` : 
+                    `【已接通】<br>通话进行中...`;
+            }
+        }
+
+        function checkPartnerActiveMessage() {
+            if (Math.random() < 0.1 && cardLibrary.length > 0) {
+                setTimeout(() => {
+                    const maxCount = Math.min(cardLibrary.length, 3);
+                    const count = Math.floor(Math.random() * maxCount) + 1;
+                    let tempLib = [...cardLibrary];
+                    let selectedTexts = [];
+                    for(let i = 0; i < count; i++) {
+                        const randomIndex = Math.floor(Math.random() * tempLib.length);
+                        selectedTexts.push(tempLib[randomIndex].content);
+                        tempLib.splice(randomIndex, 1);
+                    }
+                    chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' ') });
+                    saveData();
+                    updateChatMessages();
+                }, 1500);
+            }
+        }
+
+        function toggleEmojiPicker() {
+            let picker = document.getElementById('emojiPicker');
+            if (picker) { picker.remove(); return; }
+            const container = document.getElementById('chatContainer');
+            if(!container) return;
+            picker = document.createElement('div');
+            picker.id = 'emojiPicker';
+            picker.className = 'emoji-picker';
+            
+            if (settings.emojis.length === 0) {
+                picker.innerHTML = `<div style="grid-column: span 4; font-size:12px; text-align:center; color:var(--sub-text);">暂无表情，请在【系统】添加</div>`;
+            } else {
+                settings.emojis.forEach((imgBase64) => {
+                    const img = document.createElement('img');
+                    img.src = imgBase64;
+                    img.className = 'emoji-item';
+                    img.onclick = () => {
+                        chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'image', content: imgBase64 });
+                        saveData();
+                        updateChatMessages();
+                        picker.remove();
+                        triggerPartnerReply();
+                    };
+                    picker.appendChild(img);
+                });
+            }
+            container.appendChild(picker);
+        }
+
+        function updateChatMessages() {
+            const container = document.getElementById('chatMessages');
+            if(!container) return;
+            container.innerHTML = '';
+
+            chatMessages.forEach(msg => {
+                const row = document.createElement('div');
+                row.className = `message-row ${msg.sender}`;
+                const avatar = msg.sender === 'incoming' ? settings.partnerAvatar : settings.myAvatar;
+                const name = msg.sender === 'incoming' ? settings.partnerName : settings.myName;
+                const avatarHTML = `<div class="avatar-box">${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}</div>`;
+                
+                let contentHTML = msg.type === 'image' ? `<img src="${msg.content}" class="chat-img-msg">` : `<div class="message-bubble">${msg.content}</div>`;
+
+                if (msg.sender === 'incoming') {
+                    row.innerHTML = `${avatarHTML}<div class="message-content-wrapper"><div class="message-sender-name">${name}</div>${contentHTML}</div>`;
+                } else {
+                    row.innerHTML = `<div class="message-content-wrapper" style="align-items: flex-end;"><div class="message-sender-name">${name}</div>${contentHTML}</div>${avatarHTML}`;
+                }
+                container.appendChild(row);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendUserMessage() {
+            const input = document.getElementById('chatInput');
+            if(!input) return;
+            const text = input.value.trim();
+            if (!text) return;
+
+            chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'text', content: text });
+            input.value = '';
+            saveData();
+            updateChatMessages();
+            triggerPartnerReply();
+        }
+
+        function triggerPartnerReply() {
+            if (cardLibrary.length === 0) return;
+            if (settings.readNotBack && Math.random() < 0.4) return;
+
+            const indicator = document.getElementById('typingIndicator');
+            if(indicator) indicator.innerText = `${settings.partnerName}正在输入中...`;
+
+            let delaySec = 2;
+            const valStr = String(settings.replyDelay || '2').trim();
+            if (valStr.includes('-')) {
+                const parts = valStr.split('-').map(Number);
+                const min = isNaN(parts[0]) ? 1 : parts[0];
+                const max = isNaN(parts[1]) ? 60 : parts[1];
+                delaySec = Math.floor(Math.random() * (max - min + 1)) + min;
+            } else {
+                delaySec = Number(valStr) || 2;
+            }
+            const delayMs = delaySec * 1000;
+
+            setTimeout(() => {
+                if(indicator) indicator.innerText = '';
+                
+                if (settings.emojis.length > 0 && Math.random() < 0.5) {
+                    const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
+                    chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
+                }
+
+                const maxCount = Math.min(cardLibrary.length, 5);
+                const count = Math.floor(Math.random() * maxCount) + 1;
+                let tempLib = [...cardLibrary];
+                let selectedTexts = [];
+                for(let i = 0; i < count; i++) {
+                    const randomIndex = Math.floor(Math.random() * tempLib.length);
+                    selectedTexts.push(tempLib[randomIndex].content);
+                    tempLib.splice(randomIndex, 1);
+                }
+
+                chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' ') });
+                saveData();
+                updateChatMessages();
+            }, delayMs);
+        }
+
+        // --- 2. 字卡模块 ---
+        function initCards(container) {
+            container.innerHTML = `
+                <input type="text" id="searchInput" placeholder="搜索字卡..." oninput="filterCards()">
+                <textarea id="batchInput" placeholder="批量添加（每行一条字卡）"></textarea>
+                <button class="btn" style="width:100%;" onclick="addBatchCards()">添加/导入字卡</button>
+                <div style="font-size:12px; color:var(--sub-text);">共有字卡 <span id="cardCount">0</span> 条：</div>
+                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="cardListContainer"></div>
+            `;
+            updateCardList();
+        }
+
+        function updateCardList(filteredList = cardLibrary) {
+            const listContainer = document.getElementById('cardListContainer');
+            const countEl = document.getElementById('cardCount');
+            if(!listContainer || !countEl) return;
+            countEl.innerText = filteredList.length;
+            listContainer.innerHTML = '';
+            
+            filteredList.forEach(card => {
+                const item = document.createElement('div');
+                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
+                item.innerHTML = `
+                    <div style="flex:1; padding-right:8px; word-break:break-all;">${card.content}</div>
+                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                        <button class="btn" style="padding:4px 8px; font-size:11px;" onclick="editCard(${card.id})">编辑</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteCard(${card.id})">删除</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function filterCards() {
+            const kw = document.getElementById('searchInput').value.trim();
+            updateCardList(cardLibrary.filter(c => c.content.includes(kw)));
+        }
+
+        function addBatchCards() {
+            const text = document.getElementById('batchInput').value.trim();
+            if (!text) return;
+            
+            text.split('\n').forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                cardLibrary.push({ id: Date.now() + Math.random(), content: line });
+            });
+            saveData();
+            document.getElementById('batchInput').value = '';
+            updateCardList();
+        }
+
+        function editCard(id) {
+            const card = cardLibrary.find(c => c.id === id);
+            if (!card) return;
+            const newContent = prompt('编辑字卡内容：', card.content);
+            if (newContent === null) return;
+            card.content = newContent.trim();
+            saveData();
+            updateCardList();
+        }
+
+        function deleteCard(id) {
+            cardLibrary = cardLibrary.filter(c => c.id !== id);
+            saveData();
+            updateCardList();
+        }
+
+        // --- 3. 锦书模块 ---
+        function initLetters(container) {
+            container.innerHTML = `
+                <div>
+                    <div style="font-weight:bold; margin-bottom:6px;">写一封信：</div>
+                    <textarea id="letterInput" placeholder="写下你的心事与信件..."></textarea>
+                    <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
+                </div>
+                <div style="font-weight:bold; margin-top:10px;">信箱记录：</div>
+                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
+                <div style="text-align:center; font-size:12px; color:var(--sub-text); font-style:italic; margin-top:6px;">云中谁寄锦书来</div>
+            `;
+            updateLettersList();
+        }
+
+        function sendLetter() {
+            const text = document.getElementById('letterInput').value.trim();
+            if (!text) return;
+
+            const now = Date.now();
+            const minMs = 1 * 60 * 60 * 1000;
+            const maxMs = 12 * 60 * 60 * 1000;
+            const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+
+            const d = new Date();
+            const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+
+            const estDate = new Date(now + randomDelay);
+            const estTimeStr = `${estDate.getFullYear()}-${String(estDate.getMonth()+1).padStart(2,'0')}-${String(estDate.getDate()).padStart(2,'0')} ${String(estDate.getHours()).padStart(2,'0')}:${String(estDate.getMinutes()).padStart(2,'0')}`;
+
+            letters.push({
+                id: now,
+                myLetter: text,
+                reply: '',
+                time: timeStr,
+                estTime: estTimeStr,
+                replyTimestamp: now + randomDelay
+            });
+
+            document.getElementById('letterInput').value = '';
+            saveData();
+            updateLettersList();
+        }
+
+        function updateLettersList() {
+            const container = document.getElementById('letterListContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            if (letters.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:var(--sub-text); font-size:13px;">暂无信件记录</div>';
+                return;
+            }
+
+            const now = Date.now();
+            let hasNewReply = false;
+
+            letters.forEach(item => {
+                if (!item.reply && cardLibrary.length > 0 && now >= item.replyTimestamp) {
+                    const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
+                    let selected = [];
+                    let tempLib = [...cardLibrary];
+                    for (let i = 0; i < count; i++) {
+                        const idx = Math.floor(Math.random() * tempLib.length);
+                        selected.push(tempLib[idx].content);
+                        tempLib.splice(idx, 1);
+                    }
+                    item.reply = selected.join(' ');
+                    hasNewReply = true;
+                    saveData();
+                }
+
+                const div = document.createElement('div');
+                div.style.cssText = "border:1px solid var(--border-color); padding:12px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px;";
+                
+                let replyStatus = item.reply ? 
+                    `<div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color); white-space: pre-wrap;"><strong>回信：</strong>\n${item.reply}</div>` : 
+                    `<div style="font-size:12px; color:var(--sub-text); font-style:italic;">真羡慕这封信，可以比我更早见到你</div>`;
+
+                div.innerHTML = `
+                    <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.time}</div>
+                    <div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>
+                    <div><strong>我:</strong> ${item.myLetter}</div>
+                    ${replyStatus}
+                `;
+                container.appendChild(div);
+            });
+
+            if (hasNewReply) {
+                settings.hasUnreadLetter = true;
+                saveData();
+            }
+        }
+
+        // --- 4. 良辰模块 ---
+        function initAnniversary(container) {
+            container.innerHTML = `
+                <div>
+                    <div style="font-weight:bold; margin-bottom:6px;">添加/管理良辰：</div>
+                    <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" style="margin-bottom:6px;">
+                    <input type="date" id="annivDate" style="margin-bottom:6px;">
+                    <button class="btn" style="width:100%;" onclick="addAnniversary()">保存良辰</button>
+                </div>
+                <div style="font-weight:bold; margin-top:10px;">良辰倒计时列表：</div>
+                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="anniversaryContainer"></div>
+            `;
+            updateAnniversaryList();
+        }
+
+        function addAnniversary() {
+            const nameEl = document.getElementById('annivName');
+            const dateEl = document.getElementById('annivDate');
+            if (!nameEl || !dateEl) return;
+            
+            const name = nameEl.value.trim();
+            const date = dateEl.value;
+            if (!name || !date) {
+                alert('请填写完整的名字和日期！');
+                return;
+            }
+            anniversaries.push({ id: Date.now(), name, date });
+            saveData();
+            initAnniversary(document.getElementById('subPageContent'));
+        }
+
+        function editAnniversary(id) {
+            const item = anniversaries.find(a => a.id === id);
+            if (!item) return;
+            const newName = prompt('修改名称：', item.name);
+            if (newName === null) return;
+            const newDate = prompt('修改日期 (YYYY-MM-DD)：', item.date);
+            if (newDate === null) return;
+
+            item.name = newName.trim() || item.name;
+            item.date = newDate.trim() || item.date;
+            saveData();
+            initAnniversary(document.getElementById('subPageContent'));
+        }
+
+        function deleteAnniversary(id) {
+            anniversaries = anniversaries.filter(a => a.id !== id);
+            saveData();
+            initAnniversary(document.getElementById('subPageContent'));
+        }
+
+        function updateAnniversaryList() {
+            const container = document.getElementById('anniversaryContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const todayTime = new Date(yyyy, now.getMonth(), now.getDate()).getTime();
+
+            anniversaries.forEach(item => {
+                const parts = item.date.split('-').map(Number);
+                const targetTime = new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+
+                let label = '还剩';
+                let diffDays = 0;
+
+                const isAbsolutePast = targetTime < todayTime && (yyyy - parts[0] > 1 || item.name.includes('纪念日'));
+
+                if (isAbsolutePast) {
+                    label = '已过去';
+                    diffDays = Math.round((todayTime - targetTime) / (1000 * 60 * 60 * 24));
+                } else {
+                    let currentYearTargetTime = new Date(yyyy, parts[1] - 1, parts[2]).getTime();
+
+                    if (currentYearTargetTime === todayTime) {
+                        label = '就是';
+                        diffDays = 0;
+                    } else if (currentYearTargetTime < todayTime) {
+                        label = '已过去';
+                        diffDays = Math.round((todayTime - currentYearTargetTime) / (1000 * 60 * 60 * 24));
+                    } else {
+                        label = '还剩';
+                        diffDays = Math.round((currentYearTargetTime - todayTime) / (1000 * 60 * 60 * 24));
+                    }
+                }
+
+                const div = document.createElement('div');
+                div.style.cssText = "border:1px solid var(--border-color); padding:12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold;">${item.name}</div>
+                        <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
+                        <button class="btn" style="padding:4px 6px; font-size:11px;" onclick="editAnniversary(${item.id})">编辑</button>
+                        <button class="btn" style="padding:4px 6px; font-size:11px;" onclick="deleteAnniversary(${item.id})">删除</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // --- 5. 系统模块 ---
+        function initSettings(container) {
+            container.innerHTML = `
+                <div class="setting-group">
+                    <div class="setting-label">心情短语 (用逗号分隔)</div>
+                    <textarea id="set_moodPhrases" oninput="tempSettings.moodPhrases = this.value">${tempSettings.moodPhrases}</textarea>
+                </div>
+                <div class="setting-group">
+                    <div class="setting-label">我的名字</div>
+                    <input type="text" id="set_myName" value="${tempSettings.myName}" oninput="tempSettings.myName = this.value">
+                </div>
+                <div class="setting-group">
+                    <div class="setting-label">对方名字</div>
+                    <input type="text" id="set_partnerName" value="${tempSettings.partnerName}" oninput="tempSettings.partnerName = this.value">
+                </div>
+                <div class="setting-group">
+                    <div class="setting-label">我的头像</div>
+                    <input type="file" accept="image/*" onchange="uploadTempImage(event, 'myAvatar')">
+                </div>
+                <div class="setting-group">
+                    <div class="setting-label">对方头像</div>
+                    <input type="file" accept="image/*" onchange="uploadTempImage(event, 'partnerAvatar')">
+                </div>
+                <div class="setting-group">
+                    <div class="setting-label">聊天背景图</div>
+                    <input type="file" accept="image/*" onchange="uploadTempImage(event, 'chatBg')">
+                </div>
+                <div class="setting-group">
+                    <div class="setting-label">添加表情包</div>
+                    <input type="file" accept="image/*" multiple onchange="uploadEmojis(event)">
+                    <div style="font-size:11px; color:var(--sub-text);">已添加 ${tempSettings.emojis.length} 个表情</div>
+                </div>
+                <div class="setting-group">
+                    <div class="setting-label">数据恢复与备份</div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" style="flex:1;" onclick="exportData()">手动导出备份</button>
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="document.getElementById('importFile').click()">导入备份恢复</button>
+                        <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:10px; margin-bottom:20px;">
+                    <button class="btn" style="flex:1; background-color:#333333; color:#ffffff;" onclick="saveSettingsChanges()">保存修改</button>
+                    <button class="btn" style="flex:1; background-color:transparent; border:1px solid var(--border-color); color:var(--sub-text);" onclick="cancelSettingsChanges()">取消修改</button>
+                </div>
+            `;
+        }
+
+        function uploadTempImage(event, targetKey) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                tempSettings[targetKey] = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function uploadEmojis(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    tempSettings.emojis.push(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveSettingsChanges() {
+            settings = JSON.parse(JSON.stringify(tempSettings));
+            saveData();
+            alert('保存成功！');
+            closeApp();
+        }
+
+        function cancelSettingsChanges() {
+            tempSettings = JSON.parse(JSON.stringify(settings));
+            alert('已取消修改。');
+            closeApp();
+        }
+
+        function exportData() {
+            const backupData = { cardLibrary, chatMessages, letters, anniversaries, settings };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Sanemi_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.cardLibrary) cardLibrary = imported.cardLibrary;
+                    if (imported.chatMessages) chatMessages = imported.chatMessages;
+                    if (imported.letters) letters = imported.letters;
+                    if (imported.anniversaries) anniversaries = imported.anniversaries;
+                    if (imported.settings) settings = imported.settings;
+                    saveData();
+                    alert('数据恢复成功！');
+                    location.reload();
+                } catch (err) {
+                    alert('导入失败，文件格式错误！');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+        themeToggle.onclick = () => {
+            if (htmlElement.getAttribute('data-theme') === 'dark') {
+                htmlElement.removeAttribute('data-theme');
+            } else {
+                htmlElement.setAttribute('data-theme', 'dark');
+            }
+        };
+    </script>
+</body>
+</html>
