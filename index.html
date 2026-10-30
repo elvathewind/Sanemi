@@ -79,7 +79,6 @@
             to { opacity: 0; visibility: hidden; }
         }
 
-        /* 手机全屏容器适配 */
         .phone-container {
             width: 100vw;
             height: 100vh;
@@ -983,12 +982,15 @@
             }, delayMs);
         }
 
-        // --- 2. 字卡模块 ---
+        // --- 2. 字卡模块（已加入自动查重与一键去重） ---
         function initCards(container) {
             container.innerHTML = `
                 <input type="text" id="searchInput" placeholder="搜索字卡..." oninput="filterCards()">
-                <textarea id="batchInput" placeholder="批量添加（每行一条字卡）"></textarea>
-                <button class="btn" style="width:100%;" onclick="addBatchCards()">添加/导入字卡</button>
+                <textarea id="batchInput" placeholder="批量添加（每行一条字卡，系统会自动过滤重复内容）"></textarea>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn" style="flex:1;" onclick="addBatchCards()">添加/导入字卡</button>
+                    <button class="btn" style="flex:1; background:#ff3b30;" onclick="removeDuplicateCards()">一键清除重复字卡</button>
+                </div>
                 <div style="font-size:12px; color:var(--sub-text);">共有字卡 <span id="cardCount">0</span> 条：</div>
                 <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="cardListContainer"></div>
             `;
@@ -1025,14 +1027,37 @@
             const text = document.getElementById('batchInput').value.trim();
             if (!text) return;
             
+            let addedCount = 0;
             text.split('\n').forEach(line => {
                 line = line.trim();
                 if (!line) return;
-                cardLibrary.push({ id: Date.now() + Math.random(), content: line });
+                // 自动查重：如果字卡库里还没有这一条，才添加进去
+                const exists = cardLibrary.some(c => c.content === line);
+                if (!exists) {
+                    cardLibrary.push({ id: Date.now() + Math.random(), content: line });
+                    addedCount++;
+                }
             });
             saveData();
             document.getElementById('batchInput').value = '';
             updateCardList();
+            alert(`成功添加新字卡 ${addedCount} 条（已自动过滤重复项）！`);
+        }
+
+        // 一键清除现有库里的所有重复字卡
+        function removeDuplicateCards() {
+            const uniqueMap = new Map();
+            cardLibrary.forEach(card => {
+                if (!uniqueMap.has(card.content)) {
+                    uniqueMap.set(card.content, card);
+                }
+            });
+            const oldLen = cardLibrary.length;
+            cardLibrary = Array.from(uniqueMap.values());
+            const removedCount = oldLen - cardLibrary.length;
+            saveData();
+            updateCardList();
+            alert(`已清理完毕！共为你删除了 ${removedCount} 条重复字卡。`);
         }
 
         function editCard(id) {
@@ -1355,7 +1380,7 @@
                     if (imported.anniversaries) anniversaries = imported.anniversaries;
                     if (imported.settings) settings = imported.settings;
                     saveData();
-                    alert('数据恢复成功！');
+                    alert('数据恢复同步成功！');
                     location.reload();
                 } catch (err) {
                     alert('导入失败，文件格式错误！');
