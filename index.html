@@ -1453,7 +1453,7 @@
             });
         }
 
-        // --- 5. 系统模块 ---
+        // --- 5. 系统模块（改为和表情包一致的直观预览图 + 右上角灰色×删除小箭头） ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
@@ -1470,27 +1470,24 @@
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">我的头像</div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'myAvatar', 'myAvatarStatus')" style="flex:1;">
-                        <span id="myAvatarStatus" style="font-size:11px; color:#34c759;">${tempSettings.myAvatar ? '已设置头像 (待保存)' : ''}</span>
-                        ${tempSettings.myAvatar ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'myAvatar\', \'myAvatarStatus\')">删除头像</button>' : ''}
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'myAvatar')" style="flex:1;">
                     </div>
+                    <div id="myAvatarPreviewArea" style="margin-top:6px;"></div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">对方头像</div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'partnerAvatar', 'partnerAvatarStatus')" style="flex:1;">
-                        <span id="partnerAvatarStatus" style="font-size:11px; color:#34c759;">${tempSettings.partnerAvatar ? '已设置头像 (待保存)' : ''}</span>
-                        ${tempSettings.partnerAvatar ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'partnerAvatar\', \'partnerAvatarStatus\')">删除头像</button>' : ''}
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'partnerAvatar')" style="flex:1;">
                     </div>
+                    <div id="partnerAvatarPreviewArea" style="margin-top:6px;"></div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">聊天背景图</div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'chatBg', 'chatBgStatus')" style="flex:1;">
-                        <span id="chatBgStatus" style="font-size:11px; color:#34c759;">${tempSettings.chatBg ? '已设置背景 (待保存)' : ''}</span>
-                        ${tempSettings.chatBg ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'chatBg\', \'chatBgStatus\')">删除背景</button>' : ''}
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'chatBg')" style="flex:1;">
                     </div>
+                    <div id="chatBgPreviewArea" style="margin-top:6px;"></div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">添加表情包</div>
@@ -1512,14 +1509,36 @@
                     <button class="btn" style="flex:1; background-color:transparent; border:1px solid var(--border-color); color:var(--sub-text);" onclick="cancelSettingsChanges()">取消修改</button>
                 </div>
             `;
+            renderAvatarPreviews();
             renderEmojiManageList();
         }
 
-        function clearSettingImage(key, statusId) {
+        function renderAvatarPreviews() {
+            renderSingleAvatarPreview('myAvatar', 'myAvatarPreviewArea');
+            renderSingleAvatarPreview('partnerAvatar', 'partnerAvatarPreviewArea');
+            renderSingleAvatarPreview('chatBg', 'chatBgPreviewArea');
+        }
+
+        function renderSingleAvatarPreview(key, areaId) {
+            const area = document.getElementById(areaId);
+            if (!area) return;
+            area.innerHTML = '';
+            if (!tempSettings[key]) {
+                area.innerHTML = `<span style="font-size:11px; color:var(--sub-text);">暂无图片</span>`;
+                return;
+            }
+            const wrap = document.createElement('div');
+            wrap.style.cssText = "position:relative; width:52px; height:52px;";
+            wrap.innerHTML = `
+                <img src="${tempSettings[key]}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--border-color);">
+                <button onclick="clearSettingImage('${key}')" style="position:absolute; top:-6px; right:-6px; width:18px; height:18px; background:rgba(0,0,0,0.5); color:#fff; border:none; border-radius:50%; font-size:11px; display:flex; align-items:center; justify-content:center; cursor:pointer;">×</button>
+            `;
+            area.appendChild(wrap);
+        }
+
+        function clearSettingImage(key) {
             tempSettings[key] = '';
-            const statusEl = document.getElementById(statusId);
-            if(statusEl) statusEl.innerText = '';
-            initSettings(document.getElementById('subPageContent'));
+            renderAvatarPreviews();
         }
 
         function renderEmojiManageList() {
@@ -1548,7 +1567,7 @@
             renderEmojiManageList();
         }
 
-        function compressAndStoreImage(event, targetKey, statusId) {
+        function compressAndStoreImage(event, targetKey) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -1557,8 +1576,8 @@
                 img.src = e.target.result;
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 200;
-                    const MAX_HEIGHT = 200;
+                    const MAX_WIDTH = 300;
+                    const MAX_HEIGHT = 300;
                     let width = img.width;
                     let height = img.height;
 
@@ -1579,12 +1598,8 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    tempSettings[targetKey] = canvas.toDataURL('image/jpeg', 0.8);
-                    
-                    const statusEl = document.getElementById(statusId);
-                    if(statusEl) statusEl.innerText = '已就绪 (待保存)';
-                    
-                    initSettings(document.getElementById('subPageContent'));
+                    tempSettings[targetKey] = canvas.toDataURL('image/jpeg', 0.85);
+                    renderAvatarPreviews();
                 }
             };
             reader.readAsDataURL(file);
