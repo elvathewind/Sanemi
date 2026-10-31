@@ -560,19 +560,20 @@
             align-items: center;
         }
 
-        /* 粉色泡泡特效 */
-        @keyframes floatBubble {
-            0% { transform: translateY(0) scale(0.6); opacity: 1; }
-            100% { transform: translateY(-60px) scale(1.2); opacity: 0; }
+        /* 气泡溢出特效 */
+        @keyframes bubbleOverflow {
+            0% { transform: translateY(0) scale(0.4); opacity: 0.9; }
+            50% { transform: translateY(-40px) scale(1.1); opacity: 1; }
+            100% { transform: translateY(-90px) scale(1.4); opacity: 0; }
         }
         .pink-bubble {
             position: absolute;
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             background: #ffb6c1;
             border-radius: 50%;
             pointer-events: none;
-            animation: floatBubble 0.8s ease-out forwards;
+            animation: bubbleOverflow 0.7s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
             z-index: 99;
         }
     </style>
@@ -658,7 +659,7 @@
 
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
-        let selectedHeartImg = ''; // 用户发布朋友圈时选中的图片
+        let selectedHeartImg = '';
 
         function saveData() {
             try {
@@ -802,6 +803,10 @@
                 if (indicator) {
                     indicator.innerText = timeStr;
                 }
+                const minHeaderTime = document.getElementById('minHeaderTimeDisplay');
+                if (minHeaderTime) {
+                    minHeaderTime.innerText = timeStr;
+                }
             }, 1000);
         }
 
@@ -896,7 +901,13 @@
                 </div>
             `;
             updateChatMessages();
-            checkPartnerActiveMessage();
+            setTimeout(() => {
+                const c = document.getElementById('chatMessages');
+                if(c) c.scrollTop = c.scrollHeight;
+            }, 50);
+
+            checkPartnerInitiateCall();
+            checkPartnerRandomPoke();
         }
 
         function triggerPoke(targetWho) {
@@ -945,7 +956,7 @@
 
             modal.innerHTML = `
                 <div class="video-header" id="videoModalHeader">
-                    <span>视频通话 - ${partnerNameStr}</span>
+                    <span id="videoHeaderTitleText">视频通话 - ${partnerNameStr}</span>
                     <div style="display:flex; gap:6px; align-items:center;">
                         <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最小化" onclick="toggleMinimizeVideo(this)">—</span>
                         <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最大化" onclick="toggleFullScreenVideo(this)">□</span>
@@ -986,16 +997,25 @@
         function toggleMinimizeVideo(el) {
             const modal = document.getElementById('videoModal');
             const body = document.getElementById('videoBodyContent');
-            if(!modal || !body) return;
+            const headerTitle = document.getElementById('videoHeaderTitleText');
+            if(!modal || !body || !headerTitle) return;
+
+            const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:16px;height:16px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;">` : '';
+            const mins = Math.floor(callSeconds / 60);
+            const secs = callSeconds % 60;
+            const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
             if (body.style.display === 'none') {
                 body.style.display = 'flex';
                 modal.style.height = '240px';
                 el.innerText = '—';
+                headerTitle.innerText = `视频通话 - ${settings.partnerName || '对方'}`;
                 renderVideoBodyContent();
             } else {
                 body.style.display = 'none';
                 modal.style.height = 'auto';
                 el.innerText = '＋';
+                headerTitle.innerHTML = `${partnerAvatarImg}<span id="minHeaderTimeDisplay">${timeStr}</span>`;
             }
         }
 
@@ -1100,7 +1120,7 @@
 
                 modal.innerHTML = `
                     <div class="video-header" id="videoModalHeader">
-                        <span>${partnerNameStr} 的来电</span>
+                        <span id="videoHeaderTitleText">${partnerNameStr} 的来电</span>
                         <div style="display:flex; gap:6px; align-items:center;">
                             <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最小化" onclick="toggleMinimizeVideo(this)">—</span>
                             <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最大化" onclick="toggleFullScreenVideo(this)">□</span>
@@ -1347,23 +1367,32 @@
             }, delayMs);
         }
 
-        // --- 2. 新增模块：心迹（朋友圈，支持图片与规则限制）---
+        // --- 2. 新增模块：心迹（朋友圈，支持溢出泡泡与动态提醒跳转）---
+        let latestHeartNotification = { text: '', targetId: null };
+
         function initHeartMoments(container) {
             checkPartnerHeartMomentLimit();
             selectedHeartImg = '';
+            updateLatestHeartNotification();
 
             const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%;">
-                    <!-- 顶部情侣挂件 -->
-                    <div style="display:flex; justify-content:center; align-items:center; gap:12px; padding:10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative;" id="heartHeaderBox">
+                    <!-- 顶部情侣挂件（宽度三倍，气泡从爱心处像真实泡泡一样迅速溢出装满整个框） -->
+                    <div style="display:flex; justify-content:center; align-items:center; gap:36px; padding:10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
                         <div class="avatar-box" style="width:36px;height:36px;">${partnerAvatarImg}</div>
-                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:30px; height:30px;" onclick="spawnPinkBubbles(event)" title="点一点冒粉色泡泡">
-                            <svg viewBox="0 0 24 24" width="22" height="22" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:40px; height:40px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点冒粉色泡泡">
+                            <svg viewBox="0 0 24 24" width="28" height="28" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                         </div>
                         <div class="avatar-box" style="width:36px;height:36px;">${myAvatarImg}</div>
+                    </div>
+
+                    <!-- 动态提醒栏 -->
+                    <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.15); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="jumpToNotificationTarget()">
+                        <span id="heartNotificationText">${latestHeartNotification.text}</span>
+                        <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
                     </div>
 
                     <div>
@@ -1371,51 +1400,54 @@
                         <textarea id="heartInput" placeholder="分享此刻的心情或动态..."></textarea>
                         <div id="heartImgPreviewBox" style="margin-top:6px;"></div>
                         <div style="display:flex; gap:8px; margin-top:6px;">
-                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color); font-size:12px;" onclick="pickHeartImageFromEmojis()">从表情包选择配图</button>
+                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color); font-size:12px;" onclick="document.getElementById('localImgInput').click()">选择配图</button>
+                            <input type="file" id="localImgInput" style="display:none" accept="image/*" onchange="pickLocalImage(event)">
                             <button class="btn" style="flex:1; font-size:12px;" onclick="postUserHeartMoment()">发布新动态</button>
                         </div>
                     </div>
-                    <div style="font-weight:bold; border-top:1px solid var(--border-color); padding-top:10px;">心迹广场：</div>
+                    <div style="font-weight:bold; border-top:1px solid var(--border-color); padding-top:10px;">心迹列表：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px;" id="heartMomentsList"></div>
                 </div>
             `;
             renderHeartMomentsList();
         }
 
-        function pickHeartImageFromEmojis() {
-            if (!settings.emojis || settings.emojis.length === 0) {
-                alert('您的表情包库为空，请先在【设置】中添加表情包！');
-                return;
-            }
-            let pickerModal = document.getElementById('heartEmojiPickerModal');
-            if(pickerModal) { pickerModal.remove(); return; }
+        function pickLocalImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1200;
+                    const MAX_HEIGHT = 1200;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    selectedHeartImg = canvas.toDataURL('image/jpeg', 0.9);
 
-            pickerModal = document.createElement('div');
-            pickerModal.id = 'heartEmojiPickerModal';
-            pickerModal.style.cssText = "position:absolute; bottom:60px; left:10px; right:10px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:8px; padding:10px; z-index:999; box-shadow:0 4px 12px rgba(0,0,0,0.15); max-height:160px; overflow-y:auto;";
-            
-            let gridHTML = `<div style="font-size:12px; margin-bottom:6px; color:var(--sub-text); display:flex; justify-content:between;"><span>选择一张图片作为配图：</span><span style="cursor:pointer;" onclick="document.getElementById('heartEmojiPickerModal').remove()">✕ 关闭</span></div><div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">`;
-            settings.emojis.forEach((imgBase64, idx) => {
-                gridHTML += `<img src="${imgBase64}" style="width:45px; height:45px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;" onclick="selectHeartImage('${imgBase64}')">`;
-            });
-            gridHTML += `</div>`;
-            pickerModal.innerHTML = gridHTML;
-            document.body.appendChild(pickerModal);
-        }
-
-        function selectHeartImage(imgBase64) {
-            selectedHeartImg = imgBase64;
-            const box = document.getElementById('heartImgPreviewBox');
-            if(box) {
-                box.innerHTML = `
-                    <div style="position:relative; width:60px; height:60px; display:inline-block;">
-                        <img src="${imgBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
-                        <button onclick="clearHeartImage()" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; background:rgba(0,0,0,0.5); color:#fff; border:none; border-radius:50%; font-size:10px; cursor:pointer;">×</button>
-                    </div>
-                `;
-            }
-            const modal = document.getElementById('heartEmojiPickerModal');
-            if(modal) modal.remove();
+                    const box = document.getElementById('heartImgPreviewBox');
+                    if(box) {
+                        box.innerHTML = `
+                            <div style="position:relative; width:60px; height:60px; display:inline-block;">
+                                <img src="${selectedHeartImg}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
+                                <button onclick="clearHeartImage()" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; background:rgba(0,0,0,0.5); color:#fff; border:none; border-radius:50%; font-size:10px; cursor:pointer;">×</button>
+                            </div>
+                        `;
+                    }
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         function clearHeartImage() {
@@ -1424,18 +1456,46 @@
             if(box) box.innerHTML = '';
         }
 
-        function spawnPinkBubbles(e) {
+        function updateLatestHeartNotification() {
+            const partnerNameStr = settings.partnerName || '对方';
+            if (heartMoments.length === 0) {
+                latestHeartNotification = { text: `${partnerNameStr}暂无新动态，快来发布一条吧~`, targetId: null };
+                return;
+            }
+            const latestM = heartMoments[0];
+            if (latestM.author === 'partner') {
+                latestHeartNotification = { text: `${partnerNameStr}有新的心迹`, targetId: latestM.id };
+            } else if (latestM.comments && latestM.comments.length > 0) {
+                latestHeartNotification = { text: `${partnerNameStr}回复了你的心迹`, targetId: latestM.id };
+            } else {
+                latestHeartNotification = { text: `${partnerNameStr}暂无最新消息`, targetId: latestM.id };
+            }
+        }
+
+        function jumpToNotificationTarget() {
+            if (!latestHeartNotification.targetId) return;
+            const el = document.getElementById(`moment-card-${latestHeartNotification.targetId}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.borderColor = '#ffb6c1';
+                setTimeout(() => { el.style.borderColor = 'var(--border-color)'; }, 1500);
+            }
+        }
+
+        function spawnOverflowingBubbles(e) {
             const box = document.getElementById('heartHeaderBox');
             if(!box) return;
             const rect = box.getBoundingClientRect();
-            for(let i=0; i<6; i++) {
+            for(let i=0; i<24; i++) {
                 const bubble = document.createElement('div');
                 bubble.className = 'pink-bubble';
-                const leftOffset = (e.clientX - rect.left) + (Math.random() * 40 - 20);
-                bubble.style.left = leftOffset + 'px';
-                bubble.style.top = (e.clientY - rect.top) + 'px';
+                const randomX = Math.random() * (rect.width - 20);
+                const randomY = (rect.height / 2) + (Math.random() * 20 - 10);
+                bubble.style.left = randomX + 'px';
+                bubble.style.top = randomY + 'px';
+                bubble.style.animationDuration = (0.4 + Math.random() * 0.5) + 's';
                 box.appendChild(bubble);
-                setTimeout(() => bubble.remove(), 800);
+                setTimeout(() => bubble.remove(), 900);
             }
         }
 
@@ -1456,17 +1516,15 @@
             const todayStr = new Date().toISOString().slice(0, 10);
             const partnerPostsToday = heartMoments.filter(m => m.author === 'partner' && m.dateStr === todayStr);
 
-            // 规则：每天最多5条，一小时最多1条，发布时间随机
             if (partnerPostsToday.length < 5 && Math.random() < 0.25) {
-                // 检查距离上一条对方发布的时间是否超过1小时
-                const lastPartnerPost = partnerPostsToday[0]; // 因为是unshift，最新的在最前面
+                const lastPartnerPost = partnerPostsToday[0];
                 const nowTimestamp = Date.now();
                 if (!lastPartnerPost || (nowTimestamp - lastPartnerPost.id >= 60 * 60 * 1000)) {
                     const text = getRandomCardSentences();
                     const d = new Date();
                     const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                     
-                    // 随机决定是否配图（从表情包中随机抽一张）
+                    // 对方发布心迹时，自动从表情包库中随机挑选一张配图
                     let partnerImg = '';
                     if (settings.emojis && settings.emojis.length > 0 && Math.random() < 0.6) {
                         partnerImg = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
@@ -1523,7 +1581,6 @@
             saveData();
             renderHeartMomentsList();
 
-            // 规则：对方点赞与回复延迟 5 到 30 分钟（模拟真实真人）
             const randomDelayMs = getRandomReplyDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === newMoment.id);
@@ -1531,15 +1588,17 @@
                     if (!mTarget.likes.includes(partnerNameStr)) {
                         mTarget.likes.push(partnerNameStr);
                     }
-                    const partnerCommentText = getRandomCardSentences();
-                    mTarget.comments.push({
-                        id: Date.now() + 1,
-                        author: partnerNameStr,
-                        text: partnerCommentText,
-                        replies: []
-                    });
-                    saveData();
-                    renderHeartMomentsList();
+                    if (mTarget.comments.length < 10) {
+                        const partnerCommentText = getRandomCardSentences();
+                        mTarget.comments.push({
+                            id: Date.now() + 1,
+                            author: partnerNameStr,
+                            text: partnerCommentText,
+                            replies: []
+                        });
+                        saveData();
+                        renderHeartMomentsList();
+                    }
                 }
             }, randomDelayMs);
         }
@@ -1564,7 +1623,8 @@
                 const authorAvatar = moment.author === 'user' ? settings.myAvatar : settings.partnerAvatar;
 
                 const card = document.createElement('div');
-                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; ${moment.isPinned ? 'border-color: #007aff;' : ''}`;
+                card.id = `moment-card-${moment.id}`;
+                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; transition:border-color 0.3s; ${moment.isPinned ? 'border-color: #007aff;' : ''}`;
                 
                 let pinTag = moment.isPinned ? `<span style="font-size:10px; background:#007aff; color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
 
@@ -1586,7 +1646,7 @@
                     likesHTML = `<div style="font-size:11px; color:#007aff; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
-                let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px;" id="comments-box-${moment.id}">`;
+                let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px; max-height: 160px; overflow-y: auto;" id="comments-box-${moment.id}">`;
                 if (moment.comments && moment.comments.length > 0) {
                     moment.comments.forEach(com => {
                         let repliesListHTML = '';
@@ -1650,6 +1710,10 @@
         function commentMoment(momentId) {
             const moment = heartMoments.find(m => m.id === momentId);
             if (!moment) return;
+            if (moment.comments.length >= 10) {
+                alert('单条心迹回复已达上限（10条）！');
+                return;
+            }
             const text = prompt('写下你的评论：', '');
             if (!text || !text.trim()) return;
 
@@ -1672,14 +1736,16 @@
                     if (!mTarget.likes.includes(partnerNameStr)) {
                         mTarget.likes.push(partnerNameStr);
                     }
-                    mTarget.comments.push({
-                        id: Date.now() + 1,
-                        author: partnerNameStr,
-                        text: getRandomCardSentences(),
-                        replies: []
-                    });
-                    saveData();
-                    renderHeartMomentsList();
+                    if (mTarget.comments.length < 10) {
+                        mTarget.comments.push({
+                            id: Date.now() + 1,
+                            author: partnerNameStr,
+                            text: getRandomCardSentences(),
+                            replies: []
+                        });
+                        saveData();
+                        renderHeartMomentsList();
+                    }
                 }
             }, randomDelayMs);
         }
@@ -1757,7 +1823,6 @@
                     <textarea id="batchInput" placeholder="批量添加（每行一条字卡，系统会自动过滤重复内容）"></textarea>
                     <div style="display:flex; gap:8px;">
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchCards()">添加/导入字卡</button>
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="removeDuplicateCards()">一键清除重复字卡</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有字卡 <span id="cardCount">0</span> 条：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
@@ -1839,18 +1904,6 @@
             saveData();
             updateCardList();
             alert(`成功添加新字卡 ${addedCount} 条！`);
-        }
-
-        function removeDuplicateCards() {
-            const uniqueMap = new Map();
-            cardLibrary.forEach(card => {
-                if (!uniqueMap.has(card.content)) uniqueMap.set(card.content, card);
-            });
-            const oldLen = cardLibrary.length;
-            cardLibrary = Array.from(uniqueMap.values());
-            saveData();
-            updateCardList();
-            alert(`已清理完毕！共删除 ${oldLen - cardLibrary.length} 条重复字卡。`);
         }
 
         function editCard(id) {
