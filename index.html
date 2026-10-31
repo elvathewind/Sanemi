@@ -560,21 +560,24 @@
             align-items: center;
         }
 
-        /* 缓慢浪漫的气泡溢出特效 */
-        @keyframes bubbleOverflowSlow {
-            0% { transform: translateY(0) scale(0.4); opacity: 0.85; }
-            50% { transform: translateY(-50px) scale(1.1); opacity: 1; }
-            100% { transform: translateY(-120px) scale(1.3); opacity: 0; }
+        /* 非常非常慢的缓缓上升肥皂泡特效 */
+        @keyframes bubbleSlowRise {
+            0% { transform: translateY(0) scale(0.6); opacity: 0.1; }
+            30% { opacity: 0.8; }
+            80% { opacity: 0.8; }
+            100% { transform: translateY(-75px) scale(1.2); opacity: 0; }
         }
         .pink-bubble {
             position: absolute;
             width: 16px;
             height: 16px;
-            background: #ffb6c1;
+            background: radial-gradient(circle at 30% 30%, #ffffff, #ffb6c1);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             pointer-events: none;
-            animation: bubbleOverflowSlow 1.4s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+            animation: bubbleSlowRise 2.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
             z-index: 99;
+            box-shadow: inset -2px -2px 4px rgba(255, 182, 193, 0.6);
         }
     </style>
 </head>
@@ -660,7 +663,7 @@
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
         let selectedHeartImg = '';
-        let dismissedNotificationId = null; // 记录已被点击消除的通知ID
+        let dismissedNotificationId = null;
 
         function saveData() {
             try {
@@ -1001,7 +1004,8 @@
             const headerTitle = document.getElementById('videoHeaderTitleText');
             if(!modal || !body || !headerTitle) return;
 
-            const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:16px;height:16px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;">` : '';
+            // 严格对齐：头像与时间在同一条线上，并且中心点高度完全一致
+            const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:16px;height:16px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;display:inline-block;">` : '';
             const mins = Math.floor(callSeconds / 60);
             const secs = callSeconds % 60;
             const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
@@ -1016,9 +1020,9 @@
             } else {
                 body.style.display = 'none';
                 modal.style.height = 'auto';
-                modal.style.width = '145px'; // 稍微短一点，完美平衡间距
+                modal.style.width = '145px';
                 el.innerText = '＋';
-                headerTitle.innerHTML = `${partnerAvatarImg}<span id="minHeaderTimeDisplay">${timeStr}</span>`;
+                headerTitle.innerHTML = `<div style="display:flex; align-items:center; gap:4px; line-height:1;"><span style="display:inline-flex; align-items:center;">${partnerAvatarImg}</span><span id="minHeaderTimeDisplay" style="display:inline-flex; align-items:center;">${timeStr}</span></div>`;
             }
         }
 
@@ -1346,7 +1350,7 @@
             }, delayMs);
         }
 
-        // --- 2. 新增模块：心迹（置顶栏宽度再加宽2倍、缓慢浪漫气泡、完美交互消除提醒跳转）---
+        // --- 2. 新增模块：心迹（置顶栏高度加倍、非常缓慢浪漫上升气泡）---
         let latestHeartNotification = { text: '', targetId: null };
 
         function initHeartMoments(container) {
@@ -1359,16 +1363,16 @@
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%;">
-                    <!-- 顶部情侣挂件（宽度再次加宽为原来两倍宽，缓慢温柔冒泡） -->
-                    <div style="display:flex; justify-content:center; align-items:center; gap:72px; padding:12px 20px; width: 100%; max-width: 100%; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
-                        <div class="avatar-box" style="width:38px;height:38px;">${partnerAvatarImg}</div>
-                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:44px; height:44px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点冒粉色泡泡">
-                            <svg viewBox="0 0 24 24" width="30" height="30" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    <!-- 顶部情侣挂件（宽度恢复上一版，栏目高度增加到现在的两倍） -->
+                    <div style="display:flex; justify-content:center; align-items:center; gap:36px; padding:24px 16px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
+                        <div class="avatar-box" style="width:40px;height:40px;">${partnerAvatarImg}</div>
+                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
+                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                         </div>
-                        <div class="avatar-box" style="width:38px;height:38px;">${myAvatarImg}</div>
+                        <div class="avatar-box" style="width:40px;height:40px;">${myAvatarImg}</div>
                     </div>
 
-                    <!-- 动态提醒栏（点击后跳转并立刻消失） -->
+                    <!-- 动态提醒栏 -->
                     <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.15); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:${latestHeartNotification.text ? 'flex' : 'none'}; justify-content:space-between; align-items:center; cursor:pointer;" onclick="jumpToNotificationTarget()">
                         <span id="heartNotificationText">${latestHeartNotification.text}</span>
                         <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
@@ -1398,7 +1402,6 @@
                 return;
             }
             const latestM = heartMoments[0];
-            // 如果该条目已被点击消除过，则不显示提醒
             if (dismissedNotificationId === latestM.id) {
                 latestHeartNotification = { text: '', targetId: null };
                 return;
@@ -1417,7 +1420,6 @@
             if (!latestHeartNotification.targetId) return;
             const targetId = latestHeartNotification.targetId;
             
-            // 记录已消除，并隐藏提醒栏
             dismissedNotificationId = targetId;
             const notifBar = document.getElementById('heartNotificationBar');
             if (notifBar) notifBar.style.display = 'none';
@@ -1478,17 +1480,17 @@
             const box = document.getElementById('heartHeaderBox');
             if(!box) return;
             const rect = box.getBoundingClientRect();
-            // 缓慢温柔向上冒泡特效
-            for(let i=0; i<20; i++) {
+            // 以非常非常慢的速度从底部缓缓上升
+            for(let i=0; i<15; i++) {
                 const bubble = document.createElement('div');
                 bubble.className = 'pink-bubble';
-                const randomX = Math.random() * (rect.width - 20);
-                const randomY = (rect.height / 2) + (Math.random() * 20 - 10);
+                const randomX = Math.random() * (rect.width - 30) + 10;
                 bubble.style.left = randomX + 'px';
-                bubble.style.top = randomY + 'px';
-                bubble.style.animationDuration = (1.0 + Math.random() * 0.6) + 's';
+                bubble.style.bottom = '4px';
+                bubble.style.animationDuration = (2.2 + Math.random() * 1.2) + 's';
+                bubble.style.animationDelay = (Math.random() * 0.4) + 's';
                 box.appendChild(bubble);
-                setTimeout(() => bubble.remove(), 1600);
+                setTimeout(() => bubble.remove(), 3500);
             }
         }
 
@@ -1533,7 +1535,7 @@
                         comments: [],
                         isPinned: false
                     });
-                    dismissedNotificationId = null; // 有新动态时重置消除状态
+                    dismissedNotificationId = null;
                     saveData();
                 }
             }
@@ -1787,16 +1789,16 @@
             }, randomDelayMs);
         }
 
-        // --- 3. 字库模块（已整合字卡库、动作库、心情短语、表情包管理四栏两行卡片布局） ---
+        // --- 3. 字库模块（四栏完美命名：字卡、动作、心情、表情；心情模式与字卡一致） ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
             container.innerHTML = `
                 <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; padding:10px; background:var(--card-bg); border-bottom:1px solid var(--border-color);">
-                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='cards'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='cards'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('cards')">字卡库</div>
-                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='actions'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='actions'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('actions')">动作库</div>
-                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='moods'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='moods'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('moods')">心情短语</div>
-                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='emojis'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='emojis'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('emojis')">表情包管理</div>
+                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='cards'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='cards'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('cards')">字卡</div>
+                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='actions'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='actions'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('actions')">动作</div>
+                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='moods'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='moods'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('moods')">心情</div>
+                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='emojis'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='emojis'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('emojis')">表情</div>
                 </div>
                 <div id="libContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:8px; overflow-y:auto;"></div>
             `;
@@ -1836,11 +1838,15 @@
                 updateActionList();
             } else if (currentLibTab === 'moods') {
                 area.innerHTML = `
-                    <div style="font-weight:bold; font-size:13px;">心情短语配置：</div>
-                    <div style="font-size:11px; color:var(--sub-text);">用逗号或换行分隔多个短语，每小时自动轮换：</div>
-                    <textarea id="lib_moodPhrases" style="min-height:120px;">${settings.moodPhrases || ''}</textarea>
-                    <button class="btn" style="width:100%;" onclick="saveMoodPhrasesFromLib()">保存心情短语</button>
+                    <input type="text" id="searchMoodInput" placeholder="搜索心情短语..." oninput="filterMoods()">
+                    <textarea id="batchMoodInput" placeholder="批量添加心情短语（每行一条短语）"></textarea>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchMoods()">添加/导入心情短语</button>
+                    </div>
+                    <div style="font-size:12px; color:var(--sub-text);">共有心情短语 <span id="moodCount">0</span> 条：</div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
                 `;
+                updateMoodList();
             } else if (currentLibTab === 'emojis') {
                 area.innerHTML = `
                     <div style="font-weight:bold; font-size:13px;">表情包库管理：</div>
@@ -1852,11 +1858,81 @@
             }
         }
 
-        function saveMoodPhrasesFromLib() {
-            const val = document.getElementById('lib_moodPhrases').value.trim();
-            settings.moodPhrases = val;
+        // --- 心情短语列表管理（与字卡完全一致） ---
+        function getMoodPhrasesArray() {
+            const raw = settings.moodPhrases || '';
+            return raw.split(/[,，\n]+/).map(s => s.trim()).filter(Boolean);
+        }
+
+        function saveMoodPhrasesArray(arr) {
+            settings.moodPhrases = arr.join(', ');
             saveData();
-            alert('心情短语保存成功！');
+        }
+
+        function updateMoodList(filteredList = null) {
+            const listContainer = document.getElementById('itemContainer');
+            const countEl = document.getElementById('moodCount');
+            if(!listContainer || !countEl) return;
+
+            const arr = filteredList !== null ? filteredList : getMoodPhrasesArray();
+            countEl.innerText = arr.length;
+            listContainer.innerHTML = '';
+            
+            arr.forEach((moodText, index) => {
+                const item = document.createElement('div');
+                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
+                item.innerHTML = `
+                    <div style="flex:1; padding-right:8px; word-break:break-all;">${moodText}</div>
+                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editMood(${index})">修改</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteMood(${index})">删除</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function filterMoods() {
+            const kw = document.getElementById('searchMoodInput').value.trim();
+            const arr = getMoodPhrasesArray();
+            updateMoodList(arr.filter(m => m.includes(kw)));
+        }
+
+        function addBatchMoods() {
+            const text = document.getElementById('batchMoodInput').value.trim();
+            if (!text) return;
+            let arr = getMoodPhrasesArray();
+            let addedCount = 0;
+            text.split('\n').forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                if (!arr.includes(line)) {
+                    arr.push(line);
+                    addedCount++;
+                }
+            });
+            saveMoodPhrasesArray(arr);
+            updateMoodList();
+            alert(`成功添加新心情短语 ${addedCount} 条！`);
+        }
+
+        function editMood(index) {
+            const arr = getMoodPhrasesArray();
+            const currentVal = arr[index] || '';
+            const newContent = prompt('修改心情短语：', currentVal);
+            if (newContent === null) return;
+            const trimmed = newContent.trim();
+            if (!trimmed) return;
+            arr[index] = trimmed;
+            saveMoodPhrasesArray(arr);
+            updateMoodList();
+        }
+
+        function deleteMood(index) {
+            let arr = getMoodPhrasesArray();
+            arr.splice(index, 1);
+            saveMoodPhrasesArray(arr);
+            updateMoodList();
         }
 
         function uploadEmojisFromLib(event) {
@@ -2236,7 +2312,7 @@
             });
         }
 
-        // --- 6. 设置模块（心情短语与表情包已精简移至字库，此处保留基础信息） ---
+        // --- 6. 设置模块 ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
