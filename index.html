@@ -1263,7 +1263,7 @@
             updateCardList();
         }
 
-        // --- 3. 锦书模块 ---
+        // --- 3. 锦书模块（精修：删除冗余提示语，右上角改为优雅浅灰色删除键） ---
         function initLetters(container) {
             container.innerHTML = `
                 <div>
@@ -1271,7 +1271,7 @@
                     <textarea id="letterInput" placeholder="写下你的心事与信件..."></textarea>
                     <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
                 </div>
-                <div style="font-weight:bold; margin-top:10px;">信箱记录（可点击右侧删除按钮或右滑删除）：</div>
+                <div style="font-weight:bold; margin-top:10px;">信箱记录：</div>
                 <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
                 <div style="text-align:center; font-size:12px; color:var(--sub-text); font-style:italic; margin-top:6px;">云中谁寄锦书来</div>
             `;
@@ -1347,7 +1347,7 @@
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.time}</span>
-                        <button class="btn" style="padding:2px 8px; font-size:11px; background:#ff3b30; color:#fff; border:none;" onclick="deleteLetter(${item.id})">删除</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLetter(${item.id})">删除</button>
                     </div>
                     <div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>
                     <div><strong>我:</strong> ${item.myLetter}</div>
@@ -1489,7 +1489,7 @@
             });
         }
 
-        // --- 5. 系统模块（新增对方气泡文字颜色控制） ---
+        // --- 5. 系统模块 ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
