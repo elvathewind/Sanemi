@@ -549,12 +549,12 @@
             align-items: center;
         }
 
-        /* 非常非常慢的缓缓上升肥皂泡特效 */
+        /* 冒到框内最高处的泡泡特效 */
         @keyframes bubbleSlowRise {
             0% { transform: translateY(0) scale(0.6); opacity: 0.1; }
             30% { opacity: 0.8; }
-            80% { opacity: 0.8; }
-            100% { transform: translateY(-90px) scale(1.2); opacity: 0; }
+            85% { opacity: 0.8; }
+            100% { transform: translateY(-130px) scale(1.2); opacity: 0; }
         }
         .pink-bubble {
             position: absolute;
@@ -564,7 +564,7 @@
             border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             pointer-events: none;
-            animation: bubbleSlowRise 3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+            animation: bubbleSlowRise 3.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
             z-index: 99;
             box-shadow: inset -2px -2px 4px rgba(255, 182, 193, 0.6);
         }
@@ -1367,7 +1367,7 @@
             }, delayMs);
         }
 
-        // --- 2 & 3. 心迹模块（置顶高度为发布框的2倍，提醒功能满血复活） ---
+        // --- 2 & 3. 心迹模块（提醒逻辑全局锁定、气泡直冲最高处） ---
         let latestHeartNotification = { text: '', targetId: null };
 
         function initHeartMoments(container) {
@@ -1380,13 +1380,13 @@
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
-                    <!-- 动态提醒栏（满血复活，置顶清晰呈现） -->
+                    <!-- 动态提醒栏 -->
                     <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.2); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:${latestHeartNotification.text ? 'flex' : 'none'}; justify-content:space-between; align-items:center; cursor:pointer; z-index:2;" onclick="jumpToNotificationTarget()">
                         <span id="heartNotificationText">${latestHeartNotification.text}</span>
                         <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
                     </div>
 
-                    <!-- 顶部情侣挂件：高度为发布心迹输入框高度的2倍 (~160px) -->
+                    <!-- 顶部情侣挂件 -->
                     <div style="display:flex; justify-content:center; align-items:center; gap:50px; padding:20px; height:160px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
                         <div class="avatar-box" style="width:90px;height:90px; border-radius:50%;">${partnerAvatarImg}</div>
                         <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:52px; height:52px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
@@ -1427,7 +1427,12 @@
             if (latestM.author === 'partner') {
                 latestHeartNotification = { text: `${partnerNameStr}有新的心迹`, targetId: latestM.id };
             } else if (latestM.comments && latestM.comments.length > 0) {
-                latestHeartNotification = { text: `${partnerNameStr}回复了你的心迹`, targetId: latestM.id };
+                const lastComment = latestM.comments[latestM.comments.length - 1];
+                if (lastComment.author === partnerNameStr) {
+                    latestHeartNotification = { text: `${partnerNameStr}回复了你的心迹`, targetId: latestM.id };
+                } else {
+                    latestHeartNotification = { text: '', targetId: null };
+                }
             } else {
                 latestHeartNotification = { text: '', targetId: null };
             }
@@ -1503,10 +1508,10 @@
                 const randomX = Math.random() * (rect.width - 50) + 25;
                 bubble.style.left = randomX + 'px';
                 bubble.style.bottom = '4px';
-                bubble.style.animationDuration = (2.5 + Math.random() * 1.2) + 's';
+                bubble.style.animationDuration = (2.8 + Math.random() * 1.2) + 's';
                 bubble.style.animationDelay = (Math.random() * 0.4) + 's';
                 box.appendChild(bubble);
-                setTimeout(() => bubble.remove(), 4000);
+                setTimeout(() => bubble.remove(), 4200);
             }
         }
 
@@ -1738,6 +1743,7 @@
                 text: text.trim(),
                 replies: []
             });
+            dismissedNotificationId = null;
             saveData();
             renderHeartMomentsList();
 
@@ -1755,6 +1761,7 @@
                             text: getRandomCardSentences(),
                             replies: []
                         });
+                        dismissedNotificationId = null;
                         saveData();
                         renderHeartMomentsList();
                     }
@@ -1779,6 +1786,7 @@
                 author: myNameStr,
                 text: text.trim()
             });
+            dismissedNotificationId = null;
             saveData();
             renderHeartMomentsList();
 
@@ -1799,13 +1807,14 @@
                             });
                         }
                     }
+                    dismissedNotificationId = null;
                     saveData();
                     renderHeartMomentsList();
                 }
             }, replyDelayMs);
         }
 
-        // --- 3. 字库模块 ---
+        // --- 3. 字库模块（所有模块添加后自动清空输入框） ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -1867,7 +1876,7 @@
             } else if (currentLibTab === 'emojis') {
                 area.innerHTML = `
                     <div style="font-weight:bold; font-size:13px;">表情包库管理：</div>
-                    <input type="file" accept="image/*" multiple onchange="uploadEmojisFromLib(event)">
+                    <input type="file" id="emojiFileInput" accept="image/*" multiple onchange="uploadEmojisFromLib(event)">
                     <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${settings.emojis ? settings.emojis.length : 0} 个表情：</div>
                     <div id="itemContainer" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
                 `;
@@ -1902,7 +1911,9 @@
         }
 
         function addBatchCards() {
-            const text = document.getElementById('batchInput').value.trim();
+            const inputEl = document.getElementById('batchInput');
+            if(!inputEl) return;
+            const text = inputEl.value.trim();
             if (!text) return;
             let addedCount = 0;
             text.split('\n').forEach(line => {
@@ -1914,6 +1925,7 @@
                     addedCount++;
                 }
             });
+            inputEl.value = ''; // 自动清空输入框
             saveData();
             updateCardList();
             alert(`成功添加新字卡 ${addedCount} 条！`);
@@ -1962,7 +1974,9 @@
         }
 
         function addBatchActions() {
-            const text = document.getElementById('batchActionInput').value.trim();
+            const inputEl = document.getElementById('batchActionInput');
+            if(!inputEl) return;
+            const text = inputEl.value.trim();
             if (!text) return;
             let addedCount = 0;
             text.split('\n').forEach(line => {
@@ -1974,6 +1988,7 @@
                     addedCount++;
                 }
             });
+            inputEl.value = ''; // 自动清空输入框
             saveData();
             updateActionList();
             alert(`成功添加新动作 ${addedCount} 条！`);
@@ -2035,7 +2050,9 @@
         }
 
         function addBatchMoods() {
-            const text = document.getElementById('batchMoodInput').value.trim();
+            const inputEl = document.getElementById('batchMoodInput');
+            if(!inputEl) return;
+            const text = inputEl.value.trim();
             if (!text) return;
             let arr = getMoodPhrasesArray();
             let addedCount = 0;
@@ -2047,6 +2064,7 @@
                     addedCount++;
                 }
             });
+            inputEl.value = ''; // 自动清空输入框
             saveMoodPhrasesArray(arr);
             updateMoodList();
             alert(`成功添加新心情短语 ${addedCount} 条！`);
@@ -2106,6 +2124,7 @@
             if (!files.length) return;
             if(!settings.emojis) settings.emojis = [];
             
+            let loadedCount = 0;
             for (let file of files) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -2118,8 +2137,13 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, 150, 150);
                         settings.emojis.push(canvas.toDataURL('image/jpeg', 0.8));
-                        saveData();
-                        updateEmojiList();
+                        loadedCount++;
+                        if (loadedCount === files.length) {
+                            saveData();
+                            updateEmojiList();
+                            const fileInput = document.getElementById('emojiFileInput');
+                            if (fileInput) fileInput.value = ''; // 自动清空文件选择状态
+                        }
                     }
                 };
                 reader.readAsDataURL(file);
@@ -2132,14 +2156,14 @@
             updateEmojiList();
         }
 
-        // --- 4. 锦书模块（动态飞入信封取代红点） ---
+        // --- 4. 锦书模块（写信区域高度放大三倍） ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
             container.innerHTML = `
                 <div>
                     <div style="font-weight:bold; margin-bottom:6px;">写一封信：</div>
-                    <textarea id="letterInput" placeholder="写下你的心事与信件..."></textarea>
+                    <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 240px;"></textarea>
                     <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
                 </div>
                 <div style="font-weight:bold; margin-top:10px;">信箱记录：</div>
@@ -2392,7 +2416,7 @@
             });
         }
 
-        // --- 6. 设置模块（功能顺序：头像等 ➡️ 回复时间范围 ➡️ 气泡颜色 ➡️ 数据备份恢复） ---
+        // --- 6. 设置模块 ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
