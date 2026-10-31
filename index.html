@@ -601,6 +601,12 @@
             { id: 5, content: '抱抱我嘛~' }
         ];
 
+        let actionLibrary = JSON.parse(localStorage.getItem('actionLibrary')) || [
+            { id: 1, content: '轻轻靠在了他的肩上' },
+            { id: 2, content: '宠溺地揉了揉你的头发' },
+            { id: 3, content: '悄悄握住了你的手' }
+        ];
+
         let chatMessages = JSON.parse(localStorage.getItem('chatMessages')) || [];
         let letters = JSON.parse(localStorage.getItem('lettersData')) || [];
         let anniversaries = JSON.parse(localStorage.getItem('anniversariesData')) || [
@@ -612,7 +618,7 @@
             { id: 6, name: '我的生日', date: '1995-08-20' }
         ];
 
-        let heartMoments = JSON.parse(localStorage.getItem('heartMomentsData')) || []; // 心迹动态
+        let heartMoments = JSON.parse(localStorage.getItem('heartMomentsData')) || [];
 
         let settings = JSON.parse(localStorage.getItem('siteSettings')) || {
             fontSize: '14px',
@@ -640,6 +646,7 @@
         function saveData() {
             try {
                 localStorage.setItem('cardLibrary', JSON.stringify(cardLibrary));
+                localStorage.setItem('actionLibrary', JSON.stringify(actionLibrary));
                 localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
                 localStorage.setItem('lettersData', JSON.stringify(letters));
                 localStorage.setItem('anniversariesData', JSON.stringify(anniversaries));
@@ -690,7 +697,7 @@
             const hasNewReadyLetter = letters.some(item => item.reply && !item.isRead);
             settings.hasUnreadLetter = hasNewReadyLetter;
 
-            // 双排每排三个：蜜语、心迹、锦书、良辰、字库、设置
+            // 桌面双排 3x2：蜜语、心迹、锦书、良辰、字库、设置
             const apps = [
                 { id: 'chat', name: '蜜语', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>' },
                 { id: 'heartMoments', name: '心迹', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>' },
@@ -826,7 +833,7 @@
             }
         }
 
-        // --- 1. 蜜语模块（含拍一拍与动作描述） ---
+        // --- 1. 蜜语模块（拍一拍） ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -846,7 +853,6 @@
                             <button class="icon-btn" style="width:32px;height:32px;flex-shrink:0;" title="视频" onclick="startVideoCall()">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
                             </button>
-                            <button class="icon-btn" style="width:32px;height:32px;flex-shrink:0; font-size:11px;" title="发送动作描述" onclick="openActionPrompt()">动作</button>
                             <input type="text" id="chatInput" placeholder="输入消息..." onkeydown="if(event.key==='Enter') { event.preventDefault(); sendUserMessage(); }">
                             <button class="icon-btn" style="width:32px;height:32px;flex-shrink:0;" title="表情" onclick="toggleEmojiPicker()">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path></svg>
@@ -880,18 +886,6 @@
             if (targetWho === 'partner') {
                 triggerPartnerReply();
             }
-        }
-
-        // 动作描述触发函数
-        function openActionPrompt() {
-            const actionStr = prompt('请输入动作描述内容：', '轻轻靠在了他的肩上');
-            if (!actionStr || !actionStr.trim()) return;
-
-            const formattedAction = `♥${actionStr.trim()}♥`;
-            chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: formattedAction });
-            saveData();
-            updateChatMessages();
-            triggerPartnerReply();
         }
 
         function startVideoCall() {
@@ -1095,18 +1089,24 @@
         }
 
         function checkPartnerActiveMessage() {
-            if (Math.random() < 0.1 && cardLibrary.length > 0) {
+            if (Math.random() < 0.1 && (cardLibrary.length > 0 || actionLibrary.length > 0)) {
                 setTimeout(() => {
-                    const maxCount = Math.min(cardLibrary.length, 3);
-                    const count = Math.floor(Math.random() * maxCount) + 1;
-                    let tempLib = [...cardLibrary];
-                    let selectedTexts = [];
-                    for(let i = 0; i < count; i++) {
-                        const randomIndex = Math.floor(Math.random() * tempLib.length);
-                        selectedTexts.push(tempLib[randomIndex].content);
-                        tempLib.splice(randomIndex, 1);
+                    // 有概率发送动作，或者发送字库消息
+                    if (actionLibrary.length > 0 && Math.random() < 0.3) {
+                        const randomAction = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
+                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `♥${randomAction.content}♥` });
+                    } else if (cardLibrary.length > 0) {
+                        const maxCount = Math.min(cardLibrary.length, 3);
+                        const count = Math.floor(Math.random() * maxCount) + 1;
+                        let tempLib = [...cardLibrary];
+                        let selectedTexts = [];
+                        for(let i = 0; i < count; i++) {
+                            const randomIndex = Math.floor(Math.random() * tempLib.length);
+                            selectedTexts.push(tempLib[randomIndex].content);
+                            tempLib.splice(randomIndex, 1);
+                        }
+                        chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' ') });
                     }
-                    chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' ') });
                     saveData();
                     updateChatMessages();
                 }, 1500);
@@ -1308,9 +1308,8 @@
             }, delayMs);
         }
 
-        // --- 2. 新增模块：心迹（朋友圈） ---
+        // --- 2. 新增模块：心迹（朋友圈）---
         function initHeartMoments(container) {
-            // 检查对方今天发的心迹数量（限制每天最多3条）
             checkPartnerHeartMomentLimit();
 
             container.innerHTML = `
@@ -1344,7 +1343,6 @@
             const todayStr = new Date().toISOString().slice(0, 10);
             const partnerPostsToday = heartMoments.filter(m => m.author === 'partner' && m.dateStr === todayStr);
 
-            // 如果今天对方发的动态少于3条，且随机触发
             if (partnerPostsToday.length < 3 && Math.random() < 0.4) {
                 const text = getRandomCardSentences();
                 const d = new Date();
@@ -1384,20 +1382,30 @@
                 comments: []
             };
 
-            // 规则：如果我发朋友圈，他 100% 会点赞评论那条朋友圈
-            newMoment.likes.push(partnerNameStr);
-            const partnerCommentText = getRandomCardSentences();
-            newMoment.comments.push({
-                id: Date.now() + 1,
-                author: partnerNameStr,
-                text: partnerCommentText,
-                replies: []
-            });
-
             heartMoments.unshift(newMoment);
             input.value = '';
             saveData();
             renderHeartMomentsList();
+
+            // 规则：我发布朋友圈后，对方点赞和评论延迟 5 到 30 分钟（模拟真实真人）
+            const randomDelayMs = (Math.floor(Math.random() * 26) + 5) * 60 * 1000;
+            setTimeout(() => {
+                const mTarget = heartMoments.find(m => m.id === newMoment.id);
+                if (mTarget) {
+                    if (!mTarget.likes.includes(partnerNameStr)) {
+                        mTarget.likes.push(partnerNameStr);
+                    }
+                    const partnerCommentText = getRandomCardSentences();
+                    mTarget.comments.push({
+                        id: Date.now() + 1,
+                        author: partnerNameStr,
+                        text: partnerCommentText,
+                        replies: []
+                    });
+                    saveData();
+                    renderHeartMomentsList();
+                }
+            }, randomDelayMs);
         }
 
         function renderHeartMomentsList() {
@@ -1420,7 +1428,6 @@
                 const card = document.createElement('div');
                 card.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px;";
                 
-                // 头部
                 let headerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div class="avatar-box" style="width:28px;height:28px;">
@@ -1431,16 +1438,13 @@
                     </div>
                 `;
 
-                // 内容
                 let contentHTML = `<div style="font-size:13px; word-break:break-all; padding-left:36px;">${moment.content}</div>`;
 
-                // 点赞区
                 let likesHTML = '';
                 if (moment.likes && moment.likes.length > 0) {
                     likesHTML = `<div style="font-size:11px; color:#007aff; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
-                // 评论区
                 let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px;" id="comments-box-${moment.id}">`;
                 if (moment.comments && moment.comments.length > 0) {
                     moment.comments.forEach(com => {
@@ -1460,7 +1464,6 @@
                 }
                 commentsHTML += `</div>`;
 
-                // 操作按钮栏
                 let actionHTML = `
                     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
                         <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="likeMoment(${moment.id})">点赞</button>
@@ -1499,20 +1502,27 @@
                 text: text.trim(),
                 replies: []
             });
-
-            // 规则：如果我评论他的朋友圈，他 100% 会点赞并回复我的评论
-            if (!moment.likes.includes(partnerNameStr)) {
-                moment.likes.push(partnerNameStr);
-            }
-            moment.comments.push({
-                id: Date.now() + 1,
-                author: partnerNameStr,
-                text: getRandomCardSentences(),
-                replies: []
-            });
-
             saveData();
             renderHeartMomentsList();
+
+            // 规则：我评论他的朋友圈，对方点赞并回复延迟 5 到 30 分钟
+            const randomDelayMs = (Math.floor(Math.random() * 26) + 5) * 60 * 1000;
+            setTimeout(() => {
+                const mTarget = heartMoments.find(m => m.id === momentId);
+                if (mTarget) {
+                    if (!mTarget.likes.includes(partnerNameStr)) {
+                        mTarget.likes.push(partnerNameStr);
+                    }
+                    mTarget.comments.push({
+                        id: Date.now() + 1,
+                        author: partnerNameStr,
+                        text: getRandomCardSentences(),
+                        replies: []
+                    });
+                    saveData();
+                    renderHeartMomentsList();
+                }
+            }, randomDelayMs);
         }
 
         function replyToComment(momentId, commentId, targetAuthor) {
@@ -1532,42 +1542,84 @@
                 author: myNameStr,
                 text: text.trim()
             });
-
-            // 规则：如果我评论他的评论，他有80%概率会回复，20%概率仅点赞
-            if (!moment.likes.includes(partnerNameStr)) {
-                moment.likes.push(partnerNameStr);
-            }
-
-            if (Math.random() < 0.8) {
-                // 80% 概率回复
-                comment.replies.push({
-                    id: Date.now() + 1,
-                    author: partnerNameStr,
-                    text: getRandomCardSentences()
-                });
-            }
-
             saveData();
             renderHeartMomentsList();
+
+            // 规则：我评论他的回复，对方延迟 5 到 30 分钟响应（80%概率回复，20%概率仅点赞）
+            const randomDelayMs = (Math.floor(Math.random() * 26) + 5) * 60 * 1000;
+            setTimeout(() => {
+                const mTarget = heartMoments.find(m => m.id === momentId);
+                if (mTarget) {
+                    if (!mTarget.likes.includes(partnerNameStr)) {
+                        mTarget.likes.push(partnerNameStr);
+                    }
+                    if (Math.random() < 0.8) {
+                        const cTarget = mTarget.comments.find(c => c.id === commentId);
+                        if (cTarget) {
+                            cTarget.replies.push({
+                                id: Date.now() + 1,
+                                author: partnerNameStr,
+                                text: getRandomCardSentences()
+                            });
+                        }
+                    }
+                    saveData();
+                    renderHeartMomentsList();
+                }
+            }, randomDelayMs);
         }
 
-        // --- 3. 字库模块（原字卡） ---
+        // --- 3. 字库模块（包含字卡与动作库切换管理，统一百丽灰色系） ---
+        let currentLibTab = 'cards'; // 'cards' 或 'actions'
+
         function initCards(container) {
             container.innerHTML = `
-                <input type="text" id="searchInput" placeholder="搜索字库..." oninput="filterCards()">
-                <textarea id="batchInput" placeholder="批量添加（每行一条字库，系统会自动过滤重复内容）"></textarea>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn" style="flex:1;" onclick="addBatchCards()">添加/导入字库</button>
-                    <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="removeDuplicateCards()">一键清除重复字库</button>
+                <div style="display:flex; border-bottom:1px solid var(--border-color); background:var(--card-bg);">
+                    <button class="btn" style="flex:1; border-radius:0; background:${currentLibTab==='cards'?'var(--text-color)':'transparent'}; color:${currentLibTab==='cards'?'var(--card-bg)':'var(--text-color)'}; border:none; border-bottom:2px solid var(--border-color);" onclick="switchLibTab('cards')">字卡库</button>
+                    <button class="btn" style="flex:1; border-radius:0; background:${currentLibTab==='actions'?'var(--text-color)':'transparent'}; color:${currentLibTab==='actions'?'var(--card-bg)':'var(--text-color)'}; border:none; border-bottom:2px solid var(--border-color);" onclick="switchLibTab('actions')">动作库</button>
                 </div>
-                <div style="font-size:12px; color:var(--sub-text);">共有字库 <span id="cardCount">0</span> 条：</div>
-                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="cardListContainer"></div>
+                <div id="libContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:8px; overflow-y:auto;"></div>
             `;
-            updateCardList();
+            renderLibTabContent();
+        }
+
+        function switchLibTab(tab) {
+            currentLibTab = tab;
+            initCards(document.getElementById('subPageContent'));
+        }
+
+        function renderLibTabContent() {
+            const area = document.getElementById('libContentArea');
+            if(!area) return;
+            area.innerHTML = '';
+
+            if (currentLibTab === 'cards') {
+                area.innerHTML = `
+                    <input type="text" id="searchInput" placeholder="搜索字卡..." oninput="filterCards()">
+                    <textarea id="batchInput" placeholder="批量添加（每行一条字卡，系统会自动过滤重复内容）"></textarea>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchCards()">添加/导入字卡</button>
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="removeDuplicateCards()">一键清除重复字卡</button>
+                    </div>
+                    <div style="font-size:12px; color:var(--sub-text);">共有字卡 <span id="cardCount">0</span> 条：</div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
+                `;
+                updateCardList();
+            } else {
+                area.innerHTML = `
+                    <textarea id="batchActionInput" placeholder="批量添加动作（每行一条动作描述，如：轻轻靠在了他的肩上）"></textarea>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchActions()">添加/导入动作</button>
+                    </div>
+                    <div style="font-size:12px; color:var(--sub-text);">共有动作 <span id="actionCount">0</span> 条：</div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
+                `;
+                updateActionList();
+            }
         }
 
         function updateCardList(filteredList = cardLibrary) {
-            const listContainer = document.getElementById('cardListContainer');
+            const listContainer = document.getElementById('itemContainer');
             const countEl = document.getElementById('cardCount');
             if(!listContainer || !countEl) return;
             countEl.innerText = filteredList.length;
@@ -1579,8 +1631,29 @@
                 item.innerHTML = `
                     <div style="flex:1; padding-right:8px; word-break:break-all;">${card.content}</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
-                        <button class="btn" style="padding:4px 8px; font-size:11px;" onclick="editCard(${card.id})">编辑</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editCard(${card.id})">编辑</button>
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteCard(${card.id})">删除</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function updateActionList(filteredList = actionLibrary) {
+            const listContainer = document.getElementById('itemContainer');
+            const countEl = document.getElementById('actionCount');
+            if(!listContainer || !countEl) return;
+            countEl.innerText = filteredList.length;
+            listContainer.innerHTML = '';
+            
+            filteredList.forEach(act => {
+                const item = document.createElement('div');
+                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
+                item.innerHTML = `
+                    <div style="flex:1; padding-right:8px; word-break:break-all;">♥${act.content}♥</div>
+                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAction(${act.id})">编辑</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAction(${act.id})">删除</button>
                     </div>
                 `;
                 listContainer.appendChild(item);
@@ -1595,7 +1668,6 @@
         function addBatchCards() {
             const text = document.getElementById('batchInput').value.trim();
             if (!text) return;
-            
             let addedCount = 0;
             text.split('\n').forEach(line => {
                 line = line.trim();
@@ -1607,30 +1679,26 @@
                 }
             });
             saveData();
-            document.getElementById('batchInput').value = '';
             updateCardList();
-            alert(`成功添加新字库 ${addedCount} 条（已自动过滤重复项）！`);
+            alert(`成功添加新字卡 ${addedCount} 条！`);
         }
 
         function removeDuplicateCards() {
             const uniqueMap = new Map();
             cardLibrary.forEach(card => {
-                if (!uniqueMap.has(card.content)) {
-                    uniqueMap.set(card.content, card);
-                }
+                if (!uniqueMap.has(card.content)) uniqueMap.set(card.content, card);
             });
             const oldLen = cardLibrary.length;
             cardLibrary = Array.from(uniqueMap.values());
-            const removedCount = oldLen - cardLibrary.length;
             saveData();
             updateCardList();
-            alert(`已清理完毕！共为你删除了 ${removedCount} 条重复字库。`);
+            alert(`已清理完毕！共删除 ${oldLen - cardLibrary.length} 条重复字卡。`);
         }
 
         function editCard(id) {
             const card = cardLibrary.find(c => c.id === id);
             if (!card) return;
-            const newContent = prompt('编辑字库内容：', card.content);
+            const newContent = prompt('编辑字卡内容：', card.content);
             if (newContent === null) return;
             card.content = newContent.trim();
             saveData();
@@ -1641,6 +1709,40 @@
             cardLibrary = cardLibrary.filter(c => c.id !== id);
             saveData();
             updateCardList();
+        }
+
+        function addBatchActions() {
+            const text = document.getElementById('batchActionInput').value.trim();
+            if (!text) return;
+            let addedCount = 0;
+            text.split('\n').forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                const exists = actionLibrary.some(a => a.content === line);
+                if (!exists) {
+                    actionLibrary.push({ id: Date.now() + Math.random(), content: line });
+                    addedCount++;
+                }
+            });
+            saveData();
+            updateActionList();
+            alert(`成功添加新动作 ${addedCount} 条！`);
+        }
+
+        function editAction(id) {
+            const act = actionLibrary.find(a => a.id === id);
+            if (!act) return;
+            const newContent = prompt('编辑动作内容：', act.content);
+            if (newContent === null) return;
+            act.content = newContent.trim();
+            saveData();
+            updateActionList();
+        }
+
+        function deleteAction(id) {
+            actionLibrary = actionLibrary.filter(a => a.id !== id);
+            saveData();
+            updateActionList();
         }
 
         // --- 4. 锦书模块 ---
@@ -1727,7 +1829,7 @@
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.time}</span>
-                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteLetter(${item.id})">删除</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLetter(${item.id})">删除</button>
                     </div>
                     <div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>
                     <div><strong>我:</strong> ${item.myLetter}</div>
@@ -1738,17 +1840,13 @@
             });
         }
 
-        function confirmDeleteLetter(id) {
-            if (confirm("确定要删除这封信吗？")) {
-                deleteLetter(id);
-            }
-        }
-
         function deleteLetter(id) {
-            letters = letters.filter(l => l.id !== id);
-            saveData();
-            updateLettersList();
-            renderDesktop();
+            if (confirm("确定要删除这封信吗？")) {
+                letters = letters.filter(l => l.id !== id);
+                saveData();
+                updateLettersList();
+                renderDesktop();
+            }
         }
 
         // --- 5. 良辰模块 ---
@@ -1847,15 +1945,15 @@
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
-                        <button class="btn" style="padding:4px 6px; font-size:11px;" onclick="editAnniversary(${item.id})">编辑</button>
-                        <button class="btn" style="padding:4px 6px; font-size:11px;" onclick="deleteAnniversary(${item.id})">删除</button>
+                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAnniversary(${item.id})">编辑</button>
+                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAnniversary(${item.id})">删除</button>
                     </div>
                 `;
                 container.appendChild(div);
             });
         }
 
-        // --- 6. 设置模块（含拍一拍后缀设置） ---
+        // --- 6. 设置模块 ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
@@ -1926,7 +2024,7 @@
                 <div class="setting-group">
                     <div class="setting-label">数据恢复与备份</div>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn" style="flex:1;" onclick="exportData()">手动导出备份</button>
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="exportData()">手动导出备份</button>
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="document.getElementById('importFile').click()">导入备份恢复</button>
                         <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
                     </div>
@@ -2114,7 +2212,7 @@
         }
 
         function exportData() {
-            const backupData = { cardLibrary, chatMessages, letters, anniversaries, heartMoments, settings };
+            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, settings };
             const jsonString = JSON.stringify(backupData, null, 2);
             
             const blob = new Blob([jsonString], { type: 'application/json' });
@@ -2138,6 +2236,7 @@
                 try {
                     const imported = JSON.parse(e.target.result);
                     if (imported.cardLibrary) cardLibrary = imported.cardLibrary;
+                    if (imported.actionLibrary) actionLibrary = imported.actionLibrary;
                     if (imported.chatMessages) chatMessages = imported.chatMessages;
                     if (imported.letters) letters = imported.letters;
                     if (imported.anniversaries) anniversaries = imported.anniversaries;
