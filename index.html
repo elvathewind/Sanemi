@@ -565,7 +565,7 @@
             0% { transform: translateY(0) scale(0.6); opacity: 0.1; }
             30% { opacity: 0.8; }
             80% { opacity: 0.8; }
-            100% { transform: translateY(-75px) scale(1.2); opacity: 0; }
+            100% { transform: translateY(-90px) scale(1.2); opacity: 0; }
         }
         .pink-bubble {
             position: absolute;
@@ -575,7 +575,7 @@
             border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             pointer-events: none;
-            animation: bubbleSlowRise 2.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+            animation: bubbleSlowRise 3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
             z-index: 99;
             box-shadow: inset -2px -2px 4px rgba(255, 182, 193, 0.6);
         }
@@ -1004,7 +1004,6 @@
             const headerTitle = document.getElementById('videoHeaderTitleText');
             if(!modal || !body || !headerTitle) return;
 
-            // 严格对齐：头像与时间在同一条线上，并且中心点高度完全一致
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:16px;height:16px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;display:inline-block;">` : '';
             const mins = Math.floor(callSeconds / 60);
             const secs = callSeconds % 60;
@@ -1310,6 +1309,22 @@
             return sec * 1000;
         }
 
+        // 新增：专为心迹回复设定的随机延迟（1分钟到10分钟之内）
+        function getHeartCommentReplyDelayMs() {
+            const minSec = 60; // 1分钟
+            const maxSec = 600; // 10分钟
+            const sec = Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec;
+            return sec * 1000;
+        }
+
+        // 新增：专为首次发布心迹设定的随机延迟（5分钟到1小时之间）
+        function getHeartInitialPostDelayMs() {
+            const minSec = 300; // 5分钟
+            const maxSec = 3600; // 1小时
+            const sec = Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec;
+            return sec * 1000;
+        }
+
         function triggerPartnerReply() {
             if (cardLibrary.length === 0) return;
             if (settings.readNotBack && Math.random() < 0.4) return;
@@ -1350,7 +1365,7 @@
             }, delayMs);
         }
 
-        // --- 2. 新增模块：心迹（置顶栏高度加倍、非常缓慢浪漫上升气泡）---
+        // --- 2. 新增模块：心迹（置顶框高度1.5倍、大头像联动、首次发布5分~1小时互动、后续回复1~10分钟）---
         let latestHeartNotification = { text: '', targetId: null };
 
         function initHeartMoments(container) {
@@ -1358,18 +1373,18 @@
             selectedHeartImg = '';
             updateLatestHeartNotification();
 
-            const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-            const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+            const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+            const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%;">
-                    <!-- 顶部情侣挂件（宽度恢复上一版，栏目高度增加到现在的两倍） -->
-                    <div style="display:flex; justify-content:center; align-items:center; gap:36px; padding:24px 16px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
-                        <div class="avatar-box" style="width:40px;height:40px;">${partnerAvatarImg}</div>
-                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
-                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    <!-- 顶部情侣挂件：高度增至发布输入框的1.5倍，头像占挂件高度80% -->
+                    <div style="display:flex; justify-content:center; align-items:center; gap:40px; padding:16px 20px; height:100px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
+                        <div class="avatar-box" style="width:72px;height:72px; border-radius:50%;">${partnerAvatarImg}</div>
+                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:52px; height:52px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
+                            <svg viewBox="0 0 24 24" width="36" height="36" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                         </div>
-                        <div class="avatar-box" style="width:40px;height:40px;">${myAvatarImg}</div>
+                        <div class="avatar-box" style="width:72px;height:72px; border-radius:50%;">${myAvatarImg}</div>
                     </div>
 
                     <!-- 动态提醒栏 -->
@@ -1480,17 +1495,16 @@
             const box = document.getElementById('heartHeaderBox');
             if(!box) return;
             const rect = box.getBoundingClientRect();
-            // 以非常非常慢的速度从底部缓缓上升
             for(let i=0; i<15; i++) {
                 const bubble = document.createElement('div');
                 bubble.className = 'pink-bubble';
-                const randomX = Math.random() * (rect.width - 30) + 10;
+                const randomX = Math.random() * (rect.width - 40) + 20;
                 bubble.style.left = randomX + 'px';
                 bubble.style.bottom = '4px';
-                bubble.style.animationDuration = (2.2 + Math.random() * 1.2) + 's';
+                bubble.style.animationDuration = (2.5 + Math.random() * 1.2) + 's';
                 bubble.style.animationDelay = (Math.random() * 0.4) + 's';
                 box.appendChild(bubble);
-                setTimeout(() => bubble.remove(), 3500);
+                setTimeout(() => bubble.remove(), 4000);
             }
         }
 
@@ -1577,7 +1591,8 @@
             saveData();
             renderHeartMomentsList();
 
-            const randomDelayMs = getRandomReplyDelayMs();
+            // 首次发布心迹后：5分钟到1小时之间的随机数值
+            const initialDelayMs = getHeartInitialPostDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === newMoment.id);
                 if (mTarget) {
@@ -1596,7 +1611,7 @@
                         renderHeartMomentsList();
                     }
                 }
-            }, randomDelayMs);
+            }, initialDelayMs);
         }
 
         function renderHeartMomentsList() {
@@ -1725,7 +1740,8 @@
             saveData();
             renderHeartMomentsList();
 
-            const randomDelayMs = getRandomReplyDelayMs();
+            // 当你回复他以后：回复速度在1分钟到10分钟之内的一个随机数值
+            const replyDelayMs = getHeartCommentReplyDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === momentId);
                 if (mTarget) {
@@ -1743,7 +1759,7 @@
                         renderHeartMomentsList();
                     }
                 }
-            }, randomDelayMs);
+            }, replyDelayMs);
         }
 
         function replyToComment(momentId, commentId, targetAuthor) {
@@ -1766,7 +1782,8 @@
             saveData();
             renderHeartMomentsList();
 
-            const randomDelayMs = getRandomReplyDelayMs();
+            // 后续对话回复：1分钟到10分钟之内
+            const replyDelayMs = getHeartCommentReplyDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === momentId);
                 if (mTarget) {
@@ -1786,10 +1803,10 @@
                     saveData();
                     renderHeartMomentsList();
                 }
-            }, randomDelayMs);
+            }, replyDelayMs);
         }
 
-        // --- 3. 字库模块（四栏完美命名：字卡、动作、心情、表情；心情模式与字卡一致） ---
+        // --- 3. 字库模块（四栏完全统一：字卡、动作、心情、表情，均具备搜索、批量添加、修改、删除） ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -1828,6 +1845,7 @@
                 updateCardList();
             } else if (currentLibTab === 'actions') {
                 area.innerHTML = `
+                    <input type="text" id="searchActionInput" placeholder="搜索动作..." oninput="filterActions()">
                     <textarea id="batchActionInput" placeholder="批量添加动作（每行一条动作描述，如：轻轻靠在了他的肩上）"></textarea>
                     <div style="display:flex; gap:8px;">
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchActions()">添加/导入动作</button>
@@ -1851,14 +1869,136 @@
                 area.innerHTML = `
                     <div style="font-weight:bold; font-size:13px;">表情包库管理：</div>
                     <input type="file" accept="image/*" multiple onchange="uploadEmojisFromLib(event)">
-                    <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${settings.emojis ? settings.emojis.length : 0} 个表情</div>
-                    <div id="emojiManageList" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+                    <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${settings.emojis ? settings.emojis.length : 0} 个表情：</div>
+                    <div id="itemContainer" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
                 `;
-                renderEmojiManageList();
+                updateEmojiList();
             }
         }
 
-        // --- 心情短语列表管理（与字卡完全一致） ---
+        // --- 字卡库逻辑 ---
+        function updateCardList(filteredList = cardLibrary) {
+            const listContainer = document.getElementById('itemContainer');
+            const countEl = document.getElementById('cardCount');
+            if(!listContainer || !countEl) return;
+            countEl.innerText = filteredList.length;
+            listContainer.innerHTML = '';
+            
+            filteredList.forEach(card => {
+                const item = document.createElement('div');
+                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
+                item.innerHTML = `
+                    <div style="flex:1; padding-right:8px; word-break:break-all;">${card.content}</div>
+                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editCard(${card.id})">修改</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteCard(${card.id})">删除</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function filterCards() {
+            const kw = document.getElementById('searchInput').value.trim();
+            updateCardList(cardLibrary.filter(c => c.content.includes(kw)));
+        }
+
+        function addBatchCards() {
+            const text = document.getElementById('batchInput').value.trim();
+            if (!text) return;
+            let addedCount = 0;
+            text.split('\n').forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                const exists = cardLibrary.some(c => c.content === line);
+                if (!exists) {
+                    cardLibrary.push({ id: Date.now() + Math.random(), content: line });
+                    addedCount++;
+                }
+            });
+            saveData();
+            updateCardList();
+            alert(`成功添加新字卡 ${addedCount} 条！`);
+        }
+
+        function editCard(id) {
+            const card = cardLibrary.find(c => c.id === id);
+            if (!card) return;
+            const newContent = prompt('修改字卡内容：', card.content);
+            if (newContent === null) return;
+            card.content = newContent.trim();
+            saveData();
+            updateCardList();
+        }
+
+        function deleteCard(id) {
+            cardLibrary = cardLibrary.filter(c => c.id !== id);
+            saveData();
+            updateCardList();
+        }
+
+        // --- 动作库逻辑 ---
+        function updateActionList(filteredList = actionLibrary) {
+            const listContainer = document.getElementById('itemContainer');
+            const countEl = document.getElementById('actionCount');
+            if(!listContainer || !countEl) return;
+            countEl.innerText = filteredList.length;
+            listContainer.innerHTML = '';
+            
+            filteredList.forEach(act => {
+                const item = document.createElement('div');
+                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
+                item.innerHTML = `
+                    <div style="flex:1; padding-right:8px; word-break:break-all;">♥${act.content}♥</div>
+                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAction(${act.id})">修改</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAction(${act.id})">删除</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function filterActions() {
+            const kw = document.getElementById('searchActionInput').value.trim();
+            updateActionList(actionLibrary.filter(a => a.content.includes(kw)));
+        }
+
+        function addBatchActions() {
+            const text = document.getElementById('batchActionInput').value.trim();
+            if (!text) return;
+            let addedCount = 0;
+            text.split('\n').forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                const exists = actionLibrary.some(a => a.content === line);
+                if (!exists) {
+                    actionLibrary.push({ id: Date.now() + Math.random(), content: line });
+                    addedCount++;
+                }
+            });
+            saveData();
+            updateActionList();
+            alert(`成功添加新动作 ${addedCount} 条！`);
+        }
+
+        function editAction(id) {
+            const act = actionLibrary.find(a => a.id === id);
+            if (!act) return;
+            const newContent = prompt('修改动作内容：', act.content);
+            if (newContent === null) return;
+            act.content = newContent.trim();
+            saveData();
+            updateActionList();
+        }
+
+        function deleteAction(id) {
+            actionLibrary = actionLibrary.filter(a => a.id !== id);
+            saveData();
+            updateActionList();
+        }
+
+        // --- 心情短语库逻辑 ---
         function getMoodPhrasesArray() {
             const raw = settings.moodPhrases || '';
             return raw.split(/[,，\n]+/).map(s => s.trim()).filter(Boolean);
@@ -1935,6 +2075,37 @@
             updateMoodList();
         }
 
+        // --- 表情包库列表管理逻辑（与字卡一致，带缩略图与删除标签） ---
+        function updateEmojiList() {
+            const listContainer = document.getElementById('itemContainer');
+            const countEl = document.getElementById('emojiCountIndicator');
+            if(!listContainer) return;
+            
+            const emojis = settings.emojis || [];
+            if(countEl) countEl.innerText = `已添加 ${emojis.length} 个表情：`;
+            listContainer.innerHTML = '';
+
+            if (emojis.length === 0) {
+                listContainer.innerHTML = `<div style="font-size:12px; color:var(--sub-text); text-align:center; padding:10px;">暂无表情包</div>`;
+                return;
+            }
+
+            emojis.forEach((imgBase64, index) => {
+                const item = document.createElement('div');
+                item.style.cssText = "border:1px solid var(--border-color); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img src="${imgBase64}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
+                        <span style="font-size:12px; color:var(--sub-text);">表情 #${index + 1}</span>
+                    </div>
+                    <div>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLibEmoji(${index})">删除</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
         function uploadEmojisFromLib(event) {
             const files = event.target.files;
             if (!files.length) return;
@@ -1953,155 +2124,17 @@
                         ctx.drawImage(img, 0, 0, 150, 150);
                         settings.emojis.push(canvas.toDataURL('image/jpeg', 0.8));
                         saveData();
-                        const indicator = document.getElementById('emojiCountIndicator');
-                        if(indicator) indicator.innerText = `已添加 ${settings.emojis.length} 个表情`;
-                        renderEmojiManageList();
+                        updateEmojiList();
                     }
                 };
                 reader.readAsDataURL(file);
             }
         }
 
-        function renderEmojiManageList() {
-            const listEl = document.getElementById('emojiManageList');
-            if (!listEl) return;
-            listEl.innerHTML = '';
-            if (!settings.emojis || settings.emojis.length === 0) {
-                listEl.innerHTML = `<span style="font-size:11px; color:var(--sub-text);">暂无表情包</span>`;
-                return;
-            }
-            settings.emojis.forEach((imgBase64, index) => {
-                const wrap = document.createElement('div');
-                wrap.style.cssText = "position:relative; width:44px; height:44px;";
-                wrap.innerHTML = `
-                    <img src="${imgBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
-                    <button onclick="deleteLibEmoji(${index})" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; background:rgba(0,0,0,0.35); color:#fff; border:none; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="删除">×</button>
-                `;
-                listEl.appendChild(wrap);
-            });
-        }
-
         function deleteLibEmoji(index) {
             settings.emojis.splice(index, 1);
             saveData();
-            renderEmojiManageList();
-            const indicator = document.getElementById('emojiCountIndicator');
-            if(indicator) indicator.innerText = `已添加 ${settings.emojis.length} 个表情`;
-        }
-
-        function updateCardList(filteredList = cardLibrary) {
-            const listContainer = document.getElementById('itemContainer');
-            const countEl = document.getElementById('cardCount');
-            if(!listContainer || !countEl) return;
-            countEl.innerText = filteredList.length;
-            listContainer.innerHTML = '';
-            
-            filteredList.forEach(card => {
-                const item = document.createElement('div');
-                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
-                item.innerHTML = `
-                    <div style="flex:1; padding-right:8px; word-break:break-all;">${card.content}</div>
-                    <div style="display:flex; gap:4px; flex-shrink:0;">
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editCard(${card.id})">修改</button>
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteCard(${card.id})">删除</button>
-                    </div>
-                `;
-                listContainer.appendChild(item);
-            });
-        }
-
-        function updateActionList(filteredList = actionLibrary) {
-            const listContainer = document.getElementById('itemContainer');
-            const countEl = document.getElementById('actionCount');
-            if(!listContainer || !countEl) return;
-            countEl.innerText = filteredList.length;
-            listContainer.innerHTML = '';
-            
-            filteredList.forEach(act => {
-                const item = document.createElement('div');
-                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
-                item.innerHTML = `
-                    <div style="flex:1; padding-right:8px; word-break:break-all;">♥${act.content}♥</div>
-                    <div style="display:flex; gap:4px; flex-shrink:0;">
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAction(${act.id})">修改</button>
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAction(${act.id})">删除</button>
-                    </div>
-                `;
-                listContainer.appendChild(item);
-            });
-        }
-
-        function filterCards() {
-            const kw = document.getElementById('searchInput').value.trim();
-            updateCardList(cardLibrary.filter(c => c.content.includes(kw)));
-        }
-
-        function addBatchCards() {
-            const text = document.getElementById('batchInput').value.trim();
-            if (!text) return;
-            let addedCount = 0;
-            text.split('\n').forEach(line => {
-                line = line.trim();
-                if (!line) return;
-                const exists = cardLibrary.some(c => c.content === line);
-                if (!exists) {
-                    cardLibrary.push({ id: Date.now() + Math.random(), content: line });
-                    addedCount++;
-                }
-            });
-            saveData();
-            updateCardList();
-            alert(`成功添加新字卡 ${addedCount} 条！`);
-        }
-
-        function editCard(id) {
-            const card = cardLibrary.find(c => c.id === id);
-            if (!card) return;
-            const newContent = prompt('修改字卡内容：', card.content);
-            if (newContent === null) return;
-            card.content = newContent.trim();
-            saveData();
-            updateCardList();
-        }
-
-        function deleteCard(id) {
-            cardLibrary = cardLibrary.filter(c => c.id !== id);
-            saveData();
-            updateCardList();
-        }
-
-        function addBatchActions() {
-            const text = document.getElementById('batchActionInput').value.trim();
-            if (!text) return;
-            let addedCount = 0;
-            text.split('\n').forEach(line => {
-                line = line.trim();
-                if (!line) return;
-                const exists = actionLibrary.some(a => a.content === line);
-                if (!exists) {
-                    actionLibrary.push({ id: Date.now() + Math.random(), content: line });
-                    addedCount++;
-                }
-            });
-            saveData();
-            updateActionList();
-            alert(`成功添加新动作 ${addedCount} 条！`);
-        }
-
-        function editAction(id) {
-            const act = actionLibrary.find(a => a.id === id);
-            if (!act) return;
-            const newContent = prompt('修改动作内容：', act.content);
-            if (newContent === null) return;
-            act.content = newContent.trim();
-            saveData();
-            updateActionList();
-        }
-
-        function deleteAction(id) {
-            actionLibrary = actionLibrary.filter(a => a.id !== id);
-            saveData();
-            updateActionList();
+            updateEmojiList();
         }
 
         // --- 4. 锦书模块 ---
