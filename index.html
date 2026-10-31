@@ -249,7 +249,8 @@
             flex-direction: column;
             height: 100%;
             justify-content: space-between;
-            background-color: var(--chat-bg);
+            background-color: var(--card-bg);
+            background-image: var(--chat-bg);
             background-size: cover;
             background-position: center;
             padding: 10px;
@@ -625,7 +626,7 @@
             if (settings.chatBg) {
                 document.documentElement.style.setProperty('--chat-bg', `url(${settings.chatBg})`);
             } else {
-                document.documentElement.style.setProperty('--chat-bg', 'var(--card-bg)');
+                document.documentElement.style.setProperty('--chat-bg', 'none');
             }
         }
         applySettings();
@@ -1453,7 +1454,7 @@
             });
         }
 
-        // --- 5. 系统模块（改为和表情包一致的直观预览图 + 右上角灰色×删除小箭头） ---
+        // --- 5. 系统模块 ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
@@ -1528,7 +1529,7 @@
                 return;
             }
             const wrap = document.createElement('div');
-            wrap.style.cssText = "position:relative; width:52px; height:52px;";
+            wrap.style.cssText = key === 'chatBg' ? "position:relative; width:80px; height:52px;" : "position:relative; width:52px; height:52px;";
             wrap.innerHTML = `
                 <img src="${tempSettings[key]}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--border-color);">
                 <button onclick="clearSettingImage('${key}')" style="position:absolute; top:-6px; right:-6px; width:18px; height:18px; background:rgba(0,0,0,0.5); color:#fff; border:none; border-radius:50%; font-size:11px; display:flex; align-items:center; justify-content:center; cursor:pointer;">×</button>
@@ -1576,8 +1577,8 @@
                 img.src = e.target.result;
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 300;
-                    const MAX_HEIGHT = 300;
+                    const MAX_WIDTH = targetKey === 'chatBg' ? 800 : 300;
+                    const MAX_HEIGHT = targetKey === 'chatBg' ? 1200 : 300;
                     let width = img.width;
                     let height = img.height;
 
@@ -1648,7 +1649,7 @@
             settings.chatBg = tempSettings.chatBg;
             settings.emojis = tempSettings.emojis;
 
-            saveData();
+            saveData(); // saveData 内部会自动调用 applySettings() 实时刷新背景！
             alert('保存成功！');
             closeApp();
         }
