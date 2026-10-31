@@ -328,6 +328,9 @@
             line-height: 1.4;
             word-break: break-all;
             border: 1px solid var(--border-color);
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
         }
 
         .message-row.incoming .message-bubble { background-color: var(--bubble-bg); color: var(--text-color); }
@@ -335,6 +338,7 @@
 
         .chat-img-msg { max-width: 120px; border-radius: 8px; border: 1px solid var(--border-color); }
 
+        /* 绝对防御：强制长文本引用单行截断并锁死在气泡宽度内，绝不溢出遮挡 */
         .quoted-box {
             font-size: 11px;
             opacity: 0.8;
@@ -344,7 +348,10 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            width: 100%;
             max-width: 100%;
+            display: block;
+            box-sizing: border-box;
         }
 
         #replyPreviewBar {
@@ -1446,7 +1453,7 @@
             });
         }
 
-        // --- 5. 系统模块（彻底修复保存时头像/背景被覆盖的 Bug） ---
+        // --- 5. 系统模块 ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
@@ -1465,7 +1472,7 @@
                     <div class="setting-label">我的头像</div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'myAvatar', 'myAvatarStatus')" style="flex:1;">
-                        <span id="myAvatarStatus" style="font-size:11px; color:var(--sub-text);">${tempSettings.myAvatar ? '已设置头像' : ''}</span>
+                        <span id="myAvatarStatus" style="font-size:11px; color:#34c759;">${tempSettings.myAvatar ? '已设置头像 (待保存)' : ''}</span>
                         ${tempSettings.myAvatar ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'myAvatar\', \'myAvatarStatus\')">删除头像</button>' : ''}
                     </div>
                 </div>
@@ -1473,7 +1480,7 @@
                     <div class="setting-label">对方头像</div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'partnerAvatar', 'partnerAvatarStatus')" style="flex:1;">
-                        <span id="partnerAvatarStatus" style="font-size:11px; color:var(--sub-text);">${tempSettings.partnerAvatar ? '已设置头像' : ''}</span>
+                        <span id="partnerAvatarStatus" style="font-size:11px; color:#34c759;">${tempSettings.partnerAvatar ? '已设置头像 (待保存)' : ''}</span>
                         ${tempSettings.partnerAvatar ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'partnerAvatar\', \'partnerAvatarStatus\')">删除头像</button>' : ''}
                     </div>
                 </div>
@@ -1481,7 +1488,7 @@
                     <div class="setting-label">聊天背景图</div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'chatBg', 'chatBgStatus')" style="flex:1;">
-                        <span id="chatBgStatus" style="font-size:11px; color:var(--sub-text);">${tempSettings.chatBg ? '已设置背景' : ''}</span>
+                        <span id="chatBgStatus" style="font-size:11px; color:#34c759;">${tempSettings.chatBg ? '已设置背景 (待保存)' : ''}</span>
                         ${tempSettings.chatBg ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'chatBg\', \'chatBgStatus\')">删除背景</button>' : ''}
                     </div>
                 </div>
@@ -1512,7 +1519,6 @@
             tempSettings[key] = '';
             const statusEl = document.getElementById(statusId);
             if(statusEl) statusEl.innerText = '';
-            alert('已成功标记删除！记得点击下方的“保存修改”。');
             initSettings(document.getElementById('subPageContent'));
         }
 
@@ -1577,8 +1583,7 @@
                     
                     const statusEl = document.getElementById(statusId);
                     if(statusEl) statusEl.innerText = '已就绪 (待保存)';
-
-                    alert('图片已成功加载并优化！记得点击下方的“保存修改”。');
+                    
                     initSettings(document.getElementById('subPageContent'));
                 }
             };
@@ -1620,7 +1625,6 @@
             if(pName) tempSettings.partnerName = pName.value.trim();
             if(mPhrases) tempSettings.moodPhrases = mPhrases.value.trim();
 
-            // 彻底同步所有临时设置到正式设置中（包括头像和背景图）
             settings.myName = tempSettings.myName;
             settings.partnerName = tempSettings.partnerName;
             settings.moodPhrases = tempSettings.moodPhrases;
