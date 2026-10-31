@@ -1446,7 +1446,7 @@
             });
         }
 
-        // --- 5. 系统模块（修复上传图片后由于重新渲染导致文件选择被冲掉的 Bug） ---
+        // --- 5. 系统模块（彻底修复保存时头像/背景被覆盖的 Bug） ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
@@ -1508,12 +1508,11 @@
             renderEmojiManageList();
         }
 
-        // 清除头像或背景图（不整页刷新，避免破坏交互）
         function clearSettingImage(key, statusId) {
             tempSettings[key] = '';
             const statusEl = document.getElementById(statusId);
             if(statusEl) statusEl.innerText = '';
-            alert('已成功删除！记得点击下方的“保存修改”。');
+            alert('已成功标记删除！记得点击下方的“保存修改”。');
             initSettings(document.getElementById('subPageContent'));
         }
 
@@ -1543,7 +1542,6 @@
             renderEmojiManageList();
         }
 
-        // 优化压缩并存储图片（防止重绘导致输入框重置）
         function compressAndStoreImage(event, targetKey, statusId) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1622,7 +1620,15 @@
             if(pName) tempSettings.partnerName = pName.value.trim();
             if(mPhrases) tempSettings.moodPhrases = mPhrases.value.trim();
 
-            settings = JSON.parse(JSON.stringify(tempSettings));
+            // 彻底同步所有临时设置到正式设置中（包括头像和背景图）
+            settings.myName = tempSettings.myName;
+            settings.partnerName = tempSettings.partnerName;
+            settings.moodPhrases = tempSettings.moodPhrases;
+            settings.myAvatar = tempSettings.myAvatar;
+            settings.partnerAvatar = tempSettings.partnerAvatar;
+            settings.chatBg = tempSettings.chatBg;
+            settings.emojis = tempSettings.emojis;
+
             saveData();
             alert('保存成功！');
             closeApp();
