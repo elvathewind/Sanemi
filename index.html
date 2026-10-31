@@ -508,7 +508,7 @@
             border-radius: 8px;
         }
 
-        /* 表情包选择栏：紧凑排列、大小整齐 */
+        /* 表情包选择栏 */
         .emoji-picker {
             position: absolute;
             bottom: calc(100% + 6px);
@@ -862,12 +862,12 @@
                     `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%;">【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span></div>`;
             } else {
                 if (currentCallStatus === 'busy') {
-                    // 改为浅灰色，在黑背景下清晰可见
+                    // 只保留上面一行字，颜色、大小与忙线一致
                     body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px;">当前线路正忙请稍后再拨</div>`;
                 } else if (currentCallStatus === 'no_answer') {
-                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc;">网络不佳或暂时无法接通<br><span style="font-size:10px; color:#aaaaaa; margin-top:4px;">对方当前网络不佳或不在手机旁</span></div>`;
+                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px;">当前线路正忙请稍后再拨</div>`;
                 } else if (currentCallStatus === 'rejected') {
-                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#5f7e71; font-weight:bold; font-size:13px;">现在有点事，等下哦</div>`;
+                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px;">当前线路正忙请稍后再拨</div>`;
                 } else {
                     body.innerHTML = `<div style="color:#aaa; display:flex; justify-content:center; align-items:center; width:100%; height:100%;">通话已结束</div>`;
                 }
@@ -917,7 +917,6 @@
             checkPartnerRandomPoke();
         }
 
-        // 全局点击处理：用于收回表情包栏及右键菜单
         function handleGlobalChatClick(e) {
             closeAllContextMenus();
             const picker = document.getElementById('emojiPicker');
@@ -2124,7 +2123,7 @@
             updateEmojiList();
         }
 
-        // --- 3. 锦书模块（完美区分三类信件并删除了多余标题） ---
+        // --- 3. 锦书模块 ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
@@ -2175,7 +2174,9 @@
                         time: timeStr,
                         estTime: timeStr,
                         replyTimestamp: now,
-                        isRead: false
+                        isRead: false,
+                        partnerLetterTime: timeStr,
+                        myReplyToPartner: ''
                     });
 
                     localStorage.setItem('lastPartnerLetterTime', now);
@@ -2242,10 +2243,26 @@
                 time: timeStr,
                 estTime: estTimeStr,
                 replyTimestamp: now + randomDelay,
-                isRead: false
+                isRead: false,
+                replyTime: ''
             });
 
             document.getElementById('letterInput').value = '';
+            saveData();
+            updateLettersList();
+        }
+
+        function replyToPartnerLetter(id) {
+            const letter = letters.find(l => l.id === id);
+            if (!letter) return;
+            const text = prompt('给他的信写回信：', '');
+            if (!text || !text.trim()) return;
+
+            const d = new Date();
+            const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+
+            letter.myReplyToPartner = text.trim();
+            letter.myReplyTime = timeStr;
             saveData();
             updateLettersList();
         }
@@ -2273,41 +2290,61 @@
                         tempLib.splice(idx, 1);
                     }
                     item.reply = selected.join(' ');
+                    
+                    const d = new Date();
+                    item.replyTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                     item.isRead = false;
                     saveData();
                 }
 
-                if (item.reply && !item.isRead) {
+                if (item.reply && !item.isRead && !item.isPartnerInitiated) {
                     hasNewUnread = true;
                 }
             });
 
-            const unreceivedList = letters.filter(item => !item.reply).sort((a, b) => b.id - a.id);
-            const receivedList = letters.filter(item => item.reply).sort((a, b) => b.id - a.id);
-            const sortedLetters = [...unreceivedList, ...receivedList];
+            const sortedLetters = [...letters].sort((a, b) => b.id - a.id);
 
             sortedLetters.forEach(item => {
                 const div = document.createElement('div');
                 div.id = `letter-item-${item.id}`;
                 div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
                 
+                let dotColor = '';
+                let topTimeText = '';
                 let cardContentHTML = '';
 
                 if (item.isPartnerInitiated) {
-                    // 类型三：对方主动寄给你的信
+                    // 类型三：墨绿 #3b5c4e - 他主动写给我的信
+                    dotColor = '#3b5c4e';
+                    topTimeText = `写信时间: ${item.partnerLetterTime || item.time}`;
+                    let replySection = item.myReplyToPartner ? `
+                        <div style="border-top:1px dashed var(--border-color); padding-top:6px; margin-top:4px;">
+                            <strong>我的回信 (${item.myReplyTime}):</strong>
+                            <div style="max-height: 140px; overflow-y: auto; margin-top: 4px; white-space: pre-wrap;">${item.myReplyToPartner}</div>
+                        </div>
+                    ` : `
+                        <div style="margin-top:6px;">
+                            <button class="btn" style="padding:4px 10px; font-size:11px; background:var(--text-color); color:var(--card-bg);" onclick="replyToPartnerLetter(${item.id})">回复此信</button>
+                        </div>
+                    `;
+
                     cardContentHTML = `
-                        <div style="font-weight:bold; color:var(--text-color);">对方寄给你的信</div>
+                        <div style="font-weight:bold; color:var(--text-color);">对方主动写给你的信</div>
                         <div style="border-top:1px dashed var(--border-color); padding-top:6px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; color:var(--text-color);">${item.reply}</div>
+                        ${replySection}
                     `;
                 } else if (!item.reply) {
-                    // 类型一：我写的信（等待回信中）
+                    // 类型一：浅绿 #829e8d - 我已寄出，等待回信中
+                    dotColor = '#829e8d';
+                    topTimeText = `寄出时间: ${item.time} | 预计回信时间: ${item.estTime || '不久之后'}`;
                     cardContentHTML = `
-                        <div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>
                         <div><strong>我:</strong> ${item.myLetter}</div>
                         <div style="font-size:12px; color:var(--sub-text); font-style:italic; border-top:1px dashed var(--border-color); padding-top:6px;">真羡慕这封信，可以比我更早见到你</div>
                     `;
                 } else {
-                    // 类型二：我写的信 + 收到的回信
+                    // 类型二：草绿 #5f7e71 - 我已寄出，且已收到回信
+                    dotColor = '#5f7e71';
+                    topTimeText = `寄出时间: ${item.time} | 回信时间: ${item.replyTime || '已送达'}`;
                     cardContentHTML = `
                         <div><strong>我:</strong> ${item.myLetter}</div>
                         <div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
@@ -2319,7 +2356,10 @@
 
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:11px; color:var(--sub-text);">${item.isPartnerInitiated ? '收信时间' : '寄出时间'}: ${item.time}</span>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="width:8px; height:8px; background-color:${dotColor}; border-radius:50%; display:inline-block; flex-shrink:0;"></span>
+                            <span style="font-size:11px; color:var(--sub-text);">${topTimeText}</span>
+                        </div>
                         <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLetter(${item.id})">删除</button>
                     </div>
                     ${cardContentHTML}
@@ -2339,7 +2379,7 @@
                 letters = letters.filter(l => l.id !== id);
                 saveData();
                 updateLettersList();
-                if (activeFlyingEnvelopeEl && !letters.some(item => item.reply && !item.isRead)) {
+                if (activeFlyingEnvelopeEl && !letters.some(item => item.reply && !item.isRead && !item.isPartnerInitiated)) {
                     activeFlyingEnvelopeEl.remove();
                     activeFlyingEnvelopeEl = null;
                 }
