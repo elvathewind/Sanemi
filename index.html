@@ -284,6 +284,9 @@
             width: 100%;
             align-items: flex-end;
             gap: 8px;
+            position: relative;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .message-row.incoming { justify-content: flex-start; }
@@ -293,6 +296,7 @@
             display: flex;
             flex-direction: column;
             max-width: 75%;
+            position: relative;
         }
 
         .message-row.outgoing .message-content-wrapper { align-items: flex-end; }
@@ -330,6 +334,58 @@
         .message-row.outgoing .message-bubble { background-color: var(--my-bubble-bg); color: var(--my-bubble-text); }
 
         .chat-img-msg { max-width: 120px; border-radius: 8px; border: 1px solid var(--border-color); }
+
+        .quoted-box {
+            font-size: 11px;
+            opacity: 0.8;
+            border-left: 2px solid currentColor;
+            padding-left: 6px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        #replyPreviewBar {
+            display: none;
+            font-size: 11px;
+            color: var(--sub-text);
+            background: rgba(120,120,120,0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .context-menu {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 6px;
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            z-index: 100;
+            white-space: nowrap;
+        }
+        .context-menu button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 11px;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .context-menu button:hover {
+            background: var(--app-icon-bg);
+        }
 
         .chat-bottom-area {
             display: flex;
@@ -541,6 +597,7 @@
         };
 
         let tempSettings = JSON.parse(JSON.stringify(settings));
+        let currentReplyingTo = null;
 
         function saveData() {
             try {
@@ -571,8 +628,6 @@
             if(!grid) return;
             grid.innerHTML = '';
             
-            // 检查锦书是否有未读回信（必须看过去且未读）
-            const now = Date.now();
             const hasNewReadyLetter = letters.some(item => item.reply && !item.isRead);
             settings.hasUnreadLetter = hasNewReadyLetter;
 
@@ -615,9 +670,9 @@
             }
             else if (appId === 'cards') initCards(contentEl);
             else if (appId === 'letters') {
-                // 当点进锦书后，把所有已回信的标记为已读
                 letters.forEach(item => { if (item.reply) item.isRead = true; });
                 saveData();
+                renderDesktop();
                 initLetters(contentEl);
             }
             else if (appId === 'anniversary') initAnniversary(contentEl);
@@ -635,9 +690,9 @@
             renderDesktop();
         }
 
-        // 修改点 2：心情单条显示，每小时随机更换一次
         function getPartnerMood() {
-            const phrases = (settings.moodPhrases || '状态良好').split(',').map(s => s.trim()).filter(Boolean);
+            const rawText = settings.moodPhrases || '状态良好';
+            const phrases = rawText.split(/[,，\n]+/).map(s => s.trim()).filter(Boolean);
             if (phrases.length === 0) return '状态良好';
             const hourIndex = Math.floor(Date.now() / (1000 * 60 * 60)) % phrases.length;
             return phrases[hourIndex];
@@ -645,14 +700,19 @@
 
         // --- 1. 蜜语模块 ---
         function initChat(container) {
+            currentReplyingTo = null;
             container.innerHTML = `
-                <div class="chat-container" id="chatContainer">
+                <div class="chat-container" id="chatContainer" onclick="closeAllContextMenus(event)">
                     <div class="mood-bar">
                         <span><strong>${getPartnerMood()}</strong></span>
                     </div>
                     <div class="chat-messages" id="chatMessages"></div>
                     
                     <div class="chat-bottom-area">
+                        <div id="replyPreviewBar">
+                            <span id="replyPreviewText" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:85%;"></span>
+                            <span style="cursor:pointer; font-weight:bold; padding:0 4px;" onclick="cancelReplyQuote()">✕</span>
+                        </div>
                         <div class="typing-indicator" id="typingIndicator"></div>
                         <div class="chat-input-area">
                             <button class="icon-btn" style="width:32px;height:32px;flex-shrink:0;" title="视频" onclick="startVideoCall()">
@@ -869,7 +929,6 @@
         function checkPartnerActiveMessage() {
             if (Math.random() < 0.1 && cardLibrary.length > 0) {
                 setTimeout(() => {
-                    // 修改点 1：随机从字卡库中选择 1 到 3 条
                     const maxCount = Math.min(cardLibrary.length, 3);
                     const count = Math.floor(Math.random() * maxCount) + 1;
                     let tempLib = [...cardLibrary];
@@ -903,7 +962,9 @@
                     img.src = imgBase64;
                     img.className = 'emoji-item';
                     img.onclick = () => {
-                        chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'image', content: imgBase64 });
+                        chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'image', content: imgBase64, quoted: currentReplyingTo });
+                        currentReplyingTo = null;
+                        cancelReplyQuote();
                         saveData();
                         updateChatMessages();
                         picker.remove();
@@ -931,7 +992,26 @@
                 
                 const avatarHTML = `<div class="avatar-box">${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}</div>`;
                 
-                let contentHTML = msg.type === 'image' ? `<img src="${msg.content}" class="chat-img-msg">` : `<div class="message-bubble">${msg.content}</div>`;
+                let quotedHTML = msg.quoted ? `<div class="quoted-box">${msg.quoted}</div>` : '';
+                let contentHTML = msg.type === 'image' ? `<div class="message-bubble">${quotedHTML}<img src="${msg.content}" class="chat-img-msg"></div>` : `<div class="message-bubble">${quotedHTML}${msg.content}</div>`;
+
+                let pressTimer = null;
+                const startPress = (e) => {
+                    if(e.target.closest('.context-menu')) return;
+                    pressTimer = setTimeout(() => {
+                        showContextMenu(row, msg.id, msg.type === 'text' ? msg.content : '[图片]');
+                    }, 600);
+                };
+                const cancelPress = () => {
+                    if(pressTimer) clearTimeout(pressTimer);
+                };
+
+                row.ontouchstart = startPress;
+                row.ontouchend = cancelPress;
+                row.ontouchmove = cancelPress;
+                row.onmousedown = startPress;
+                row.onmouseup = cancelPress;
+                row.onmouseleave = cancelPress;
 
                 if (msg.sender === 'incoming') {
                     row.innerHTML = `${avatarHTML}<div class="message-content-wrapper"><div class="message-sender-name">${name}</div>${contentHTML}</div>`;
@@ -943,13 +1023,57 @@
             container.scrollTop = container.scrollHeight;
         }
 
+        function showContextMenu(rowElement, msgId, textContent) {
+            closeAllContextMenus();
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.innerHTML = `
+                <button onclick="prepareReplyQuote('${escapeHtml(textContent)}')">引用</button>
+                <button onclick="deleteChatMessage(${msgId})" style="color:var(--sub-text);">删除</button>
+            `;
+            rowElement.appendChild(menu);
+        }
+
+        function closeAllContextMenus(e) {
+            document.querySelectorAll('.context-menu').forEach(m => m.remove());
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function prepareReplyQuote(text) {
+            currentReplyingTo = text;
+            const bar = document.getElementById('replyPreviewBar');
+            const previewText = document.getElementById('replyPreviewText');
+            if(bar && previewText) {
+                previewText.innerText = text;
+                bar.style.display = 'flex';
+            }
+            closeAllContextMenus();
+        }
+
+        function cancelReplyQuote() {
+            currentReplyingTo = null;
+            const bar = document.getElementById('replyPreviewBar');
+            if(bar) bar.style.display = 'none';
+        }
+
+        function deleteChatMessage(id) {
+            chatMessages = chatMessages.filter(m => m.id !== id);
+            saveData();
+            updateChatMessages();
+        }
+
         function sendUserMessage() {
             const input = document.getElementById('chatInput');
             if(!input) return;
             const text = input.value.trim();
             if (!text) return;
 
-            chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'text', content: text });
+            chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'text', content: text, quoted: currentReplyingTo });
+            currentReplyingTo = null;
+            cancelReplyQuote();
             input.value = '';
             saveData();
             updateChatMessages();
@@ -984,7 +1108,6 @@
                     chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
                 }
 
-                // 修改点 1：回复时随机从字卡库中选择 1 到 3 条
                 const maxCount = Math.min(cardLibrary.length, 3);
                 const count = Math.floor(Math.random() * maxCount) + 1;
                 let tempLib = [...cardLibrary];
@@ -995,7 +1118,13 @@
                     tempLib.splice(randomIndex, 1);
                 }
 
-                chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' ') });
+                let partnerQuoted = null;
+                const lastOutgoing = [...chatMessages].reverse().find(m => m.sender === 'outgoing' && m.type === 'text');
+                if (lastOutgoing && Math.random() < 0.3) {
+                    partnerQuoted = lastOutgoing.content;
+                }
+
+                chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' '), quoted: partnerQuoted });
                 saveData();
                 updateChatMessages();
             }, delayMs);
@@ -1101,8 +1230,8 @@
                     <textarea id="letterInput" placeholder="写下你的心事与信件..."></textarea>
                     <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
                 </div>
-                <div style="font-weight:bold; margin-top:10px;">信箱记录：</div>
-                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
+                <div style="font-weight:bold; margin-top:10px;">信箱记录（长按信件可删除）：</div>
+                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer" onclick="closeAllContextMenus(event)"></div>
                 <div style="text-align:center; font-size:12px; color:var(--sub-text); font-style:italic; margin-top:6px;">云中谁寄锦书来</div>
             `;
             updateLettersList();
@@ -1130,7 +1259,7 @@
                 time: timeStr,
                 estTime: estTimeStr,
                 replyTimestamp: now + randomDelay,
-                isRead: false // 新增已读状态
+                isRead: false
             });
 
             document.getElementById('letterInput').value = '';
@@ -1160,12 +1289,12 @@
                         tempLib.splice(idx, 1);
                     }
                     item.reply = selected.join(' ');
-                    item.isRead = false; // 刚生成回信时标记为未读，这样返回桌面时就会触发红点
+                    item.isRead = false;
                     saveData();
                 }
 
                 const div = document.createElement('div');
-                div.style.cssText = "border:1px solid var(--border-color); padding:12px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px;";
+                div.style.cssText = "border:1px solid var(--border-color); padding:12px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; position:relative; user-select:none;";
                 
                 let replyStatus = item.reply ? 
                     `<div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color); white-space: pre-wrap;"><strong>回信：</strong>\n${item.reply}</div>` : 
@@ -1177,8 +1306,40 @@
                     <div><strong>我:</strong> ${item.myLetter}</div>
                     ${replyStatus}
                 `;
+
+                let letterTimer = null;
+                const startLPress = (e) => {
+                    if(e.target.closest('.context-menu')) return;
+                    letterTimer = setTimeout(() => {
+                        showLetterContextMenu(div, item.id);
+                    }, 600);
+                };
+                const cancelLPress = () => { if(letterTimer) clearTimeout(letterTimer); };
+
+                div.ontouchstart = startLPress;
+                div.ontouchend = cancelLPress;
+                div.ontouchmove = cancelLPress;
+                div.onmousedown = startLPress;
+                div.onmouseup = cancelLPress;
+                div.onmouseleave = cancelLPress;
+
                 container.appendChild(div);
             });
+        }
+
+        function showLetterContextMenu(divElement, letterId) {
+            closeAllContextMenus();
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.innerHTML = `<button onclick="deleteLetter(${letterId})" style="color:var(--sub-text);">删除此信</button>`;
+            divElement.appendChild(menu);
+        }
+
+        function deleteLetter(id) {
+            letters = letters.filter(l => l.id !== id);
+            saveData();
+            updateLettersList();
+            renderDesktop();
         }
 
         // --- 4. 良辰模块 ---
@@ -1285,11 +1446,11 @@
             });
         }
 
-        // --- 5. 系统模块 ---
+        // --- 5. 系统模块（修复上传图片后由于重新渲染导致文件选择被冲掉的 Bug） ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
-                    <div class="setting-label">心情短语 (用逗号分隔)</div>
+                    <div class="setting-label">心情短语 (用逗号或换行分隔)</div>
                     <textarea id="set_moodPhrases">${tempSettings.moodPhrases || ''}</textarea>
                 </div>
                 <div class="setting-group">
@@ -1302,20 +1463,33 @@
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">我的头像</div>
-                    <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'myAvatar')">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'myAvatar', 'myAvatarStatus')" style="flex:1;">
+                        <span id="myAvatarStatus" style="font-size:11px; color:var(--sub-text);">${tempSettings.myAvatar ? '已设置头像' : ''}</span>
+                        ${tempSettings.myAvatar ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'myAvatar\', \'myAvatarStatus\')">删除头像</button>' : ''}
+                    </div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">对方头像</div>
-                    <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'partnerAvatar')">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'partnerAvatar', 'partnerAvatarStatus')" style="flex:1;">
+                        <span id="partnerAvatarStatus" style="font-size:11px; color:var(--sub-text);">${tempSettings.partnerAvatar ? '已设置头像' : ''}</span>
+                        ${tempSettings.partnerAvatar ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'partnerAvatar\', \'partnerAvatarStatus\')">删除头像</button>' : ''}
+                    </div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">聊天背景图</div>
-                    <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'chatBg')">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'chatBg', 'chatBgStatus')" style="flex:1;">
+                        <span id="chatBgStatus" style="font-size:11px; color:var(--sub-text);">${tempSettings.chatBg ? '已设置背景' : ''}</span>
+                        ${tempSettings.chatBg ? '<button class="btn" style="padding:6px 12px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="clearSettingImage(\'chatBg\', \'chatBgStatus\')">删除背景</button>' : ''}
+                    </div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">添加表情包</div>
                     <input type="file" accept="image/*" multiple onchange="uploadEmojis(event)">
                     <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${tempSettings.emojis ? tempSettings.emojis.length : 0} 个表情</div>
+                    <div id="emojiManageList" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">数据恢复与备份</div>
@@ -1331,9 +1505,46 @@
                     <button class="btn" style="flex:1; background-color:transparent; border:1px solid var(--border-color); color:var(--sub-text);" onclick="cancelSettingsChanges()">取消修改</button>
                 </div>
             `;
+            renderEmojiManageList();
         }
 
-        function compressAndStoreImage(event, targetKey) {
+        // 清除头像或背景图（不整页刷新，避免破坏交互）
+        function clearSettingImage(key, statusId) {
+            tempSettings[key] = '';
+            const statusEl = document.getElementById(statusId);
+            if(statusEl) statusEl.innerText = '';
+            alert('已成功删除！记得点击下方的“保存修改”。');
+            initSettings(document.getElementById('subPageContent'));
+        }
+
+        function renderEmojiManageList() {
+            const listEl = document.getElementById('emojiManageList');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            if (!tempSettings.emojis || tempSettings.emojis.length === 0) {
+                listEl.innerHTML = `<span style="font-size:11px; color:var(--sub-text);">暂无表情包</span>`;
+                return;
+            }
+            tempSettings.emojis.forEach((imgBase64, index) => {
+                const wrap = document.createElement('div');
+                wrap.style.cssText = "position:relative; width:44px; height:44px;";
+                wrap.innerHTML = `
+                    <img src="${imgBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
+                    <button onclick="deleteTempEmoji(${index})" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; background:rgba(0,0,0,0.35); color:#fff; border:none; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;">×</button>
+                `;
+                listEl.appendChild(wrap);
+            });
+        }
+
+        function deleteTempEmoji(index) {
+            tempSettings.emojis.splice(index, 1);
+            const indicator = document.getElementById('emojiCountIndicator');
+            if(indicator) indicator.innerText = `已添加 ${tempSettings.emojis.length} 个表情`;
+            renderEmojiManageList();
+        }
+
+        // 优化压缩并存储图片（防止重绘导致输入框重置）
+        function compressAndStoreImage(event, targetKey, statusId) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -1365,7 +1576,12 @@
                     ctx.drawImage(img, 0, 0, width, height);
                     
                     tempSettings[targetKey] = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    const statusEl = document.getElementById(statusId);
+                    if(statusEl) statusEl.innerText = '已就绪 (待保存)';
+
                     alert('图片已成功加载并优化！记得点击下方的“保存修改”。');
+                    initSettings(document.getElementById('subPageContent'));
                 }
             };
             reader.readAsDataURL(file);
@@ -1390,6 +1606,7 @@
                         tempSettings.emojis.push(canvas.toDataURL('image/jpeg', 0.8));
                         const indicator = document.getElementById('emojiCountIndicator');
                         if(indicator) indicator.innerText = `已添加 ${tempSettings.emojis.length} 个表情`;
+                        renderEmojiManageList();
                     }
                 };
                 reader.readAsDataURL(file);
@@ -1417,7 +1634,6 @@
             closeApp();
         }
 
-        // 关于下载文件的解答与优化：
         function exportData() {
             const backupData = { cardLibrary, chatMessages, letters, anniversaries, settings };
             const jsonString = JSON.stringify(backupData, null, 2);
@@ -1432,7 +1648,6 @@
             document.body.removeChild(downloadAnchor);
             URL.revokeObjectURL(url);
             
-            // 贴心弹窗指引：告诉你它去哪了
             alert('备份已生成！在弹出的提示中点击“下载”后，文件会自动保存在手机自带的【文件 (Files)】App 中的【下载 (Downloads)】或【iCloud 云盘】文件夹里哦！');
         }
 
