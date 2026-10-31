@@ -412,6 +412,7 @@
             border-radius: 8px;
             margin-bottom: max(env(safe-area-inset-bottom), 6px);
             opacity: 0.95;
+            position: relative;
         }
 
         .chat-input-area {
@@ -428,7 +429,7 @@
             padding-left: 4px;
         }
 
-        /* 视频通话悬浮窗（绝对居中布局） */
+        /* 视频通话悬浮窗 */
         .video-modal {
             position: absolute;
             top: 60px;
@@ -507,29 +508,35 @@
             border-radius: 8px;
         }
 
+        /* 表情包选择栏：紧凑排列、大小整齐 */
         .emoji-picker {
             position: absolute;
-            bottom: 60px;
-            left: 10px;
-            right: 10px;
+            bottom: calc(100% + 6px);
+            left: 0;
+            right: 0;
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 10px;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            max-height: 150px;
+            gap: 10px;
+            max-height: 180px;
             overflow-y: auto;
-            z-index: 50;
+            z-index: 100;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
         }
         .emoji-item {
-            width: 40px;
-            height: 40px;
-            border-radius: 6px;
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
             object-fit: cover;
             cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .emoji-item:active {
+            transform: scale(0.95);
         }
 
         .setting-group {
@@ -855,12 +862,11 @@
                     `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%;">【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span></div>`;
             } else {
                 if (currentCallStatus === 'busy') {
-                    // 无引号，且在小视频正中心
-                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px;">当前线路正忙请稍后再拨</div>`;
+                    // 改为浅灰色，在黑背景下清晰可见
+                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px;">当前线路正忙请稍后再拨</div>`;
                 } else if (currentCallStatus === 'no_answer') {
-                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px;">网络不佳或暂时无法接通<br><span style="font-size:10px; color:#aaa; margin-top:4px;">对方当前网络不佳或不在手机旁</span></div>`;
+                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc;">网络不佳或暂时无法接通<br><span style="font-size:10px; color:#aaaaaa; margin-top:4px;">对方当前网络不佳或不在手机旁</span></div>`;
                 } else if (currentCallStatus === 'rejected') {
-                    // 无引号，松绿色，在小视频正中心
                     body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#5f7e71; font-weight:bold; font-size:13px;">现在有点事，等下哦</div>`;
                 } else {
                     body.innerHTML = `<div style="color:#aaa; display:flex; justify-content:center; align-items:center; width:100%; height:100%;">通话已结束</div>`;
@@ -876,13 +882,13 @@
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
-                <div class="chat-container" id="chatContainer" onclick="closeAllContextMenus(event)">
+                <div class="chat-container" id="chatContainer" onclick="handleGlobalChatClick(event)">
                     <div class="mood-bar">
                         <span><strong>${getPartnerMood()}</strong></span>
                     </div>
                     <div class="chat-messages" id="chatMessages"></div>
                     
-                    <div class="chat-bottom-area">
+                    <div class="chat-bottom-area" id="chatBottomArea">
                         <div id="replyPreviewBar">
                             <span id="replyPreviewText" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:85%;"></span>
                             <span style="cursor:pointer; font-weight:bold; padding:0 4px;" onclick="cancelReplyQuote()">✕</span>
@@ -893,7 +899,7 @@
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
                             </button>
                             <input type="text" id="chatInput" placeholder="输入消息..." onkeydown="if(event.key==='Enter') { event.preventDefault(); sendUserMessage(); }">
-                            <button class="icon-btn" style="width:32px;height:32px;flex-shrink:0;" title="表情" onclick="toggleEmojiPicker()">
+                            <button class="icon-btn" style="width:32px;height:32px;flex-shrink:0;" title="表情" id="emojiToggleBtn" onclick="toggleEmojiPicker(event)">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path></svg>
                             </button>
                             <button class="btn" style="padding:6px 12px;flex-shrink:0;" onclick="sendUserMessage()">发送</button>
@@ -909,6 +915,16 @@
 
             checkPartnerInitiateCall();
             checkPartnerRandomPoke();
+        }
+
+        // 全局点击处理：用于收回表情包栏及右键菜单
+        function handleGlobalChatClick(e) {
+            closeAllContextMenus();
+            const picker = document.getElementById('emojiPicker');
+            const toggleBtn = document.getElementById('emojiToggleBtn');
+            if (picker && !picker.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
+                picker.remove();
+            }
         }
 
         function sendUserMessage() {
@@ -1174,17 +1190,19 @@
             renderVideoBodyContent();
         }
 
-        function toggleEmojiPicker() {
+        function toggleEmojiPicker(e) {
+            e.stopPropagation();
             let picker = document.getElementById('emojiPicker');
             if (picker) { picker.remove(); return; }
-            const container = document.getElementById('chatContainer');
-            if(!container) return;
+            const bottomArea = document.getElementById('chatBottomArea');
+            if(!bottomArea) return;
+            
             picker = document.createElement('div');
             picker.id = 'emojiPicker';
             picker.className = 'emoji-picker';
             
             if (!settings.emojis || settings.emojis.length === 0) {
-                picker.innerHTML = `<div style="grid-column: span 4; font-size:12px; text-align:center; color:var(--sub-text);">暂无表情，请在【字库】添加</div>`;
+                picker.innerHTML = `<div style="grid-column: span 4; font-size:12px; text-align:center; color:var(--sub-text); padding:10px;">暂无表情，请在【字库】添加</div>`;
             } else {
                 settings.emojis.forEach((imgBase64) => {
                     const img = document.createElement('img');
@@ -1202,7 +1220,7 @@
                     picker.appendChild(img);
                 });
             }
-            container.appendChild(picker);
+            bottomArea.appendChild(picker);
         }
 
         function updateChatMessages() {
@@ -1390,7 +1408,7 @@
             }
         }
 
-        // --- 2. 心迹模块（心迹字号和评论字号完全一致为 var(--font-size)） ---
+        // --- 2. 心迹模块 ---
         function initHeartMoments(container) {
             checkAndProcessPendingHeartInteractions(); 
             selectedHeartImg = '';
@@ -1651,7 +1669,6 @@
                     </div>
                 `;
 
-                // 统一心迹正文字号为 var(--font-size)，与评论区字号完全一样
                 let textHTML = moment.content ? `<div style="font-size:var(--font-size); word-break:break-all; padding-left:36px;">${moment.content}</div>` : '';
                 let imgHTML = moment.image ? `<div style="padding-left:36px; margin-top:4px;"><img src="${moment.image}" style="max-width:140px; max-height:140px; border-radius:6px; border:1px solid var(--border-color); object-fit:cover;"></div>` : '';
 
@@ -1660,7 +1677,6 @@
                     likesHTML = `<div style="font-size:11px; color:#007aff; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
-                // 评论与子回复统一字号
                 let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px; max-height: 160px; overflow-y: auto;" id="comments-box-${moment.id}">`;
                 if (moment.comments && moment.comments.length > 0) {
                     moment.comments.forEach(com => {
@@ -2108,20 +2124,17 @@
             updateEmojiList();
         }
 
-        // --- 3. 锦书模块 ---
+        // --- 3. 锦书模块（完美区分三类信件并删除了多余标题） ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
             checkAndGeneratePartnerInitiatedLetter();
             container.innerHTML = `
-                <div>
-                    <div style="font-weight:bold; margin-bottom:6px;">写一封信：</div>
-                    <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 240px;"></textarea>
+                <div style="padding-bottom:8px;">
+                    <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 220px;"></textarea>
                     <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
                 </div>
-                <div style="font-weight:bold; margin-top:10px;">信箱记录：</div>
-                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
-                <div style="text-align:center; font-size:12px; color:var(--sub-text); font-style:italic; margin-top:6px;">云中谁寄锦书来</div>
+                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-top:4px;" id="letterListContainer"></div>
             `;
             checkAndSpawnFlyingEnvelope(container);
             updateLettersList();
@@ -2157,7 +2170,7 @@
                     letters.push({
                         id: now,
                         isPartnerInitiated: true,
-                        myLetter: '（对方主动寄给你的信）',
+                        myLetter: '',
                         reply: partnerLetterContent,
                         time: timeStr,
                         estTime: timeStr,
@@ -2242,7 +2255,7 @@
             if (!container) return;
             container.innerHTML = '';
             if (letters.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:var(--sub-text); font-size:13px;">暂无信件记录</div>';
+                container.innerHTML = '<div style="text-align:center; color:var(--sub-text); font-size:13px; padding:20px;">暂无信件记录</div>';
                 return;
             }
 
@@ -2278,25 +2291,38 @@
                 div.id = `letter-item-${item.id}`;
                 div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
                 
-                let replyStatus = item.reply ? 
-                    `<div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
-                        <strong>${item.isPartnerInitiated ? '来信内容：' : '回信：'}</strong>
-                        <div style="max-height: 180px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap;">${item.reply}</div>
-                    </div>` : 
-                    `<div style="font-size:12px; color:var(--sub-text); font-style:italic;">真羡慕这封信，可以比我更早见到你</div>`;
+                let cardContentHTML = '';
 
-                let senderDisplay = item.isPartnerInitiated ? 
-                    `<div><strong>对方寄给你的信</strong></div>` : 
-                    `<div><strong>我:</strong> ${item.myLetter}</div>`;
+                if (item.isPartnerInitiated) {
+                    // 类型三：对方主动寄给你的信
+                    cardContentHTML = `
+                        <div style="font-weight:bold; color:var(--text-color);">对方寄给你的信</div>
+                        <div style="border-top:1px dashed var(--border-color); padding-top:6px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; color:var(--text-color);">${item.reply}</div>
+                    `;
+                } else if (!item.reply) {
+                    // 类型一：我写的信（等待回信中）
+                    cardContentHTML = `
+                        <div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>
+                        <div><strong>我:</strong> ${item.myLetter}</div>
+                        <div style="font-size:12px; color:var(--sub-text); font-style:italic; border-top:1px dashed var(--border-color); padding-top:6px;">真羡慕这封信，可以比我更早见到你</div>
+                    `;
+                } else {
+                    // 类型二：我写的信 + 收到的回信
+                    cardContentHTML = `
+                        <div><strong>我:</strong> ${item.myLetter}</div>
+                        <div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
+                            <strong>回信：</strong>
+                            <div style="max-height: 180px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap;">${item.reply}</div>
+                        </div>
+                    `;
+                }
 
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:11px; color:var(--sub-text);">${item.isPartnerInitiated ? '收信时间' : '寄出时间'}: ${item.time}</span>
                         <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLetter(${item.id})">删除</button>
                     </div>
-                    ${!item.isPartnerInitiated ? `<div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>` : ''}
-                    ${senderDisplay}
-                    ${replyStatus}
+                    ${cardContentHTML}
                 `;
 
                 container.appendChild(div);
