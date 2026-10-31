@@ -559,6 +559,22 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        /* 粉色泡泡特效 */
+        @keyframes floatBubble {
+            0% { transform: translateY(0) scale(0.6); opacity: 1; }
+            100% { transform: translateY(-60px) scale(1.2); opacity: 0; }
+        }
+        .pink-bubble {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #ffb6c1;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: floatBubble 0.8s ease-out forwards;
+            z-index: 99;
+        }
     </style>
 </head>
 <body>
@@ -630,7 +646,8 @@
             partnerName: '对方',
             chatBg: '',
             hasUnreadLetter: false,
-            replyDelay: '2-5',
+            replyDelayMin: '5',
+            replyDelayMax: '30',
             moodPhrases: '今天心情不错, 想你了, 正在发呆, 喝杯咖啡吧',
             emojis: [],
             myBubbleBg: '',
@@ -641,6 +658,7 @@
 
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
+        let selectedHeartImg = ''; // 用户发布朋友圈时选中的图片
 
         function saveData() {
             try {
@@ -733,7 +751,7 @@
             if (appId === 'chat') {
                 initChat(contentEl);
                 checkPartnerInitiateCall();
-                checkPartnerRandomPoke(); // 每次打开蜜语 10% 概率触发对方拍你
+                checkPartnerRandomPoke();
             }
             else if (appId === 'heartMoments') initHeartMoments(contentEl);
             else if (appId === 'cards') initCards(contentEl);
@@ -770,6 +788,7 @@
         let callTimerInterval = null;
         let callSeconds = 0;
         let currentCallStatus = 'idle';
+        let callAutoCloseTimer = null;
 
         function startCallTimer() {
             stopCallTimer();
@@ -791,12 +810,21 @@
                 clearInterval(callTimerInterval);
                 callTimerInterval = null;
             }
+            if (callAutoCloseTimer) {
+                clearTimeout(callAutoCloseTimer);
+                callAutoCloseTimer = null;
+            }
         }
 
         function renderVideoBodyContent() {
             const body = document.getElementById('videoBodyContent');
             if(!body) return;
             const partnerNameStr = (settings.partnerName || '对方');
+
+            if (callAutoCloseTimer) {
+                clearTimeout(callAutoCloseTimer);
+                callAutoCloseTimer = null;
+            }
 
             if (currentCallStatus === 'connecting') {
                 body.innerHTML = settings.partnerAvatar ? 
@@ -821,18 +849,24 @@
                 body.innerHTML = settings.partnerAvatar ? 
                     `<img src="${settings.partnerAvatar}"><div id="callTimerDisplay" style="position:absolute; bottom:8px; right:8px; font-size:11px; background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); color:#fff; padding:3px 8px; border-radius:12px; z-index:3;">${timeStr}</div>` : 
                     `【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span>`;
-            } else if (currentCallStatus === 'busy') {
-                body.innerHTML = `对方忙线中<br><span style="font-size:10px; color:#aaa;">“当前线路正忙，请稍后再拨~”</span>`;
-            } else if (currentCallStatus === 'no_answer') {
-                body.innerHTML = `暂时无法接通<br><span style="font-size:10px; color:#aaa;">对方当前网络不佳或不在手机旁</span>`;
-            } else if (currentCallStatus === 'rejected') {
-                body.innerHTML = `对方拒绝通话<br><span style="font-size:11px; color:#ffcccc; margin-top:4px;">“我现在不太方便，等一下哦”</span>`;
             } else {
-                body.innerHTML = `<div style="color:#aaa;">通话已结束</div>`;
+                if (currentCallStatus === 'busy') {
+                    body.innerHTML = `对方忙线中<br><span style="font-size:10px; color:#aaa;">“当前线路正忙，请稍后再拨~”</span>`;
+                } else if (currentCallStatus === 'no_answer') {
+                    body.innerHTML = `网络不佳或暂时无法接通<br><span style="font-size:10px; color:#aaa;">对方当前网络不佳或不在手机旁</span>`;
+                } else if (currentCallStatus === 'rejected') {
+                    body.innerHTML = `对方拒绝通话<br><span style="font-size:11px; color:#ffcccc; margin-top:4px;">“我现在不太方便，等一下哦”</span>`;
+                } else {
+                    body.innerHTML = `<div style="color:#aaa;">通话已结束</div>`;
+                }
+                
+                callAutoCloseTimer = setTimeout(() => {
+                    closeVideoModal();
+                }, 5000);
             }
         }
 
-        // --- 1. 蜜语模块（拍一拍更新） ---
+        // --- 1. 蜜语模块 ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -865,10 +899,7 @@
             checkPartnerActiveMessage();
         }
 
-        // 拍一拍触发函数：
-        // 点击对方头像 -> 我拍了拍 [对方称呼]
-        // 点击自己头像 -> 我拍了拍自己
-        function triggerPoke(targetWho) { // 'me' 或 'partner'
+        function triggerPoke(targetWho) {
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '对方';
 
             let pokeText = '';
@@ -887,7 +918,6 @@
             }
         }
 
-        // 对方拍我的随机触发（10% 概率）
         function checkPartnerRandomPoke() {
             if (Math.random() < 0.1) {
                 const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '对方';
@@ -1175,8 +1205,6 @@
                 row.className = `message-row ${msg.sender}`;
                 const avatar = msg.sender === 'incoming' ? settings.partnerAvatar : settings.myAvatar;
                 const name = msg.sender === 'incoming' ? partnerNameStr : myNameStr;
-                
-                // 绑定点击头像逻辑：incoming(对方) -> 触发拍对方； outgoing(自己) -> 触发拍自己
                 const targetWho = msg.sender === 'incoming' ? 'partner' : 'me';
                 
                 const avatarHTML = `<div class="avatar-box" onclick="triggerPoke('${targetWho}')">${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}</div>`;
@@ -1270,6 +1298,15 @@
             triggerPartnerReply();
         }
 
+        function getRandomReplyDelayMs() {
+            const minSec = Number(settings.replyDelayMin) || 5;
+            const maxSec = Number(settings.replyDelayMax) || 30;
+            const low = Math.min(minSec, maxSec);
+            const high = Math.max(minSec, maxSec);
+            const sec = Math.floor(Math.random() * (high - low + 1)) + low;
+            return sec * 1000;
+        }
+
         function triggerPartnerReply() {
             if (cardLibrary.length === 0) return;
             if (settings.readNotBack && Math.random() < 0.4) return;
@@ -1278,17 +1315,7 @@
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '对方';
             if(indicator) indicator.innerText = `${partnerNameStr}正在输入中...`;
 
-            let delaySec = 2;
-            const valStr = String(settings.replyDelay || '2').trim();
-            if (valStr.includes('-')) {
-                const parts = valStr.split('-').map(Number);
-                const min = isNaN(parts[0]) ? 1 : parts[0];
-                const max = isNaN(parts[1]) ? 60 : parts[1];
-                delaySec = Math.floor(Math.random() * (max - min + 1)) + min;
-            } else {
-                delaySec = Number(valStr) || 2;
-            }
-            const delayMs = delaySec * 1000;
+            const delayMs = getRandomReplyDelayMs();
 
             setTimeout(() => {
                 if(indicator) indicator.innerText = '';
@@ -1320,22 +1347,96 @@
             }, delayMs);
         }
 
-        // --- 2. 新增模块：心迹（朋友圈）---
+        // --- 2. 新增模块：心迹（朋友圈，支持图片与规则限制）---
         function initHeartMoments(container) {
             checkPartnerHeartMomentLimit();
+            selectedHeartImg = '';
+
+            const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+            const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%;">
+                    <!-- 顶部情侣挂件 -->
+                    <div style="display:flex; justify-content:center; align-items:center; gap:12px; padding:10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative;" id="heartHeaderBox">
+                        <div class="avatar-box" style="width:36px;height:36px;">${partnerAvatarImg}</div>
+                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:30px; height:30px;" onclick="spawnPinkBubbles(event)" title="点一点冒粉色泡泡">
+                            <svg viewBox="0 0 24 24" width="22" height="22" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        </div>
+                        <div class="avatar-box" style="width:36px;height:36px;">${myAvatarImg}</div>
+                    </div>
+
                     <div>
                         <div style="font-weight:bold; margin-bottom:6px;">发布心迹：</div>
                         <textarea id="heartInput" placeholder="分享此刻的心情或动态..."></textarea>
-                        <button class="btn" style="width:100%; margin-top:6px;" onclick="postUserHeartMoment()">发布新动态</button>
+                        <div id="heartImgPreviewBox" style="margin-top:6px;"></div>
+                        <div style="display:flex; gap:8px; margin-top:6px;">
+                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color); font-size:12px;" onclick="pickHeartImageFromEmojis()">从表情包选择配图</button>
+                            <button class="btn" style="flex:1; font-size:12px;" onclick="postUserHeartMoment()">发布新动态</button>
+                        </div>
                     </div>
                     <div style="font-weight:bold; border-top:1px solid var(--border-color); padding-top:10px;">心迹广场：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px;" id="heartMomentsList"></div>
                 </div>
             `;
             renderHeartMomentsList();
+        }
+
+        function pickHeartImageFromEmojis() {
+            if (!settings.emojis || settings.emojis.length === 0) {
+                alert('您的表情包库为空，请先在【设置】中添加表情包！');
+                return;
+            }
+            let pickerModal = document.getElementById('heartEmojiPickerModal');
+            if(pickerModal) { pickerModal.remove(); return; }
+
+            pickerModal = document.createElement('div');
+            pickerModal.id = 'heartEmojiPickerModal';
+            pickerModal.style.cssText = "position:absolute; bottom:60px; left:10px; right:10px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:8px; padding:10px; z-index:999; box-shadow:0 4px 12px rgba(0,0,0,0.15); max-height:160px; overflow-y:auto;";
+            
+            let gridHTML = `<div style="font-size:12px; margin-bottom:6px; color:var(--sub-text); display:flex; justify-content:between;"><span>选择一张图片作为配图：</span><span style="cursor:pointer;" onclick="document.getElementById('heartEmojiPickerModal').remove()">✕ 关闭</span></div><div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">`;
+            settings.emojis.forEach((imgBase64, idx) => {
+                gridHTML += `<img src="${imgBase64}" style="width:45px; height:45px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;" onclick="selectHeartImage('${imgBase64}')">`;
+            });
+            gridHTML += `</div>`;
+            pickerModal.innerHTML = gridHTML;
+            document.body.appendChild(pickerModal);
+        }
+
+        function selectHeartImage(imgBase64) {
+            selectedHeartImg = imgBase64;
+            const box = document.getElementById('heartImgPreviewBox');
+            if(box) {
+                box.innerHTML = `
+                    <div style="position:relative; width:60px; height:60px; display:inline-block;">
+                        <img src="${imgBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
+                        <button onclick="clearHeartImage()" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; background:rgba(0,0,0,0.5); color:#fff; border:none; border-radius:50%; font-size:10px; cursor:pointer;">×</button>
+                    </div>
+                `;
+            }
+            const modal = document.getElementById('heartEmojiPickerModal');
+            if(modal) modal.remove();
+        }
+
+        function clearHeartImage() {
+            selectedHeartImg = '';
+            const box = document.getElementById('heartImgPreviewBox');
+            if(box) box.innerHTML = '';
+        }
+
+        function spawnPinkBubbles(e) {
+            const box = document.getElementById('heartHeaderBox');
+            if(!box) return;
+            const rect = box.getBoundingClientRect();
+            for(let i=0; i<6; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'pink-bubble';
+                const leftOffset = (e.clientX - rect.left) + (Math.random() * 40 - 20);
+                bubble.style.left = leftOffset + 'px';
+                bubble.style.top = (e.clientY - rect.top) + 'px';
+                box.appendChild(bubble);
+                setTimeout(() => bubble.remove(), 800);
+            }
         }
 
         function getRandomCardSentences() {
@@ -1355,21 +1456,35 @@
             const todayStr = new Date().toISOString().slice(0, 10);
             const partnerPostsToday = heartMoments.filter(m => m.author === 'partner' && m.dateStr === todayStr);
 
-            if (partnerPostsToday.length < 3 && Math.random() < 0.4) {
-                const text = getRandomCardSentences();
-                const d = new Date();
-                const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                
-                heartMoments.unshift({
-                    id: Date.now(),
-                    author: 'partner',
-                    content: text,
-                    time: timeStr,
-                    dateStr: todayStr,
-                    likes: [],
-                    comments: []
-                });
-                saveData();
+            // 规则：每天最多5条，一小时最多1条，发布时间随机
+            if (partnerPostsToday.length < 5 && Math.random() < 0.25) {
+                // 检查距离上一条对方发布的时间是否超过1小时
+                const lastPartnerPost = partnerPostsToday[0]; // 因为是unshift，最新的在最前面
+                const nowTimestamp = Date.now();
+                if (!lastPartnerPost || (nowTimestamp - lastPartnerPost.id >= 60 * 60 * 1000)) {
+                    const text = getRandomCardSentences();
+                    const d = new Date();
+                    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                    
+                    // 随机决定是否配图（从表情包中随机抽一张）
+                    let partnerImg = '';
+                    if (settings.emojis && settings.emojis.length > 0 && Math.random() < 0.6) {
+                        partnerImg = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
+                    }
+
+                    heartMoments.unshift({
+                        id: nowTimestamp,
+                        author: 'partner',
+                        content: text,
+                        image: partnerImg,
+                        time: timeStr,
+                        dateStr: todayStr,
+                        likes: [],
+                        comments: [],
+                        isPinned: false
+                    });
+                    saveData();
+                }
             }
         }
 
@@ -1377,7 +1492,10 @@
             const input = document.getElementById('heartInput');
             if(!input) return;
             const text = input.value.trim();
-            if (!text) return;
+            if (!text && !selectedHeartImg) {
+                alert('请至少输入文字或选择一张图片！');
+                return;
+            }
 
             const d = new Date();
             const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1388,18 +1506,25 @@
                 id: Date.now(),
                 author: 'user',
                 content: text,
+                image: selectedHeartImg,
                 time: timeStr,
                 dateStr: dateStr,
                 likes: [],
-                comments: []
+                comments: [],
+                isPinned: false
             };
 
             heartMoments.unshift(newMoment);
             input.value = '';
+            selectedHeartImg = '';
+            const previewBox = document.getElementById('heartImgPreviewBox');
+            if(previewBox) previewBox.innerHTML = '';
+
             saveData();
             renderHeartMomentsList();
 
-            const randomDelayMs = (Math.floor(Math.random() * 26) + 5) * 60 * 1000;
+            // 规则：对方点赞与回复延迟 5 到 30 分钟（模拟真实真人）
+            const randomDelayMs = getRandomReplyDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === newMoment.id);
                 if (mTarget) {
@@ -1429,34 +1554,38 @@
                 return;
             }
 
+            let sortedMoments = [...heartMoments].sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
             const myNameStr = settings.myName || '我';
             const partnerNameStr = settings.partnerName || '对方';
 
-            heartMoments.forEach(moment => {
+            sortedMoments.forEach(moment => {
                 const authorName = moment.author === 'user' ? myNameStr : partnerNameStr;
                 const authorAvatar = moment.author === 'user' ? settings.myAvatar : settings.partnerAvatar;
 
                 const card = document.createElement('div');
-                card.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px;";
+                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; ${moment.isPinned ? 'border-color: #007aff;' : ''}`;
                 
+                let pinTag = moment.isPinned ? `<span style="font-size:10px; background:#007aff; color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
+
                 let headerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div class="avatar-box" style="width:28px;height:28px;">
                             ${authorAvatar ? `<img src="${authorAvatar}">` : '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}
                         </div>
-                        <div style="flex:1; font-weight:bold; font-size:12px;">${authorName}</div>
+                        <div style="flex:1; font-weight:bold; font-size:12px; display:flex; align-items:center;">${pinTag}${authorName}</div>
                         <div style="font-size:10px; color:var(--sub-text);">${moment.time}</div>
                     </div>
                 `;
 
-                let contentHTML = `<div style="font-size:13px; word-break:break-all; padding-left:36px;">${moment.content}</div>`;
+                let textHTML = moment.content ? `<div style="font-size:13px; word-break:break-all; padding-left:36px;">${moment.content}</div>` : '';
+                let imgHTML = moment.image ? `<div style="padding-left:36px; margin-top:4px;"><img src="${moment.image}" style="max-width:140px; max-height:140px; border-radius:6px; border:1px solid var(--border-color); object-fit:cover;"></div>` : '';
 
                 let likesHTML = '';
                 if (moment.likes && moment.likes.length > 0) {
                     likesHTML = `<div style="font-size:11px; color:#007aff; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
-                // 统一修复回复区排版与字号（与正文字号一致，消除大小突兀感）
                 let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px;" id="comments-box-${moment.id}">`;
                 if (moment.comments && moment.comments.length > 0) {
                     moment.comments.forEach(com => {
@@ -1476,16 +1605,35 @@
                 }
                 commentsHTML += `</div>`;
 
+                let pinBtnText = moment.isPinned ? '取消置顶' : '置顶';
                 let actionHTML = `
                     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="togglePinMoment(${moment.id})">${pinBtnText}</button>
                         <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="likeMoment(${moment.id})">点赞</button>
                         <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="commentMoment(${moment.id})">评论</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteMoment(${moment.id})">删除</button>
                     </div>
                 `;
 
-                card.innerHTML = headerHTML + contentHTML + likesHTML + commentsHTML + actionHTML;
+                card.innerHTML = headerHTML + textHTML + imgHTML + likesHTML + commentsHTML + actionHTML;
                 listEl.appendChild(card);
             });
+        }
+
+        function togglePinMoment(momentId) {
+            const moment = heartMoments.find(m => m.id === momentId);
+            if (!moment) return;
+            moment.isPinned = !moment.isPinned;
+            saveData();
+            renderHeartMomentsList();
+        }
+
+        function deleteMoment(momentId) {
+            if (confirm("确定要删除这条心迹吗？")) {
+                heartMoments = heartMoments.filter(m => m.id !== momentId);
+                saveData();
+                renderHeartMomentsList();
+            }
         }
 
         function likeMoment(momentId) {
@@ -1517,7 +1665,7 @@
             saveData();
             renderHeartMomentsList();
 
-            const randomDelayMs = (Math.floor(Math.random() * 26) + 5) * 60 * 1000;
+            const randomDelayMs = getRandomReplyDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === momentId);
                 if (mTarget) {
@@ -1556,7 +1704,7 @@
             saveData();
             renderHeartMomentsList();
 
-            const randomDelayMs = (Math.floor(Math.random() * 26) + 5) * 60 * 1000;
+            const randomDelayMs = getRandomReplyDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === momentId);
                 if (mTarget) {
@@ -1967,6 +2115,15 @@
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
+                    <div class="setting-label">对方回复时间范围 (秒)</div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px;">
+                        <span>最小秒数：</span>
+                        <input type="number" id="set_replyDelayMin" value="${tempSettings.replyDelayMin || '5'}" min="1" max="600" style="flex:1;">
+                        <span>最大秒数 (最高600秒/10分钟)：</span>
+                        <input type="number" id="set_replyDelayMax" value="${tempSettings.replyDelayMax || '30'}" min="1" max="600" style="flex:1;">
+                    </div>
+                </div>
+                <div class="setting-group">
                     <div class="setting-label">心情短语 (用逗号或换行分隔)</div>
                     <textarea id="set_moodPhrases">${tempSettings.moodPhrases || ''}</textarea>
                 </div>
@@ -2178,6 +2335,8 @@
             const mName = document.getElementById('set_myName');
             const pName = document.getElementById('set_partnerName');
             const mPhrases = document.getElementById('set_moodPhrases');
+            const dMin = document.getElementById('set_replyDelayMin');
+            const dMax = document.getElementById('set_replyDelayMax');
             const mbBg = document.getElementById('set_myBubbleBg');
             const mbText = document.getElementById('set_myBubbleText');
             const pbBg = document.getElementById('set_partnerBubbleBg');
@@ -2186,6 +2345,8 @@
             if(mName) tempSettings.myName = mName.value.trim();
             if(pName) tempSettings.partnerName = pName.value.trim();
             if(mPhrases) tempSettings.moodPhrases = mPhrases.value.trim();
+            if(dMin) tempSettings.replyDelayMin = dMin.value.trim();
+            if(dMax) tempSettings.replyDelayMax = dMax.value.trim();
             if(mbBg) tempSettings.myBubbleBg = mbBg.value;
             if(mbText) tempSettings.myBubbleText = mbText.value;
             if(pbBg) tempSettings.partnerBubbleBg = pbBg.value;
@@ -2194,6 +2355,8 @@
             settings.myName = tempSettings.myName;
             settings.partnerName = tempSettings.partnerName;
             settings.moodPhrases = tempSettings.moodPhrases;
+            settings.replyDelayMin = tempSettings.replyDelayMin;
+            settings.replyDelayMax = tempSettings.replyDelayMax;
             settings.myAvatar = tempSettings.myAvatar;
             settings.partnerAvatar = tempSettings.partnerAvatar;
             settings.chatBg = tempSettings.chatBg;
