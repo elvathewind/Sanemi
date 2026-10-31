@@ -952,7 +952,8 @@
         }
 
         function checkPartnerRandomPoke() {
-            if (Math.random() < 0.1) {
+            // 主动发消息/互动的概率调高到 10%
+            if (Math.random() < 0.10) {
                 const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '对方';
                 setTimeout(() => {
                     chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 拍了拍我` });
@@ -1129,7 +1130,7 @@
 
         let callTimeoutTimer = null;
         function checkPartnerInitiateCall() {
-            if (Math.random() < 0.1) {
+            if (Math.random() < 0.10) {
                 const phoneLayer = document.getElementById('phoneVideoLayer');
                 if(!phoneLayer) return;
                 let modal = document.getElementById('videoModal');
@@ -1373,10 +1374,15 @@
                     tempLib.splice(randomIndex, 1);
                 }
 
+                // 规则3：从你最近发的10条文本消息中随机抽取一条作为引用
                 let partnerQuoted = null;
-                const lastOutgoing = [...chatMessages].reverse().find(m => m.sender === 'outgoing' && m.type === 'text');
-                if (lastOutgoing && Math.random() < 0.3) {
-                    partnerQuoted = lastOutgoing.content;
+                const recentOutgoingTexts = chatMessages
+                    .filter(m => m.sender === 'outgoing' && m.type === 'text')
+                    .slice(-10);
+
+                if (recentOutgoingTexts.length > 0 && Math.random() < 0.6) {
+                    const randomMsg = recentOutgoingTexts[Math.floor(Math.random() * recentOutgoingTexts.length)];
+                    partnerQuoted = randomMsg.content;
                 }
 
                 chatMessages.push({ id: Date.now() + 1, sender: 'incoming', type: 'text', content: selectedTexts.join(' '), quoted: partnerQuoted });
@@ -1385,9 +1391,9 @@
             }
         }
 
-        // --- 2. 纯净版心迹模块（无提醒栏，仅靠时间差自动补齐互动） ---
+        // --- 2. 纯净版心迹模块（规则4：100% 必回，3~30分钟随机时间差） ---
         function initHeartMoments(container) {
-            checkAndProcessPendingHeartInteractions(); // 打开页面时立即根据真实时间差自动补齐点赞和回复
+            checkAndProcessPendingHeartInteractions(); 
             selectedHeartImg = '';
 
             const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
@@ -1419,34 +1425,80 @@
             renderHeartMomentsList();
         }
 
-        // 核心：利用时间差自动补齐，超过3分钟未互动的动态自动完成点赞和回复
+        // 核心：100% 必回，时间差在 3~30分钟 之间随机波动
         function checkAndProcessPendingHeartInteractions() {
             const now = Date.now();
             const partnerNameStr = settings.partnerName || '对方';
             let updated = false;
 
             heartMoments.forEach(m => {
+                const momentAge = now - m.id;
+
+                // 为每条动态分配一个专属于它的随机延时（3到30分钟之间的随机毫秒数）
+                if (!m.requiredDelayMs) {
+                    const randomMinutes = Math.random() * (30 - 3) + 3; // 3 到 30 分钟
+                    m.requiredDelayMs = Math.floor(randomMinutes * 60 * 1000);
+                }
+
+                // 1. 检查动态本身是否需要补齐点赞和顶层评论
                 if (m.author === 'user') {
-                    const elapsedMs = now - m.id;
                     const hasLiked = m.likes && m.likes.includes(partnerNameStr);
                     const hasReplied = m.comments && m.comments.some(c => c.author === partnerNameStr);
 
-                    if (!hasLiked || !hasReplied) {
-                        if (elapsedMs >= 3 * 60 * 1000) {
-                            if (!hasLiked) {
-                                m.likes.push(partnerNameStr);
-                            }
-                            if (!hasReplied) {
-                                m.comments.push({
-                                    id: m.id + 100,
-                                    author: partnerNameStr,
-                                    text: getRandomCardSentences(),
-                                    replies: []
-                                });
-                            }
+                    if ((!hasLiked || !hasReplied) && momentAge >= m.requiredDelayMs) {
+                        if (!hasLiked) {
+                            m.likes.push(partnerNameStr);
+                        }
+                        if (!hasReplied) {
+                            m.comments.push({
+                                id: m.id + 100,
+                                author: partnerNameStr,
+                                text: getRandomCardSentences(),
+                                replies: [],
+                                requiredDelayMs: m.requiredDelayMs
+                            });
+                        }
+                        updated = true;
+                    }
+                }
+
+                // 2. 检查评论区里“你对他的动态评论”或“你对他的回复”是否需要触发回信
+                if (m.comments && m.comments.length > 0) {
+                    m.comments.forEach(com => {
+                        const comAge = now - com.id;
+                        if (!com.requiredDelayMs) {
+                            com.requiredDelayMs = Math.floor((Math.random() * (30 - 3) + 3) * 60 * 1000);
+                        }
+                        const hasSubReply = com.replies && com.replies.some(r => r.author === partnerNameStr);
+                        if (com.author !== partnerNameStr && !hasSubReply && comAge >= com.requiredDelayMs) {
+                            com.replies.push({
+                                id: Date.now(),
+                                author: partnerNameStr,
+                                text: getRandomCardSentences(),
+                                requiredDelayMs: com.requiredDelayMs
+                            });
                             updated = true;
                         }
-                    }
+
+                        if (com.replies && com.replies.length > 0) {
+                            com.replies.forEach(rep => {
+                                const repAge = now - rep.id;
+                                if (!rep.requiredDelayMs) {
+                                    rep.requiredDelayMs = Math.floor((Math.random() * (30 - 3) + 3) * 60 * 1000);
+                                }
+                                const alreadyCounterReplied = com.replies.some(r => r.author === partnerNameStr && r.id > rep.id);
+                                if (rep.author !== partnerNameStr && !alreadyCounterReplied && repAge >= rep.requiredDelayMs) {
+                                    com.replies.push({
+                                        id: Date.now(),
+                                        author: partnerNameStr,
+                                        text: getRandomCardSentences(),
+                                        requiredDelayMs: rep.requiredDelayMs
+                                    });
+                                    updated = true;
+                                }
+                            });
+                        }
+                    });
                 }
             });
 
@@ -1542,6 +1594,10 @@
             const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
             const dateStr = d.toISOString().slice(0, 10);
 
+            // 为新动态随机分配一个3~30分钟之间的专属回信延迟
+            const randomMinutes = Math.random() * (30 - 3) + 3;
+            const assignedDelayMs = Math.floor(randomMinutes * 60 * 1000);
+
             const newMoment = {
                 id: Date.now(),
                 author: 'user',
@@ -1551,7 +1607,8 @@
                 dateStr: dateStr,
                 likes: [],
                 comments: [],
-                isPinned: false
+                isPinned: false,
+                requiredDelayMs: assignedDelayMs
             };
 
             heartMoments.unshift(newMoment);
@@ -1614,12 +1671,14 @@
                         let repliesListHTML = '';
                         if (com.replies && com.replies.length > 0) {
                             com.replies.forEach(rep => {
-                                repliesListHTML += `<div style="font-size:12px; line-height:1.4; margin-top:2px; color:var(--text-color);"><strong style="color:var(--sub-text); font-size:12px;">${rep.author}:</strong> ${rep.text}</div>`;
+                                repliesListHTML += `<div style="font-size:12px; line-height:1.4; margin-top:2px; color:var(--text-color); cursor:pointer;" onclick="replyToComment(${moment.id}, ${com.id}, '${rep.author}')"><strong style="color:var(--sub-text); font-size:12px;">${rep.author}:</strong> ${rep.text}</div>`;
                             });
                         }
                         commentsHTML += `
-                            <div style="font-size:12px; line-height:1.4; background:rgba(120,120,120,0.06); padding:6px; border-radius:6px; cursor:pointer;" onclick="replyToComment(${moment.id}, ${com.id}, '${com.author}')">
-                                <strong style="font-size:12px;">${com.author}:</strong> ${com.text}
+                            <div style="font-size:12px; line-height:1.4; background:rgba(120,120,120,0.06); padding:6px; border-radius:6px;">
+                                <div style="cursor:pointer;" onclick="replyToComment(${moment.id}, ${com.id}, '${com.author}')">
+                                    <strong style="font-size:12px;">${com.author}:</strong> ${com.text}
+                                </div>
                                 ${repliesListHTML}
                             </div>
                         `;
@@ -1677,11 +1736,15 @@
 
             const myNameStr = settings.myName || '我';
 
+            // 为新评论分配专属的 3~30分钟 随机回信延时
+            const assignedDelayMs = Math.floor((Math.random() * (30 - 3) + 3) * 60 * 1000);
+
             moment.comments.push({
                 id: Date.now(),
                 author: myNameStr,
                 text: text.trim(),
-                replies: []
+                replies: [],
+                requiredDelayMs: assignedDelayMs
             });
             saveData();
             renderHeartMomentsList();
@@ -1697,11 +1760,13 @@
             if (!text || !text.trim()) return;
 
             const myNameStr = settings.myName || '我';
+            const assignedDelayMs = Math.floor((Math.random() * (30 - 3) + 3) * 60 * 1000);
 
             comment.replies.push({
                 id: Date.now(),
                 author: myNameStr,
-                text: text.trim()
+                text: text.trim(),
+                requiredDelayMs: assignedDelayMs
             });
             saveData();
             renderHeartMomentsList();
@@ -2049,10 +2114,11 @@
             updateEmojiList();
         }
 
-        // --- 3. 锦书模块 ---
+        // --- 3. 锦书模块（规则1：你写信 12~24小时回；对方主动写信 72~168小时随机） ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
+            checkAndGeneratePartnerInitiatedLetter(); // 检查并可能生成对方主动写给你的信
             container.innerHTML = `
                 <div>
                     <div style="font-weight:bold; margin-bottom:6px;">写一封信：</div>
@@ -2065,6 +2131,54 @@
             `;
             checkAndSpawnFlyingEnvelope(container);
             updateLettersList();
+        }
+
+        // 核心：模拟对方主动给你写信（72~168小时随机一次，如果在没有未读信件时判定）
+        function checkAndGeneratePartnerInitiatedLetter() {
+            const now = Date.now();
+            let lastPartnerLetterTime = Number(localStorage.getItem('lastPartnerLetterTime')) || 0;
+            
+            // 如果从未生成过，初始化一个时间
+            if (!lastPartnerLetterTime) {
+                lastPartnerLetterTime = now;
+                localStorage.setItem('lastPartnerLetterTime', lastPartnerLetterTime);
+            }
+
+            const elapsed = now - lastPartnerLetterTime;
+            // 随机间隔 72 到 168 小时（单位毫秒）
+            const randomTargetInterval = (Math.random() * (168 - 72) + 72) * 60 * 60 * 1000;
+
+            if (elapsed >= randomTargetInterval) {
+                // 生成一封对方主动写给你的信
+                if (cardLibrary.length > 0) {
+                    const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (15 - 5 + 1)) + 5);
+                    let selected = [];
+                    let tempLib = [...cardLibrary];
+                    for (let i = 0; i < count; i++) {
+                        const idx = Math.floor(Math.random() * tempLib.length);
+                        selected.push(tempLib[idx].content);
+                        tempLib.splice(idx, 1);
+                    }
+                    const partnerLetterContent = selected.join(' ');
+
+                    const d = new Date();
+                    const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+                    letters.push({
+                        id: now,
+                        isPartnerInitiated: true,
+                        myLetter: '（对方主动寄给你的信）',
+                        reply: partnerLetterContent,
+                        time: timeStr,
+                        estTime: timeStr,
+                        replyTimestamp: now,
+                        isRead: false
+                    });
+
+                    localStorage.setItem('lastPartnerLetterTime', now);
+                    saveData();
+                }
+            }
         }
 
         function checkAndSpawnFlyingEnvelope(container) {
@@ -2107,8 +2221,9 @@
             if (!text) return;
 
             const now = Date.now();
-            const minMs = 1 * 60 * 60 * 1000;
-            const maxMs = 12 * 60 * 60 * 1000;
+            // 规则1：你主动写信，回信时间在 12 到 24 小时之内随机波动
+            const minMs = 12 * 60 * 60 * 1000;
+            const maxMs = 24 * 60 * 60 * 1000;
             const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 
             const d = new Date();
@@ -2119,6 +2234,7 @@
 
             letters.push({
                 id: now,
+                isPartnerInitiated: false,
                 myLetter: text,
                 reply: '',
                 time: timeStr,
@@ -2145,7 +2261,7 @@
             let hasNewUnread = false;
 
             letters.forEach(item => {
-                if (!item.reply && cardLibrary.length > 0 && now >= item.replyTimestamp) {
+                if (!item.isPartnerInitiated && !item.reply && cardLibrary.length > 0 && now >= item.replyTimestamp) {
                     const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
                     let selected = [];
                     let tempLib = [...cardLibrary];
@@ -2175,18 +2291,22 @@
                 
                 let replyStatus = item.reply ? 
                     `<div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
-                        <strong>回信：</strong>
+                        <strong>${item.isPartnerInitiated ? '来信内容：' : '回信：'}</strong>
                         <div style="max-height: 180px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap;">${item.reply}</div>
                     </div>` : 
                     `<div style="font-size:12px; color:var(--sub-text); font-style:italic;">真羡慕这封信，可以比我更早见到你</div>`;
 
+                let senderDisplay = item.isPartnerInitiated ? 
+                    `<div><strong>对方寄给你的信</strong></div>` : 
+                    `<div><strong>我:</strong> ${item.myLetter}</div>`;
+
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.time}</span>
+                        <span style="font-size:11px; color:var(--sub-text);">${item.isPartnerInitiated ? '收信时间' : '寄出时间'}: ${item.time}</span>
                         <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLetter(${item.id})">删除</button>
                     </div>
-                    <div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>
-                    <div><strong>我:</strong> ${item.myLetter}</div>
+                    ${!item.isPartnerInitiated ? `<div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>` : ''}
+                    ${senderDisplay}
                     ${replyStatus}
                 `;
 
