@@ -877,7 +877,7 @@
             }
         }
 
-        // --- 1. 蜜语模块 ---
+        // --- 1. 蜜语模块 (零延迟上屏) ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -1318,21 +1318,6 @@
             return Math.floor(sec * 1000);
         }
 
-        function getHeartCommentReplyDelayMs() {
-            const minSec = 60;
-            const maxSec = 600;
-            const sec = Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec;
-            return sec * 1000;
-        }
-
-        function getHeartInitialPostDelayMs() {
-            const minSec = 300;
-            const maxSec = 3600;
-            const sec = Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec;
-            return sec * 1000;
-        }
-
-        // --- 概率维持不变：2%拍一拍, 8%表情包, 10%动作, 80%字卡 ---
         function triggerPartnerReply() {
             if (settings.readNotBack && Math.random() < 0.4) return;
 
@@ -1406,22 +1391,22 @@
             }
         }
 
-        // --- 2. 心迹模块（彻底修复删除旧心迹后新心迹提醒无法弹出的Bug） ---
-        let latestHeartNotification = { text: '', targetId: null };
+        // --- 2. 智能汇总心迹提醒逻辑 ---
+        let unreadHeartTargetIds = []; // 存储所有未读的互动/新心迹 ID 队列
 
         function initHeartMoments(container) {
             checkPartnerHeartMomentLimit();
             selectedHeartImg = '';
-            updateLatestHeartNotification();
+            updateSmartHeartNotification();
 
             const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
-                    <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.2); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:${latestHeartNotification.text ? 'flex' : 'none'}; justify-content:space-between; align-items:center; cursor:pointer; z-index:2;" onclick="jumpToNotificationTarget()">
-                        <span id="heartNotificationText">${latestHeartNotification.text}</span>
-                        <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
+                    <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.2); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:none; justify-content:space-between; align-items:center; cursor:pointer; z-index:2;" onclick="jumpToSmartNotificationTarget()">
+                        <span id="heartNotificationText"></span>
+                        <span style="font-size:10px; color:var(--sub-text);">查看下一条 ›</span>
                     </div>
 
                     <div style="display:flex; justify-content:center; align-items:center; gap:40px; padding:10px 16px; height:102px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
@@ -1448,55 +1433,75 @@
             renderHeartMomentsList();
         }
 
-        function updateLatestHeartNotification() {
+        function updateSmartHeartNotification() {
             const partnerNameStr = settings.partnerName || '对方';
             if (heartMoments.length === 0) {
-                latestHeartNotification = { text: '', targetId: null };
+                unreadHeartTargetIds = [];
+                renderNotificationBarUI();
                 return;
             }
 
-            // 清理已删除心迹留在黑名单里的孤儿 ID，保证黑名单永远同步
+            // 清理已删除的心迹在黑名单和未读队列里的残留
             const existingIds = heartMoments.map(m => m.id);
             dismissedHeartIds = dismissedHeartIds.filter(id => existingIds.includes(id));
 
-            let targetMoment = null;
-            let notifyText = '';
-
-            for (let m of heartMoments) {
-                if (dismissedHeartIds.includes(m.id)) continue;
-
+            // 找出所有未在已读黑名单里的互动心迹 ID
+            let freshIds = [];
+            heartMoments.forEach(m => {
+                if (dismissedHeartIds.includes(m.id)) return;
+                
+                let hasUnreadActivity = false;
                 if (m.author === 'partner') {
-                    targetMoment = m;
-                    notifyText = `${partnerNameStr}有新的心迹`;
-                    break;
-                } else if (m.comments && m.comments.length > 0) {
-                    const lastComment = m.comments[m.comments.length - 1];
-                    if (lastComment.author === partnerNameStr) {
-                        targetMoment = m;
-                        notifyText = `${partnerNameStr}回复了你的心迹`;
-                        break;
-                    }
+                    hasUnreadActivity = true;
+                } else if (m.comments && m.comments.some(c => c.author === partnerNameStr)) {
+                    hasUnreadActivity = true;
+                } else if (m.likes && m.likes.includes(partnerNameStr)) {
+                    hasUnreadActivity = true;
                 }
+
+                if (hasUnreadActivity && !freshIds.includes(m.id)) {
+                    freshIds.push(m.id);
+                }
+            });
+
+            unreadHeartTargetIds = freshIds;
+            renderNotificationBarUI();
+        }
+
+        function renderNotificationBarUI() {
+            const notifBar = document.getElementById('heartNotificationBar');
+            const notifText = document.getElementById('heartNotificationText');
+            if (!notifBar || !notifText) return;
+
+            if (unreadHeartTargetIds.length === 0) {
+                notifBar.style.display = 'none';
+                return;
             }
 
-            if (targetMoment) {
-                latestHeartNotification = { text: notifyText, targetId: targetMoment.id };
+            const totalCount = unreadHeartTargetIds.length;
+            notifBar.style.display = 'flex';
+            if (totalCount === 1) {
+                notifText.innerText = `有一条新的心迹互动待查看`;
             } else {
-                latestHeartNotification = { text: '', targetId: null };
+                notifText.innerText = `有 ${totalCount} 条新的心迹互动待查看`;
             }
         }
 
-        function jumpToNotificationTarget() {
-            if (!latestHeartNotification.targetId) return;
-            const targetId = latestHeartNotification.targetId;
+        function jumpToSmartNotificationTarget() {
+            if (unreadHeartTargetIds.length === 0) return;
+
+            // 取出队列中的第一条进行定位
+            const targetId = unreadHeartTargetIds[0];
             
+            // 立即加入已读黑名单并保存
             if (!dismissedHeartIds.includes(targetId)) {
                 dismissedHeartIds.push(targetId);
                 saveData();
             }
 
-            const notifBar = document.getElementById('heartNotificationBar');
-            if (notifBar) notifBar.style.display = 'none';
+            // 从待办队列中移除
+            unreadHeartTargetIds.shift();
+            renderNotificationBarUI();
 
             const el = document.getElementById(`moment-card-${targetId}`);
             if (el) {
@@ -1580,14 +1585,22 @@
             return selected.join(' ');
         }
 
+        function getUnifiedHeartDelayMs() {
+            const minMs = 3 * 60 * 1000;
+            const maxMs = 15 * 60 * 1000;
+            return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+        }
+
         function checkPartnerHeartMomentLimit() {
             const todayStr = new Date().toISOString().slice(0, 10);
             const partnerPostsToday = heartMoments.filter(m => m.author === 'partner' && m.dateStr === todayStr);
 
-            if (partnerPostsToday.length < 5 && Math.random() < 0.25) {
+            if (partnerPostsToday.length < 5 && Math.random() < 0.2) {
                 const lastPartnerPost = partnerPostsToday[0];
                 const nowTimestamp = Date.now();
-                if (!lastPartnerPost || (nowTimestamp - lastPartnerPost.id >= 60 * 60 * 1000)) {
+                const oneHourMs = 60 * 60 * 1000;
+
+                if (!lastPartnerPost || (nowTimestamp - lastPartnerPost.id >= oneHourMs)) {
                     const text = getRandomCardSentences();
                     const d = new Date();
                     const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1609,6 +1622,7 @@
                         isPinned: false
                     });
                     saveData();
+                    updateSmartHeartNotification();
                 }
             }
         }
@@ -1648,7 +1662,7 @@
             saveData();
             renderHeartMomentsList();
 
-            const initialDelayMs = getHeartInitialPostDelayMs();
+            const delayMs = getUnifiedHeartDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === newMoment.id);
                 if (mTarget) {
@@ -1664,8 +1678,9 @@
                     });
                     saveData();
                     renderHeartMomentsList();
+                    updateSmartHeartNotification();
                 }
-            }, initialDelayMs);
+            }, delayMs);
         }
 
         function renderHeartMomentsList() {
@@ -1759,6 +1774,7 @@
                 dismissedHeartIds = dismissedHeartIds.filter(id => id !== momentId);
                 saveData();
                 renderHeartMomentsList();
+                updateSmartHeartNotification();
             }
         }
 
@@ -1791,7 +1807,7 @@
             saveData();
             renderHeartMomentsList();
 
-            const replyDelayMs = getHeartCommentReplyDelayMs();
+            const delayMs = getUnifiedHeartDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === momentId);
                 if (mTarget) {
@@ -1807,8 +1823,9 @@
                     });
                     saveData();
                     renderHeartMomentsList();
+                    updateSmartHeartNotification();
                 }
-            }, replyDelayMs);
+            }, delayMs);
         }
 
         function replyToComment(momentId, commentId, targetAuthor) {
@@ -1831,7 +1848,7 @@
             saveData();
             renderHeartMomentsList();
 
-            const replyDelayMs = getHeartCommentReplyDelayMs();
+            const delayMs = getUnifiedHeartDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === momentId);
                 if (mTarget) {
@@ -1850,8 +1867,9 @@
                     }
                     saveData();
                     renderHeartMomentsList();
+                    updateSmartHeartNotification();
                 }
-            }, replyDelayMs);
+            }, delayMs);
         }
 
         // --- 字库模块 ---
@@ -2196,7 +2214,7 @@
             updateEmojiList();
         }
 
-        // --- 3. 锦书模块（倒叙排列） ---
+        // --- 3. 锦书模块 ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
@@ -2291,9 +2309,7 @@
             const now = Date.now();
             let hasNewUnread = false;
 
-            const reversedLetters = [...letters].reverse();
-
-            reversedLetters.forEach(item => {
+            letters.forEach(item => {
                 if (!item.reply && cardLibrary.length > 0 && now >= item.replyTimestamp) {
                     const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
                     let selected = [];
@@ -2311,7 +2327,13 @@
                 if (item.reply && !item.isRead) {
                     hasNewUnread = true;
                 }
+            });
 
+            const unreceivedList = letters.filter(item => !item.reply).sort((a, b) => b.id - a.id);
+            const receivedList = letters.filter(item => item.reply).sort((a, b) => b.id - a.id);
+            const sortedLetters = [...unreceivedList, ...receivedList];
+
+            sortedLetters.forEach(item => {
                 const div = document.createElement('div');
                 div.id = `letter-item-${item.id}`;
                 div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
