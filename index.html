@@ -560,11 +560,11 @@
             align-items: center;
         }
 
-        /* 气泡溢出特效 */
-        @keyframes bubbleOverflow {
-            0% { transform: translateY(0) scale(0.4); opacity: 0.9; }
-            50% { transform: translateY(-40px) scale(1.1); opacity: 1; }
-            100% { transform: translateY(-90px) scale(1.4); opacity: 0; }
+        /* 缓慢浪漫的气泡溢出特效 */
+        @keyframes bubbleOverflowSlow {
+            0% { transform: translateY(0) scale(0.4); opacity: 0.85; }
+            50% { transform: translateY(-50px) scale(1.1); opacity: 1; }
+            100% { transform: translateY(-120px) scale(1.3); opacity: 0; }
         }
         .pink-bubble {
             position: absolute;
@@ -573,7 +573,7 @@
             background: #ffb6c1;
             border-radius: 50%;
             pointer-events: none;
-            animation: bubbleOverflow 0.7s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            animation: bubbleOverflowSlow 1.4s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
             z-index: 99;
         }
     </style>
@@ -660,6 +660,7 @@
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
         let selectedHeartImg = '';
+        let dismissedNotificationId = null; // 记录已被点击消除的通知ID
 
         function saveData() {
             try {
@@ -1008,12 +1009,14 @@
             if (body.style.display === 'none') {
                 body.style.display = 'flex';
                 modal.style.height = '240px';
+                modal.style.width = '200px';
                 el.innerText = '—';
                 headerTitle.innerText = `视频通话 - ${settings.partnerName || '对方'}`;
                 renderVideoBodyContent();
             } else {
                 body.style.display = 'none';
                 modal.style.height = 'auto';
+                modal.style.width = '145px'; // 稍微短一点，完美平衡间距
                 el.innerText = '＋';
                 headerTitle.innerHTML = `${partnerAvatarImg}<span id="minHeaderTimeDisplay">${timeStr}</span>`;
             }
@@ -1149,30 +1152,6 @@
             renderVideoBodyContent();
         }
 
-        function checkPartnerActiveMessage() {
-            if (Math.random() < 0.1 && (cardLibrary.length > 0 || actionLibrary.length > 0)) {
-                setTimeout(() => {
-                    if (actionLibrary.length > 0 && Math.random() < 0.3) {
-                        const randomAction = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
-                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `♥${randomAction.content}♥` });
-                    } else if (cardLibrary.length > 0) {
-                        const maxCount = Math.min(cardLibrary.length, 3);
-                        const count = Math.floor(Math.random() * maxCount) + 1;
-                        let tempLib = [...cardLibrary];
-                        let selectedTexts = [];
-                        for(let i = 0; i < count; i++) {
-                            const randomIndex = Math.floor(Math.random() * tempLib.length);
-                            selectedTexts.push(tempLib[randomIndex].content);
-                            tempLib.splice(randomIndex, 1);
-                        }
-                        chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' ') });
-                    }
-                    saveData();
-                    updateChatMessages();
-                }, 1500);
-            }
-        }
-
         function toggleEmojiPicker() {
             let picker = document.getElementById('emojiPicker');
             if (picker) { picker.remove(); return; }
@@ -1183,7 +1162,7 @@
             picker.className = 'emoji-picker';
             
             if (!settings.emojis || settings.emojis.length === 0) {
-                picker.innerHTML = `<div style="grid-column: span 4; font-size:12px; text-align:center; color:var(--sub-text);">暂无表情，请在【设置】添加</div>`;
+                picker.innerHTML = `<div style="grid-column: span 4; font-size:12px; text-align:center; color:var(--sub-text);">暂无表情，请在【字库】添加</div>`;
             } else {
                 settings.emojis.forEach((imgBase64) => {
                     const img = document.createElement('img');
@@ -1367,7 +1346,7 @@
             }, delayMs);
         }
 
-        // --- 2. 新增模块：心迹（朋友圈，支持溢出泡泡与动态提醒跳转）---
+        // --- 2. 新增模块：心迹（置顶栏宽度再加宽2倍、缓慢浪漫气泡、完美交互消除提醒跳转）---
         let latestHeartNotification = { text: '', targetId: null };
 
         function initHeartMoments(container) {
@@ -1380,17 +1359,17 @@
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%;">
-                    <!-- 顶部情侣挂件（宽度三倍，气泡从爱心处像真实泡泡一样迅速溢出装满整个框） -->
-                    <div style="display:flex; justify-content:center; align-items:center; gap:36px; padding:10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
-                        <div class="avatar-box" style="width:36px;height:36px;">${partnerAvatarImg}</div>
-                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:40px; height:40px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点冒粉色泡泡">
-                            <svg viewBox="0 0 24 24" width="28" height="28" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    <!-- 顶部情侣挂件（宽度再次加宽为原来两倍宽，缓慢温柔冒泡） -->
+                    <div style="display:flex; justify-content:center; align-items:center; gap:72px; padding:12px 20px; width: 100%; max-width: 100%; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
+                        <div class="avatar-box" style="width:38px;height:38px;">${partnerAvatarImg}</div>
+                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:44px; height:44px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点冒粉色泡泡">
+                            <svg viewBox="0 0 24 24" width="30" height="30" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                         </div>
-                        <div class="avatar-box" style="width:36px;height:36px;">${myAvatarImg}</div>
+                        <div class="avatar-box" style="width:38px;height:38px;">${myAvatarImg}</div>
                     </div>
 
-                    <!-- 动态提醒栏 -->
-                    <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.15); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="jumpToNotificationTarget()">
+                    <!-- 动态提醒栏（点击后跳转并立刻消失） -->
+                    <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.15); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:${latestHeartNotification.text ? 'flex' : 'none'}; justify-content:space-between; align-items:center; cursor:pointer;" onclick="jumpToNotificationTarget()">
                         <span id="heartNotificationText">${latestHeartNotification.text}</span>
                         <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
                     </div>
@@ -1410,6 +1389,45 @@
                 </div>
             `;
             renderHeartMomentsList();
+        }
+
+        function updateLatestHeartNotification() {
+            const partnerNameStr = settings.partnerName || '对方';
+            if (heartMoments.length === 0) {
+                latestHeartNotification = { text: '', targetId: null };
+                return;
+            }
+            const latestM = heartMoments[0];
+            // 如果该条目已被点击消除过，则不显示提醒
+            if (dismissedNotificationId === latestM.id) {
+                latestHeartNotification = { text: '', targetId: null };
+                return;
+            }
+
+            if (latestM.author === 'partner') {
+                latestHeartNotification = { text: `${partnerNameStr}有新的心迹`, targetId: latestM.id };
+            } else if (latestM.comments && latestM.comments.length > 0) {
+                latestHeartNotification = { text: `${partnerNameStr}回复了你的心迹`, targetId: latestM.id };
+            } else {
+                latestHeartNotification = { text: '', targetId: null };
+            }
+        }
+
+        function jumpToNotificationTarget() {
+            if (!latestHeartNotification.targetId) return;
+            const targetId = latestHeartNotification.targetId;
+            
+            // 记录已消除，并隐藏提醒栏
+            dismissedNotificationId = targetId;
+            const notifBar = document.getElementById('heartNotificationBar');
+            if (notifBar) notifBar.style.display = 'none';
+
+            const el = document.getElementById(`moment-card-${targetId}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.borderColor = '#ffb6c1';
+                setTimeout(() => { el.style.borderColor = 'var(--border-color)'; }, 1500);
+            }
         }
 
         function pickLocalImage(event) {
@@ -1456,46 +1474,21 @@
             if(box) box.innerHTML = '';
         }
 
-        function updateLatestHeartNotification() {
-            const partnerNameStr = settings.partnerName || '对方';
-            if (heartMoments.length === 0) {
-                latestHeartNotification = { text: `${partnerNameStr}暂无新动态，快来发布一条吧~`, targetId: null };
-                return;
-            }
-            const latestM = heartMoments[0];
-            if (latestM.author === 'partner') {
-                latestHeartNotification = { text: `${partnerNameStr}有新的心迹`, targetId: latestM.id };
-            } else if (latestM.comments && latestM.comments.length > 0) {
-                latestHeartNotification = { text: `${partnerNameStr}回复了你的心迹`, targetId: latestM.id };
-            } else {
-                latestHeartNotification = { text: `${partnerNameStr}暂无最新消息`, targetId: latestM.id };
-            }
-        }
-
-        function jumpToNotificationTarget() {
-            if (!latestHeartNotification.targetId) return;
-            const el = document.getElementById(`moment-card-${latestHeartNotification.targetId}`);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.style.borderColor = '#ffb6c1';
-                setTimeout(() => { el.style.borderColor = 'var(--border-color)'; }, 1500);
-            }
-        }
-
         function spawnOverflowingBubbles(e) {
             const box = document.getElementById('heartHeaderBox');
             if(!box) return;
             const rect = box.getBoundingClientRect();
-            for(let i=0; i<24; i++) {
+            // 缓慢温柔向上冒泡特效
+            for(let i=0; i<20; i++) {
                 const bubble = document.createElement('div');
                 bubble.className = 'pink-bubble';
                 const randomX = Math.random() * (rect.width - 20);
                 const randomY = (rect.height / 2) + (Math.random() * 20 - 10);
                 bubble.style.left = randomX + 'px';
                 bubble.style.top = randomY + 'px';
-                bubble.style.animationDuration = (0.4 + Math.random() * 0.5) + 's';
+                bubble.style.animationDuration = (1.0 + Math.random() * 0.6) + 's';
                 box.appendChild(bubble);
-                setTimeout(() => bubble.remove(), 900);
+                setTimeout(() => bubble.remove(), 1600);
             }
         }
 
@@ -1524,7 +1517,6 @@
                     const d = new Date();
                     const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                     
-                    // 对方发布心迹时，自动从表情包库中随机挑选一张配图
                     let partnerImg = '';
                     if (settings.emojis && settings.emojis.length > 0 && Math.random() < 0.6) {
                         partnerImg = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
@@ -1541,6 +1533,7 @@
                         comments: [],
                         isPinned: false
                     });
+                    dismissedNotificationId = null; // 有新动态时重置消除状态
                     saveData();
                 }
             }
@@ -1575,6 +1568,7 @@
             heartMoments.unshift(newMoment);
             input.value = '';
             selectedHeartImg = '';
+            dismissedNotificationId = null;
             const previewBox = document.getElementById('heartImgPreviewBox');
             if(previewBox) previewBox.innerHTML = '';
 
@@ -1793,14 +1787,16 @@
             }, randomDelayMs);
         }
 
-        // --- 3. 字库模块 ---
+        // --- 3. 字库模块（已整合字卡库、动作库、心情短语、表情包管理四栏两行卡片布局） ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
             container.innerHTML = `
-                <div style="display:flex; border-bottom:1px solid var(--border-color); background:var(--card-bg);">
-                    <button class="btn" style="flex:1; border-radius:0; background:${currentLibTab==='cards'?'var(--text-color)':'transparent'}; color:${currentLibTab==='cards'?'var(--card-bg)':'var(--text-color)'}; border:none; border-bottom:2px solid var(--border-color);" onclick="switchLibTab('cards')">字卡库</button>
-                    <button class="btn" style="flex:1; border-radius:0; background:${currentLibTab==='actions'?'var(--text-color)':'transparent'}; color:${currentLibTab==='actions'?'var(--card-bg)':'var(--text-color)'}; border:none; border-bottom:2px solid var(--border-color);" onclick="switchLibTab('actions')">动作库</button>
+                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; padding:10px; background:var(--card-bg); border-bottom:1px solid var(--border-color);">
+                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='cards'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='cards'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('cards')">字卡库</div>
+                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='actions'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='actions'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('actions')">动作库</div>
+                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='moods'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='moods'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('moods')">心情短语</div>
+                    <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='emojis'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='emojis'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('emojis')">表情包管理</div>
                 </div>
                 <div id="libContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:8px; overflow-y:auto;"></div>
             `;
@@ -1828,7 +1824,7 @@
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
                 `;
                 updateCardList();
-            } else {
+            } else if (currentLibTab === 'actions') {
                 area.innerHTML = `
                     <textarea id="batchActionInput" placeholder="批量添加动作（每行一条动作描述，如：轻轻靠在了他的肩上）"></textarea>
                     <div style="display:flex; gap:8px;">
@@ -1838,7 +1834,83 @@
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
                 `;
                 updateActionList();
+            } else if (currentLibTab === 'moods') {
+                area.innerHTML = `
+                    <div style="font-weight:bold; font-size:13px;">心情短语配置：</div>
+                    <div style="font-size:11px; color:var(--sub-text);">用逗号或换行分隔多个短语，每小时自动轮换：</div>
+                    <textarea id="lib_moodPhrases" style="min-height:120px;">${settings.moodPhrases || ''}</textarea>
+                    <button class="btn" style="width:100%;" onclick="saveMoodPhrasesFromLib()">保存心情短语</button>
+                `;
+            } else if (currentLibTab === 'emojis') {
+                area.innerHTML = `
+                    <div style="font-weight:bold; font-size:13px;">表情包库管理：</div>
+                    <input type="file" accept="image/*" multiple onchange="uploadEmojisFromLib(event)">
+                    <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${settings.emojis ? settings.emojis.length : 0} 个表情</div>
+                    <div id="emojiManageList" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+                `;
+                renderEmojiManageList();
             }
+        }
+
+        function saveMoodPhrasesFromLib() {
+            const val = document.getElementById('lib_moodPhrases').value.trim();
+            settings.moodPhrases = val;
+            saveData();
+            alert('心情短语保存成功！');
+        }
+
+        function uploadEmojisFromLib(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+            if(!settings.emojis) settings.emojis = [];
+            
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 150;
+                        canvas.height = 150;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, 150, 150);
+                        settings.emojis.push(canvas.toDataURL('image/jpeg', 0.8));
+                        saveData();
+                        const indicator = document.getElementById('emojiCountIndicator');
+                        if(indicator) indicator.innerText = `已添加 ${settings.emojis.length} 个表情`;
+                        renderEmojiManageList();
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderEmojiManageList() {
+            const listEl = document.getElementById('emojiManageList');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            if (!settings.emojis || settings.emojis.length === 0) {
+                listEl.innerHTML = `<span style="font-size:11px; color:var(--sub-text);">暂无表情包</span>`;
+                return;
+            }
+            settings.emojis.forEach((imgBase64, index) => {
+                const wrap = document.createElement('div');
+                wrap.style.cssText = "position:relative; width:44px; height:44px;";
+                wrap.innerHTML = `
+                    <img src="${imgBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
+                    <button onclick="deleteLibEmoji(${index})" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; background:rgba(0,0,0,0.35); color:#fff; border:none; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="删除">×</button>
+                `;
+                listEl.appendChild(wrap);
+            });
+        }
+
+        function deleteLibEmoji(index) {
+            settings.emojis.splice(index, 1);
+            saveData();
+            renderEmojiManageList();
+            const indicator = document.getElementById('emojiCountIndicator');
+            if(indicator) indicator.innerText = `已添加 ${settings.emojis.length} 个表情`;
         }
 
         function updateCardList(filteredList = cardLibrary) {
@@ -1854,7 +1926,7 @@
                 item.innerHTML = `
                     <div style="flex:1; padding-right:8px; word-break:break-all;">${card.content}</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editCard(${card.id})">编辑</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editCard(${card.id})">修改</button>
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteCard(${card.id})">删除</button>
                     </div>
                 `;
@@ -1875,7 +1947,7 @@
                 item.innerHTML = `
                     <div style="flex:1; padding-right:8px; word-break:break-all;">♥${act.content}♥</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAction(${act.id})">编辑</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAction(${act.id})">修改</button>
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAction(${act.id})">删除</button>
                     </div>
                 `;
@@ -1909,7 +1981,7 @@
         function editCard(id) {
             const card = cardLibrary.find(c => c.id === id);
             if (!card) return;
-            const newContent = prompt('编辑字卡内容：', card.content);
+            const newContent = prompt('修改字卡内容：', card.content);
             if (newContent === null) return;
             card.content = newContent.trim();
             saveData();
@@ -1943,7 +2015,7 @@
         function editAction(id) {
             const act = actionLibrary.find(a => a.id === id);
             if (!act) return;
-            const newContent = prompt('编辑动作内容：', act.content);
+            const newContent = prompt('修改动作内容：', act.content);
             if (newContent === null) return;
             act.content = newContent.trim();
             saveData();
@@ -2156,7 +2228,7 @@
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
-                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAnniversary(${item.id})">编辑</button>
+                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAnniversary(${item.id})">修改</button>
                         <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAnniversary(${item.id})">删除</button>
                     </div>
                 `;
@@ -2164,7 +2236,7 @@
             });
         }
 
-        // --- 6. 设置模块 ---
+        // --- 6. 设置模块（心情短语与表情包已精简移至字库，此处保留基础信息） ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
@@ -2175,10 +2247,6 @@
                         <span>最大秒数 (最高600秒/10分钟)：</span>
                         <input type="number" id="set_replyDelayMax" value="${tempSettings.replyDelayMax || '30'}" min="1" max="600" style="flex:1;">
                     </div>
-                </div>
-                <div class="setting-group">
-                    <div class="setting-label">心情短语 (用逗号或换行分隔)</div>
-                    <textarea id="set_moodPhrases">${tempSettings.moodPhrases || ''}</textarea>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">我的名字</div>
@@ -2232,12 +2300,6 @@
                     <div id="chatBgPreviewArea" style="margin-top:6px;"></div>
                 </div>
                 <div class="setting-group">
-                    <div class="setting-label">添加表情包</div>
-                    <input type="file" accept="image/*" multiple onchange="uploadEmojis(event)">
-                    <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${tempSettings.emojis ? tempSettings.emojis.length : 0} 个表情</div>
-                    <div id="emojiManageList" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
-                </div>
-                <div class="setting-group">
                     <div class="setting-label">数据恢复与备份</div>
                     <div style="display:flex; gap:8px;">
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="exportData()">手动导出备份</button>
@@ -2252,7 +2314,6 @@
                 </div>
             `;
             renderAvatarPreviews();
-            renderEmojiManageList();
         }
 
         function resetBubbleColors() {
@@ -2294,32 +2355,6 @@
             renderAvatarPreviews();
         }
 
-        function renderEmojiManageList() {
-            const listEl = document.getElementById('emojiManageList');
-            if (!listEl) return;
-            listEl.innerHTML = '';
-            if (!tempSettings.emojis || tempSettings.emojis.length === 0) {
-                listEl.innerHTML = `<span style="font-size:11px; color:var(--sub-text);">暂无表情包</span>`;
-                return;
-            }
-            tempSettings.emojis.forEach((imgBase64, index) => {
-                const wrap = document.createElement('div');
-                wrap.style.cssText = "position:relative; width:44px; height:44px;";
-                wrap.innerHTML = `
-                    <img src="${imgBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
-                    <button onclick="deleteTempEmoji(${index})" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; background:rgba(0,0,0,0.35); color:#fff; border:none; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;">×</button>
-                `;
-                listEl.appendChild(wrap);
-            });
-        }
-
-        function deleteTempEmoji(index) {
-            tempSettings.emojis.splice(index, 1);
-            const indicator = document.getElementById('emojiCountIndicator');
-            if(indicator) indicator.innerText = `已添加 ${tempSettings.emojis.length} 个表情`;
-            renderEmojiManageList();
-        }
-
         function compressAndStoreImage(event, targetKey) {
             const file = event.target.files[0];
             if (!file) return;
@@ -2329,21 +2364,15 @@
                 img.src = e.target.result;
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = targetKey === 'chatBg' ? 1200 : 1200;
-                    const MAX_HEIGHT = targetKey === 'chatBg' ? 2000 : 1200;
+                    const MAX_WIDTH = 1200;
+                    const MAX_HEIGHT = 1200;
                     let width = img.width;
                     let height = img.height;
 
                     if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                     } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
                     }
 
                     canvas.width = width;
@@ -2358,36 +2387,9 @@
             reader.readAsDataURL(file);
         }
 
-        function uploadEmojis(event) {
-            const files = event.target.files;
-            if (!files.length) return;
-            if(!tempSettings.emojis) tempSettings.emojis = [];
-            
-            for (let file of files) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 150;
-                        canvas.height = 150;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, 150, 150);
-                        tempSettings.emojis.push(canvas.toDataURL('image/jpeg', 0.8));
-                        const indicator = document.getElementById('emojiCountIndicator');
-                        if(indicator) indicator.innerText = `已添加 ${tempSettings.emojis.length} 个表情`;
-                        renderEmojiManageList();
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
         function saveSettingsChanges() {
             const mName = document.getElementById('set_myName');
             const pName = document.getElementById('set_partnerName');
-            const mPhrases = document.getElementById('set_moodPhrases');
             const dMin = document.getElementById('set_replyDelayMin');
             const dMax = document.getElementById('set_replyDelayMax');
             const mbBg = document.getElementById('set_myBubbleBg');
@@ -2397,7 +2399,6 @@
 
             if(mName) tempSettings.myName = mName.value.trim();
             if(pName) tempSettings.partnerName = pName.value.trim();
-            if(mPhrases) tempSettings.moodPhrases = mPhrases.value.trim();
             if(dMin) tempSettings.replyDelayMin = dMin.value.trim();
             if(dMax) tempSettings.replyDelayMax = dMax.value.trim();
             if(mbBg) tempSettings.myBubbleBg = mbBg.value;
@@ -2407,13 +2408,11 @@
 
             settings.myName = tempSettings.myName;
             settings.partnerName = tempSettings.partnerName;
-            settings.moodPhrases = tempSettings.moodPhrases;
             settings.replyDelayMin = tempSettings.replyDelayMin;
             settings.replyDelayMax = tempSettings.replyDelayMax;
             settings.myAvatar = tempSettings.myAvatar;
             settings.partnerAvatar = tempSettings.partnerAvatar;
             settings.chatBg = tempSettings.chatBg;
-            settings.emojis = tempSettings.emojis;
             settings.myBubbleBg = tempSettings.myBubbleBg;
             settings.myBubbleText = tempSettings.myBubbleText;
             settings.partnerBubbleBg = tempSettings.partnerBubbleBg;
