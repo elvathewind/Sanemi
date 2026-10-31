@@ -186,10 +186,12 @@
         }
 
         .sub-page-header {
-            padding: max(16px, env(safe-area-inset-top)) 20px 16px;
+            padding: max(16px, env(safe-area-inset-top)) 20px 12px;
             display: flex;
             align-items: center;
             border-bottom: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            z-index: 5;
         }
 
         .back-btn {
@@ -211,12 +213,10 @@
 
         .sub-page-content {
             flex: 1;
-            padding: 20px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            background-color: var(--card-bg);
         }
 
         input, textarea, select {
@@ -243,18 +243,19 @@
             cursor: pointer;
         }
 
-        /* 蜜语样式 */
+        /* 蜜语样式：实现真正的 100% 全屏无缝自适应铺满 */
         .chat-container {
             display: flex;
             flex-direction: column;
             height: 100%;
+            width: 100%;
             justify-content: space-between;
             background-color: var(--card-bg);
             background-image: var(--chat-bg);
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat;
             padding: 10px;
-            border-radius: 12px;
             position: relative;
         }
 
@@ -269,6 +270,7 @@
             justify-content: center;
             align-items: center;
             text-align: center;
+            opacity: 0.9;
         }
 
         .chat-messages {
@@ -277,7 +279,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            padding-bottom: 10px;
+            padding: 10px 0;
         }
 
         .message-row {
@@ -332,6 +334,7 @@
             max-width: 100%;
             box-sizing: border-box;
             overflow: hidden;
+            background-color: var(--card-bg);
         }
 
         .message-row.incoming .message-bubble { background-color: var(--bubble-bg); color: var(--text-color); }
@@ -400,10 +403,11 @@
             flex-direction: column;
             gap: 4px;
             background-color: var(--card-bg);
-            padding: 6px 8px;
+            padding: 8px;
             border-top: 1px solid var(--border-color);
             border-radius: 8px;
-            margin-bottom: env(safe-area-inset-bottom);
+            margin-bottom: max(env(safe-area-inset-bottom), 6px);
+            opacity: 0.95;
         }
 
         .chat-input-area {
@@ -420,7 +424,7 @@
             padding-left: 4px;
         }
 
-        /* 移动端视频通话悬浮窗 */
+        /* 移动端视频通话悬浮窗与头像高清全屏填充 */
         .video-modal {
             position: absolute;
             top: 60px;
@@ -470,12 +474,16 @@
             font-size: 13px;
             background: #000;
             gap: 8px;
-            padding: 8px;
+            padding: 0;
             text-align: center;
             overflow: hidden;
             position: relative;
         }
-        .video-body img { width: 100%; height: 100%; object-fit: cover; }
+        .video-body img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+        }
 
         .video-placeholder-bg {
             position: absolute;
@@ -778,7 +786,7 @@
                 const rand = Math.random();
                 if (rand < 0.7) {
                     bodyContent.innerHTML = settings.partnerAvatar ? 
-                        `<img src="${settings.partnerAvatar}"><div style="position:absolute; bottom:6px; font-size:11px; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px;">通话中...</div>` : 
+                        `<img src="${settings.partnerAvatar}"><div style="position:absolute; bottom:6px; font-size:11px; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px; z-index:3;">通话中...</div>` : 
                         `【已接通】<br>正在与 ${partnerNameStr} 视频通话中...`;
                 } else if (rand < 0.8) {
                     bodyContent.innerHTML = `对方忙线中<br><span style="font-size:10px; color:#aaa;">“当前线路正忙，请稍后再拨~”</span>`;
@@ -929,7 +937,7 @@
             const body = document.getElementById('videoBodyContent');
             if(body) {
                 body.innerHTML = settings.partnerAvatar ? 
-                    `<img src="${settings.partnerAvatar}"><div style="position:absolute; bottom:6px; font-size:11px; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px;">通话中...</div>` : 
+                    `<img src="${settings.partnerAvatar}"><div style="position:absolute; bottom:6px; font-size:11px; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px; z-index:3;">通话中...</div>` : 
                     `【已接通】<br>通话进行中...`;
             }
         }
@@ -1577,8 +1585,8 @@
                 img.src = e.target.result;
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = targetKey === 'chatBg' ? 800 : 300;
-                    const MAX_HEIGHT = targetKey === 'chatBg' ? 1200 : 300;
+                    const MAX_WIDTH = targetKey === 'chatBg' ? 1200 : 300;
+                    const MAX_HEIGHT = targetKey === 'chatBg' ? 2000 : 300;
                     let width = img.width;
                     let height = img.height;
 
@@ -1599,7 +1607,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    tempSettings[targetKey] = canvas.toDataURL('image/jpeg', 0.85);
+                    tempSettings[targetKey] = canvas.toDataURL('image/jpeg', 0.9);
                     renderAvatarPreviews();
                 }
             };
@@ -1649,7 +1657,7 @@
             settings.chatBg = tempSettings.chatBg;
             settings.emojis = tempSettings.emojis;
 
-            saveData(); // saveData 内部会自动调用 applySettings() 实时刷新背景！
+            saveData();
             alert('保存成功！');
             closeApp();
         }
