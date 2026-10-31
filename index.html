@@ -158,17 +158,6 @@
             text-align: center;
         }
 
-        .red-dot {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 10px;
-            height: 10px;
-            background-color: #ff3b30;
-            border-radius: 50%;
-            border: 1px solid var(--card-bg);
-        }
-
         .sub-page {
             position: absolute;
             top: 0;
@@ -579,6 +568,29 @@
             z-index: 99;
             box-shadow: inset -2px -2px 4px rgba(255, 182, 193, 0.6);
         }
+
+        /* 锦书动态飞入信封特效 */
+        @keyframes flyInEnvelope {
+            0% { transform: translate(-150px, -80px) rotate(-20deg) scale(0.5); opacity: 0; }
+            60% { transform: translate(10px, 10px) rotate(5deg) scale(1.05); opacity: 1; }
+            100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+        }
+        .flying-envelope-badge {
+            position: fixed;
+            bottom: 40px;
+            right: 30px;
+            background: var(--card-bg);
+            border: 2px solid #ffb6c1;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+            padding: 12px 18px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            z-index: 999;
+            animation: flyInEnvelope 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
     </style>
 </head>
 <body>
@@ -649,7 +661,6 @@
             myName: '我',
             partnerName: '对方',
             chatBg: '',
-            hasUnreadLetter: false,
             replyDelayMin: '5',
             replyDelayMax: '30',
             moodPhrases: '今天心情不错, 想你了, 正在发呆, 喝杯咖啡吧',
@@ -715,14 +726,11 @@
             const grid = document.getElementById('desktopGrid');
             if(!grid) return;
             grid.innerHTML = '';
-            
-            const hasNewReadyLetter = letters.some(item => item.reply && !item.isRead);
-            settings.hasUnreadLetter = hasNewReadyLetter;
 
             const apps = [
                 { id: 'chat', name: '蜜语', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>' },
                 { id: 'heartMoments', name: '心迹', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>' },
-                { id: 'letters', name: '锦书', icon: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>', hasRedDot: settings.hasUnreadLetter },
+                { id: 'letters', name: '锦书', icon: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>' },
                 { id: 'anniversary', name: '良辰', icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>' },
                 { id: 'cards', name: '字库', icon: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line>' },
                 { id: 'settings', name: '设置', icon: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' }
@@ -734,7 +742,6 @@
                 iconDiv.innerHTML = `
                     <div class="app-icon-box">
                         <svg viewBox="0 0 24 24">${app.icon}</svg>
-                        ${app.hasRedDot ? '<div class="red-dot"></div>' : ''}
                     </div>
                     <div class="app-name">${app.name}</div>
                 `;
@@ -761,9 +768,6 @@
             else if (appId === 'heartMoments') initHeartMoments(contentEl);
             else if (appId === 'cards') initCards(contentEl);
             else if (appId === 'letters') {
-                letters.forEach(item => { if (item.reply) item.isRead = true; });
-                saveData();
-                renderDesktop();
                 initLetters(contentEl);
             }
             else if (appId === 'anniversary') initAnniversary(contentEl);
@@ -1309,18 +1313,16 @@
             return sec * 1000;
         }
 
-        // 新增：专为心迹回复设定的随机延迟（1分钟到10分钟之内）
         function getHeartCommentReplyDelayMs() {
-            const minSec = 60; // 1分钟
-            const maxSec = 600; // 10分钟
+            const minSec = 60;
+            const maxSec = 600;
             const sec = Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec;
             return sec * 1000;
         }
 
-        // 新增：专为首次发布心迹设定的随机延迟（5分钟到1小时之间）
         function getHeartInitialPostDelayMs() {
-            const minSec = 300; // 5分钟
-            const maxSec = 3600; // 1小时
+            const minSec = 300;
+            const maxSec = 3600;
             const sec = Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec;
             return sec * 1000;
         }
@@ -1365,7 +1367,7 @@
             }, delayMs);
         }
 
-        // --- 2. 新增模块：心迹（置顶框高度1.5倍、大头像联动、首次发布5分~1小时互动、后续回复1~10分钟）---
+        // --- 2 & 3. 心迹模块（置顶高度为发布框的2倍，提醒功能满血复活） ---
         let latestHeartNotification = { text: '', targetId: null };
 
         function initHeartMoments(container) {
@@ -1377,20 +1379,20 @@
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
-                <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%;">
-                    <!-- 顶部情侣挂件：高度增至发布输入框的1.5倍，头像占挂件高度80% -->
-                    <div style="display:flex; justify-content:center; align-items:center; gap:40px; padding:16px 20px; height:100px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
-                        <div class="avatar-box" style="width:72px;height:72px; border-radius:50%;">${partnerAvatarImg}</div>
+                <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
+                    <!-- 动态提醒栏（满血复活，置顶清晰呈现） -->
+                    <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.2); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:${latestHeartNotification.text ? 'flex' : 'none'}; justify-content:space-between; align-items:center; cursor:pointer; z-index:2;" onclick="jumpToNotificationTarget()">
+                        <span id="heartNotificationText">${latestHeartNotification.text}</span>
+                        <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
+                    </div>
+
+                    <!-- 顶部情侣挂件：高度为发布心迹输入框高度的2倍 (~160px) -->
+                    <div style="display:flex; justify-content:center; align-items:center; gap:50px; padding:20px; height:160px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
+                        <div class="avatar-box" style="width:90px;height:90px; border-radius:50%;">${partnerAvatarImg}</div>
                         <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:52px; height:52px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
                             <svg viewBox="0 0 24 24" width="36" height="36" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                         </div>
-                        <div class="avatar-box" style="width:72px;height:72px; border-radius:50%;">${myAvatarImg}</div>
-                    </div>
-
-                    <!-- 动态提醒栏 -->
-                    <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.15); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:${latestHeartNotification.text ? 'flex' : 'none'}; justify-content:space-between; align-items:center; cursor:pointer;" onclick="jumpToNotificationTarget()">
-                        <span id="heartNotificationText">${latestHeartNotification.text}</span>
-                        <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
+                        <div class="avatar-box" style="width:90px;height:90px; border-radius:50%;">${myAvatarImg}</div>
                     </div>
 
                     <div>
@@ -1498,7 +1500,7 @@
             for(let i=0; i<15; i++) {
                 const bubble = document.createElement('div');
                 bubble.className = 'pink-bubble';
-                const randomX = Math.random() * (rect.width - 40) + 20;
+                const randomX = Math.random() * (rect.width - 50) + 25;
                 bubble.style.left = randomX + 'px';
                 bubble.style.bottom = '4px';
                 bubble.style.animationDuration = (2.5 + Math.random() * 1.2) + 's';
@@ -1591,7 +1593,6 @@
             saveData();
             renderHeartMomentsList();
 
-            // 首次发布心迹后：5分钟到1小时之间的随机数值
             const initialDelayMs = getHeartInitialPostDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === newMoment.id);
@@ -1740,7 +1741,6 @@
             saveData();
             renderHeartMomentsList();
 
-            // 当你回复他以后：回复速度在1分钟到10分钟之内的一个随机数值
             const replyDelayMs = getHeartCommentReplyDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === momentId);
@@ -1782,7 +1782,6 @@
             saveData();
             renderHeartMomentsList();
 
-            // 后续对话回复：1分钟到10分钟之内
             const replyDelayMs = getHeartCommentReplyDelayMs();
             setTimeout(() => {
                 const mTarget = heartMoments.find(m => m.id === momentId);
@@ -1806,7 +1805,7 @@
             }, replyDelayMs);
         }
 
-        // --- 3. 字库模块（四栏完全统一：字卡、动作、心情、表情，均具备搜索、批量添加、修改、删除） ---
+        // --- 3. 字库模块 ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -1876,7 +1875,6 @@
             }
         }
 
-        // --- 字卡库逻辑 ---
         function updateCardList(filteredList = cardLibrary) {
             const listContainer = document.getElementById('itemContainer');
             const countEl = document.getElementById('cardCount');
@@ -1937,7 +1935,6 @@
             updateCardList();
         }
 
-        // --- 动作库逻辑 ---
         function updateActionList(filteredList = actionLibrary) {
             const listContainer = document.getElementById('itemContainer');
             const countEl = document.getElementById('actionCount');
@@ -1998,7 +1995,6 @@
             updateActionList();
         }
 
-        // --- 心情短语库逻辑 ---
         function getMoodPhrasesArray() {
             const raw = settings.moodPhrases || '';
             return raw.split(/[,，\n]+/).map(s => s.trim()).filter(Boolean);
@@ -2075,7 +2071,6 @@
             updateMoodList();
         }
 
-        // --- 表情包库列表管理逻辑（与字卡一致，带缩略图与删除标签） ---
         function updateEmojiList() {
             const listContainer = document.getElementById('itemContainer');
             const countEl = document.getElementById('emojiCountIndicator');
@@ -2137,7 +2132,9 @@
             updateEmojiList();
         }
 
-        // --- 4. 锦书模块 ---
+        // --- 4. 锦书模块（动态飞入信封取代红点） ---
+        let activeFlyingEnvelopeEl = null;
+
         function initLetters(container) {
             container.innerHTML = `
                 <div>
@@ -2149,7 +2146,43 @@
                 <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
                 <div style="text-align:center; font-size:12px; color:var(--sub-text); font-style:italic; margin-top:6px;">云中谁寄锦书来</div>
             `;
+            checkAndSpawnFlyingEnvelope(container);
             updateLettersList();
+        }
+
+        function checkAndSpawnFlyingEnvelope(container) {
+            if (activeFlyingEnvelopeEl) {
+                activeFlyingEnvelopeEl.remove();
+                activeFlyingEnvelopeEl = null;
+            }
+
+            const unreadReadyLetter = letters.find(item => item.reply && !item.isRead);
+            if (!unreadReadyLetter) return;
+
+            const badge = document.createElement('div');
+            badge.className = 'flying-envelope-badge';
+            badge.innerHTML = `
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                <span style="font-size:12px; font-weight:bold; color:var(--text-color);">有一封新的回信请查收</span>
+            `;
+
+            badge.onclick = () => {
+                unreadReadyLetter.isRead = true;
+                saveData();
+                badge.remove();
+                activeFlyingEnvelopeEl = null;
+                updateLettersList();
+                
+                const targetCard = document.getElementById(`letter-item-${unreadReadyLetter.id}`);
+                if (targetCard) {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetCard.style.borderColor = '#ffb6c1';
+                    setTimeout(() => { targetCard.style.borderColor = 'var(--border-color)'; }, 1500);
+                }
+            };
+
+            container.appendChild(badge);
+            activeFlyingEnvelopeEl = badge;
         }
 
         function sendLetter() {
@@ -2192,6 +2225,7 @@
             }
 
             const now = Date.now();
+            let hasNewUnread = false;
 
             letters.forEach(item => {
                 if (!item.reply && cardLibrary.length > 0 && now >= item.replyTimestamp) {
@@ -2208,8 +2242,13 @@
                     saveData();
                 }
 
+                if (item.reply && !item.isRead) {
+                    hasNewUnread = true;
+                }
+
                 const div = document.createElement('div');
-                div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px;";
+                div.id = `letter-item-${item.id}`;
+                div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
                 
                 let replyStatus = item.reply ? 
                     `<div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
@@ -2230,6 +2269,11 @@
 
                 container.appendChild(div);
             });
+
+            if (hasNewUnread && !activeFlyingEnvelopeEl) {
+                const subContent = document.getElementById('subPageContent');
+                if (subContent) checkAndSpawnFlyingEnvelope(subContent);
+            }
         }
 
         function deleteLetter(id) {
@@ -2237,7 +2281,10 @@
                 letters = letters.filter(l => l.id !== id);
                 saveData();
                 updateLettersList();
-                renderDesktop();
+                if (activeFlyingEnvelopeEl && !letters.some(item => item.reply && !item.isRead)) {
+                    activeFlyingEnvelopeEl.remove();
+                    activeFlyingEnvelopeEl = null;
+                }
             }
         }
 
@@ -2345,18 +2392,9 @@
             });
         }
 
-        // --- 6. 设置模块 ---
+        // --- 6. 设置模块（功能顺序：头像等 ➡️ 回复时间范围 ➡️ 气泡颜色 ➡️ 数据备份恢复） ---
         function initSettings(container) {
             container.innerHTML = `
-                <div class="setting-group">
-                    <div class="setting-label">对方回复时间范围 (秒)</div>
-                    <div style="display:flex; align-items:center; gap:8px; font-size:12px;">
-                        <span>最小秒数：</span>
-                        <input type="number" id="set_replyDelayMin" value="${tempSettings.replyDelayMin || '5'}" min="1" max="600" style="flex:1;">
-                        <span>最大秒数 (最高600秒/10分钟)：</span>
-                        <input type="number" id="set_replyDelayMax" value="${tempSettings.replyDelayMax || '30'}" min="1" max="600" style="flex:1;">
-                    </div>
-                </div>
                 <div class="setting-group">
                     <div class="setting-label">我的名字</div>
                     <input type="text" id="set_myName" value="${tempSettings.myName || ''}">
@@ -2364,28 +2402,6 @@
                 <div class="setting-group">
                     <div class="setting-label">对方名字</div>
                     <input type="text" id="set_partnerName" value="${tempSettings.partnerName || ''}">
-                </div>
-                <div class="setting-group">
-                    <div class="setting-label">🎨 聊天气泡颜色自定义</div>
-                    <div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span>我的气泡背景色：</span>
-                            <input type="color" id="set_myBubbleBg" value="${tempSettings.myBubbleBg || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
-                        </div>
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span>我的气泡文字色：</span>
-                            <input type="color" id="set_myBubbleText" value="${tempSettings.myBubbleText || '#ffffff'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
-                        </div>
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span>对方气泡背景色：</span>
-                            <input type="color" id="set_partnerBubbleBg" value="${tempSettings.partnerBubbleBg || '#eaeaea'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
-                        </div>
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span>对方气泡文字色：</span>
-                            <input type="color" id="set_partnerBubbleText" value="${tempSettings.partnerBubbleText || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
-                        </div>
-                        <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetBubbleColors()">恢复默认气泡颜色</button>
-                    </div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-label">我的头像</div>
@@ -2408,6 +2424,40 @@
                     </div>
                     <div id="chatBgPreviewArea" style="margin-top:6px;"></div>
                 </div>
+
+                <div class="setting-group">
+                    <div class="setting-label">对方回复时间范围 (秒)</div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px;">
+                        <span>最小秒数：</span>
+                        <input type="number" id="set_replyDelayMin" value="${tempSettings.replyDelayMin || '5'}" min="1" max="600" style="flex:1;">
+                        <span>最大秒数 (最高600秒/10分钟)：</span>
+                        <input type="number" id="set_replyDelayMax" value="${tempSettings.replyDelayMax || '30'}" min="1" max="600" style="flex:1;">
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-label">🎨 聊天气泡颜色自定义</div>
+                    <div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <span>我的气泡背景色：</span>
+                            <input type="color" id="set_myBubbleBg" value="${tempSettings.myBubbleBg || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                        </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <span>我的气泡文字色：</span>
+                            <input type="color" id="set_myBubbleText" value="${tempSettings.myBubbleText || '#ffffff'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                        </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <span>对方气泡背景色：</span>
+                            <input type="color" id="set_partnerBubbleBg" value="${tempSettings.partnerBubbleBg || '#eaeaea'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                        </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <span>对方气泡文字色：</span>
+                            <input type="color" id="set_partnerBubbleText" value="${tempSettings.partnerBubbleText || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                        </div>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetBubbleColors()">恢复默认气泡颜色</button>
+                    </div>
+                </div>
+
                 <div class="setting-group">
                     <div class="setting-label">数据恢复与备份</div>
                     <div style="display:flex; gap:8px;">
