@@ -738,9 +738,10 @@
             return phrases[hourIndex];
         }
 
-        // --- 全局视频通话计时器变量 ---
+        // --- 全局视频通话计时器与状态保持 ---
         let callTimerInterval = null;
         let callSeconds = 0;
+        let currentCallStatus = 'idle'; // 'idle', 'connecting', 'connected', 'busy', 'no_answer', 'rejected', 'incoming'
 
         function startCallTimer() {
             stopCallTimer();
@@ -761,6 +762,45 @@
             if (callTimerInterval) {
                 clearInterval(callTimerInterval);
                 callTimerInterval = null;
+            }
+        }
+
+        function renderVideoBodyContent() {
+            const body = document.getElementById('videoBodyContent');
+            if(!body) return;
+            const partnerNameStr = (settings.partnerName || '对方');
+
+            if (currentCallStatus === 'connecting') {
+                body.innerHTML = settings.partnerAvatar ? 
+                    `<div class="video-placeholder-bg" style="background-image: url('${settings.partnerAvatar}')"></div><div class="video-placeholder-content">视频连线中...</div>` : 
+                    `<div style="color:#aaa;">视频连线中...</div>`;
+            } else if (currentCallStatus === 'incoming') {
+                let callPlaceholderHTML = settings.partnerAvatar ? 
+                    `<div class="video-placeholder-bg" style="background-image: url('${settings.partnerAvatar}')"></div><div class="video-placeholder-content">${partnerNameStr} 邀请你进行视频通话...</div>` : 
+                    `<div>${partnerNameStr} 邀请你进行视频通话...</div>`;
+                body.innerHTML = `
+                    ${callPlaceholderHTML}
+                    <div style="display:flex; gap:10px; margin-top:10px; position:relative; z-index:2;">
+                        <button class="btn" style="background:#34c759; padding:4px 10px; font-size:12px;" onclick="acceptCall()">接受</button>
+                        <button class="btn" style="background:#ff3b30; padding:4px 10px; font-size:12px;" onclick="closeVideoModal()">拒绝</button>
+                    </div>
+                `;
+            } else if (currentCallStatus === 'connected') {
+                const mins = Math.floor(callSeconds / 60);
+                const secs = callSeconds % 60;
+                const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+                body.innerHTML = settings.partnerAvatar ? 
+                    `<img src="${settings.partnerAvatar}"><div id="callTimerDisplay" style="position:absolute; bottom:8px; right:8px; font-size:11px; background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); color:#fff; padding:3px 8px; border-radius:12px; z-index:3;">${timeStr}</div>` : 
+                    `【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span>`;
+            } else if (currentCallStatus === 'busy') {
+                body.innerHTML = `对方忙线中<br><span style="font-size:10px; color:#aaa;">“当前线路正忙，请稍后再拨~”</span>`;
+            } else if (currentCallStatus === 'no_answer') {
+                body.innerHTML = `暂时无法接通<br><span style="font-size:10px; color:#aaa;">对方当前网络不佳或不在手机旁</span>`;
+            } else if (currentCallStatus === 'rejected') {
+                body.innerHTML = `对方拒绝通话<br><span style="font-size:11px; color:#ffcccc; margin-top:4px;">“我现在不太方便，等一下哦”</span>`;
+            } else {
+                body.innerHTML = `<div style="color:#aaa;">通话已结束</div>`;
             }
         }
 
@@ -809,9 +849,7 @@
             modal.className = 'video-modal';
             
             const partnerNameStr = (settings.partnerName || '对方');
-            let placeholderHTML = settings.partnerAvatar ? 
-                `<div class="video-placeholder-bg" style="background-image: url('${settings.partnerAvatar}')"></div><div class="video-placeholder-content">视频连线中...</div>` : 
-                `<div style="color:#aaa;">视频连线中...</div>`;
+            currentCallStatus = 'connecting';
 
             modal.innerHTML = `
                 <div class="video-header" id="videoModalHeader">
@@ -822,36 +860,33 @@
                         <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="关闭" onclick="closeVideoModal()">✕</span>
                     </div>
                 </div>
-                <div class="video-body" id="videoBodyContent">
-                    ${placeholderHTML}
-                </div>
+                <div class="video-body" id="videoBodyContent"></div>
             `;
             phoneLayer.appendChild(modal);
             makeDraggableInPhoneBox(modal, document.getElementById('videoModalHeader'));
             isVideoFullScreen = false;
+            renderVideoBodyContent();
 
             setTimeout(() => {
-                const bodyContent = document.getElementById('videoBodyContent');
-                if(!bodyContent) return;
-
+                if (!document.getElementById('videoModal')) return;
                 const rand = Math.random();
                 if (rand < 0.7) {
+                    currentCallStatus = 'connected';
                     startCallTimer();
-                    bodyContent.innerHTML = settings.partnerAvatar ? 
-                        `<img src="${settings.partnerAvatar}"><div id="callTimerDisplay" style="position:absolute; bottom:6px; font-size:11px; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px; z-index:3;">0:00</div>` : 
-                        `【已接通】<br><span id="callTimerDisplay">0:00</span>`;
                 } else if (rand < 0.8) {
-                    bodyContent.innerHTML = `对方忙线中<br><span style="font-size:10px; color:#aaa;">“当前线路正忙，请稍后再拨~”</span>`;
+                    currentCallStatus = 'busy';
                 } else if (rand < 0.9) {
-                    bodyContent.innerHTML = `暂时无法接通<br><span style="font-size:10px; color:#aaa;">对方当前网络不佳或不在手机旁</span>`;
+                    currentCallStatus = 'no_answer';
                 } else {
-                    bodyContent.innerHTML = `对方拒绝通话<br><span style="font-size:11px; color:#ffcccc; margin-top:4px;">“我现在不太方便，等一下哦”</span>`;
+                    currentCallStatus = 'rejected';
                 }
+                renderVideoBodyContent();
             }, 3000);
         }
 
         function closeVideoModal() {
             stopCallTimer();
+            currentCallStatus = 'idle';
             const modal = document.getElementById('videoModal');
             if(modal) modal.remove();
         }
@@ -864,6 +899,7 @@
                 body.style.display = 'flex';
                 modal.style.height = '240px';
                 el.innerText = '—';
+                renderVideoBodyContent(); // 恢复时立刻重新渲染内容，杜绝任何白屏
             } else {
                 body.style.display = 'none';
                 modal.style.height = 'auto';
@@ -876,8 +912,12 @@
             const modal = document.getElementById('videoModal');
             if(!modal) return;
             
+            // 核心修复：不论之前是否最小化、无论走什么路径，点击最大化前强制确保 body 处于 flex 显示状态并重新安全渲染内容
+            const body = document.getElementById('videoBodyContent');
+            if (body) body.style.display = 'flex';
+
             if (!isVideoFullScreen) {
-                // 记录放大前的位置与尺寸（防止原本未记录或最小化后丢失）
+                // 缓存放大前的位置尺寸
                 modal.dataset.prevTop = modal.style.top || '60px';
                 modal.dataset.prevLeft = modal.style.left || '20px';
                 modal.dataset.prevWidth = modal.style.width || '200px';
@@ -890,10 +930,6 @@
                 isVideoFullScreen = true;
                 el.innerText = '🗗';
             } else {
-                // 安全还原大小时，确保内容处于展开状态
-                const body = document.getElementById('videoBodyContent');
-                if(body) body.style.display = 'flex';
-                
                 modal.style.top = modal.dataset.prevTop || '60px';
                 modal.style.left = modal.dataset.prevLeft || '20px';
                 modal.style.width = modal.dataset.prevWidth || '200px';
@@ -901,6 +937,8 @@
                 isVideoFullScreen = false;
                 el.innerText = '□';
             }
+            // 再次刷新渲染确保内容百分百到位
+            renderVideoBodyContent();
         }
 
         function makeDraggableInPhoneBox(elmnt, header) {
@@ -965,13 +1003,11 @@
                 if(modal) modal.remove();
 
                 const partnerNameStr = (settings.partnerName || '对方');
+                currentCallStatus = 'incoming';
+
                 modal = document.createElement('div');
                 modal.id = 'videoModal';
                 modal.className = 'video-modal';
-                
-                let callPlaceholderHTML = settings.partnerAvatar ? 
-                    `<div class="video-placeholder-bg" style="background-image: url('${settings.partnerAvatar}')"></div><div class="video-placeholder-content">${partnerNameStr} 邀请你进行视频通话...</div>` : 
-                    `<div>${partnerNameStr} 邀请你进行视频通话...</div>`;
 
                 modal.innerHTML = `
                     <div class="video-header" id="videoModalHeader">
@@ -982,35 +1018,26 @@
                             <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="关闭" onclick="closeVideoModal()">✕</span>
                         </div>
                     </div>
-                    <div class="video-body" id="videoBodyContent">
-                        ${callPlaceholderHTML}
-                        <div style="display:flex; gap:10px; margin-top:10px; position:relative; z-index:2;">
-                            <button class="btn" style="background:#34c759; padding:4px 10px; font-size:12px;" onclick="acceptCall()">接受</button>
-                            <button class="btn" style="background:#ff3b30; padding:4px 10px; font-size:12px;" onclick="closeVideoModal()">拒绝</button>
-                        </div>
-                    </div>
+                    <div class="video-body" id="videoBodyContent"></div>
                 `;
                 phoneLayer.appendChild(modal);
                 makeDraggableInPhoneBox(modal, document.getElementById('videoModalHeader'));
                 isVideoFullScreen = false;
+                renderVideoBodyContent();
 
                 if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
                 callTimeoutTimer = setTimeout(() => {
                     const activeModal = document.getElementById('videoModal');
-                    if (activeModal) activeModal.remove();
+                    if (activeModal && currentCallStatus === 'incoming') closeVideoModal();
                 }, 60000);
             }
         }
 
         function acceptCall() {
             if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+            currentCallStatus = 'connected';
             startCallTimer();
-            const body = document.getElementById('videoBodyContent');
-            if(body) {
-                body.innerHTML = settings.partnerAvatar ? 
-                    `<img src="${settings.partnerAvatar}"><div id="callTimerDisplay" style="position:absolute; bottom:6px; font-size:11px; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px; z-index:3;">0:00</div>` : 
-                    `【已接通】<br><span id="callTimerDisplay">0:00</span>`;
-            }
+            renderVideoBodyContent();
         }
 
         function checkPartnerActiveMessage() {
