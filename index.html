@@ -549,22 +549,22 @@
             align-items: center;
         }
 
-        /* 冒到框内最高处的泡泡特效 */
+        /* 优化后的 0.8 倍高度泡泡飘散动画 (-104px) */
         @keyframes bubbleSlowRise {
             0% { transform: translateY(0) scale(0.6); opacity: 0.1; }
             30% { opacity: 0.8; }
             85% { opacity: 0.8; }
-            100% { transform: translateY(-130px) scale(1.2); opacity: 0; }
+            100% { transform: translateY(-104px) scale(1.15); opacity: 0; }
         }
         .pink-bubble {
             position: absolute;
-            width: 16px;
-            height: 16px;
+            width: 15px;
+            height: 15px;
             background: radial-gradient(circle at 30% 30%, #ffffff, #ffb6c1);
             border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             pointer-events: none;
-            animation: bubbleSlowRise 3.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+            animation: bubbleSlowRise 2.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
             z-index: 99;
             box-shadow: inset -2px -2px 4px rgba(255, 182, 193, 0.6);
         }
@@ -879,7 +879,7 @@
             }
         }
 
-        // --- 1. 蜜语模块 ---
+        // --- 1. 蜜语模块（新概率权重：5%拍一拍，15%动作，80%字卡/表情/混合） ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -1289,21 +1289,6 @@
             updateChatMessages();
         }
 
-        function sendUserMessage() {
-            const input = document.getElementById('chatInput');
-            if(!input) return;
-            const text = input.value.trim();
-            if (!text) return;
-
-            chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'text', content: text, quoted: currentReplyingTo });
-            currentReplyingTo = null;
-            cancelReplyQuote();
-            input.value = '';
-            saveData();
-            updateChatMessages();
-            triggerPartnerReply();
-        }
-
         function getRandomReplyDelayMs() {
             const minSec = Number(settings.replyDelayMin) || 5;
             const maxSec = Number(settings.replyDelayMax) || 30;
@@ -1328,7 +1313,6 @@
         }
 
         function triggerPartnerReply() {
-            if (cardLibrary.length === 0) return;
             if (settings.readNotBack && Math.random() < 0.4) return;
 
             const indicator = document.getElementById('typingIndicator');
@@ -1340,34 +1324,58 @@
             setTimeout(() => {
                 if(indicator) indicator.innerText = '';
                 
-                if (settings.emojis && settings.emojis.length > 0 && Math.random() < 0.5) {
-                    const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
-                    chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
+                const roll = Math.random(); 
+                // 5% 概率拍一拍
+                if (roll < 0.05) {
+                    chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 拍了拍我` });
+                } 
+                // 15% 概率触发动作（0.05 到 0.20 之间）
+                else if (roll < 0.20) {
+                    if (actionLibrary.length > 0) {
+                        const randomAct = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
+                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} ${randomAct.content}` });
+                    } else {
+                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 轻轻靠在了你的肩上` });
+                    }
+                } 
+                // 80% 概率发字卡或表情包或同时发
+                else {
+                    let hasEmoji = settings.emojis && settings.emojis.length > 0;
+                    let sendEmoji = hasEmoji && Math.random() < 0.4;
+                    let sendCard = cardLibrary.length > 0 && (Math.random() < 0.8 || !sendEmoji);
+
+                    if (sendEmoji) {
+                        const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
+                        chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
+                    }
+
+                    if (sendCard) {
+                        const maxCount = Math.min(cardLibrary.length, 3);
+                        const count = Math.floor(Math.random() * maxCount) + 1;
+                        let tempLib = [...cardLibrary];
+                        let selectedTexts = [];
+                        for(let i = 0; i < count; i++) {
+                            const randomIndex = Math.floor(Math.random() * tempLib.length);
+                            selectedTexts.push(tempLib[randomIndex].content);
+                            tempLib.splice(randomIndex, 1);
+                        }
+
+                        let partnerQuoted = null;
+                        const lastOutgoing = [...chatMessages].reverse().find(m => m.sender === 'outgoing' && m.type === 'text');
+                        if (lastOutgoing && Math.random() < 0.3) {
+                            partnerQuoted = lastOutgoing.content;
+                        }
+
+                        chatMessages.push({ id: Date.now() + 1, sender: 'incoming', type: 'text', content: selectedTexts.join(' '), quoted: partnerQuoted });
+                    }
                 }
 
-                const maxCount = Math.min(cardLibrary.length, 3);
-                const count = Math.floor(Math.random() * maxCount) + 1;
-                let tempLib = [...cardLibrary];
-                let selectedTexts = [];
-                for(let i = 0; i < count; i++) {
-                    const randomIndex = Math.floor(Math.random() * tempLib.length);
-                    selectedTexts.push(tempLib[randomIndex].content);
-                    tempLib.splice(randomIndex, 1);
-                }
-
-                let partnerQuoted = null;
-                const lastOutgoing = [...chatMessages].reverse().find(m => m.sender === 'outgoing' && m.type === 'text');
-                if (lastOutgoing && Math.random() < 0.3) {
-                    partnerQuoted = lastOutgoing.content;
-                }
-
-                chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' '), quoted: partnerQuoted });
                 saveData();
                 updateChatMessages();
             }, delayMs);
         }
 
-        // --- 2 & 3. 心迹模块（提醒逻辑全局锁定、气泡直冲最高处） ---
+        // --- 2 & 3 & 4. 心迹模块（全局提醒、0.8倍挂件及泡泡高度、删掉“心迹列表”四字） ---
         let latestHeartNotification = { text: '', targetId: null };
 
         function initHeartMoments(container) {
@@ -1386,13 +1394,13 @@
                         <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
                     </div>
 
-                    <!-- 顶部情侣挂件 -->
-                    <div style="display:flex; justify-content:center; align-items:center; gap:50px; padding:20px; height:160px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
-                        <div class="avatar-box" style="width:90px;height:90px; border-radius:50%;">${partnerAvatarImg}</div>
-                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:52px; height:52px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
-                            <svg viewBox="0 0 24 24" width="36" height="36" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    <!-- 顶部情侣挂件：高度为原来2倍的0.8倍 (~128px)，头像等比例80% (~72px) -->
+                    <div style="display:flex; justify-content:center; align-items:center; gap:40px; padding:16px; height:128px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
+                        <div class="avatar-box" style="width:72px;height:72px; border-radius:50%;">${partnerAvatarImg}</div>
+                        <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:44px; height:44px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
+                            <svg viewBox="0 0 24 24" width="30" height="30" stroke="#ffb6c1" stroke-width="2" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                         </div>
-                        <div class="avatar-box" style="width:90px;height:90px; border-radius:50%;">${myAvatarImg}</div>
+                        <div class="avatar-box" style="width:72px;height:72px; border-radius:50%;">${myAvatarImg}</div>
                     </div>
 
                     <div>
@@ -1405,8 +1413,7 @@
                             <button class="btn" style="flex:1; font-size:12px;" onclick="postUserHeartMoment()">发布新动态</button>
                         </div>
                     </div>
-                    <div style="font-weight:bold; border-top:1px solid var(--border-color); padding-top:10px;">心迹列表：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px;" id="heartMomentsList"></div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px; margin-top:4px;" id="heartMomentsList"></div>
                 </div>
             `;
             renderHeartMomentsList();
@@ -1418,21 +1425,30 @@
                 latestHeartNotification = { text: '', targetId: null };
                 return;
             }
-            const latestM = heartMoments[0];
-            if (dismissedNotificationId === latestM.id) {
-                latestHeartNotification = { text: '', targetId: null };
-                return;
+
+            // 遍历所有心迹，查找任意一条有对方最新回复或对方发布的心迹
+            let targetMoment = null;
+            let notifyText = '';
+
+            for (let m of heartMoments) {
+                if (dismissedNotificationId === m.id) continue;
+
+                if (m.author === 'partner') {
+                    targetMoment = m;
+                    notifyText = `${partnerNameStr}有新的心迹`;
+                    break;
+                } else if (m.comments && m.comments.length > 0) {
+                    const lastComment = m.comments[m.comments.length - 1];
+                    if (lastComment.author === partnerNameStr) {
+                        targetMoment = m;
+                        notifyText = `${partnerNameStr}回复了你的心迹`;
+                        break;
+                    }
+                }
             }
 
-            if (latestM.author === 'partner') {
-                latestHeartNotification = { text: `${partnerNameStr}有新的心迹`, targetId: latestM.id };
-            } else if (latestM.comments && latestM.comments.length > 0) {
-                const lastComment = latestM.comments[latestM.comments.length - 1];
-                if (lastComment.author === partnerNameStr) {
-                    latestHeartNotification = { text: `${partnerNameStr}回复了你的心迹`, targetId: latestM.id };
-                } else {
-                    latestHeartNotification = { text: '', targetId: null };
-                }
+            if (targetMoment) {
+                latestHeartNotification = { text: notifyText, targetId: targetMoment.id };
             } else {
                 latestHeartNotification = { text: '', targetId: null };
             }
@@ -1505,13 +1521,13 @@
             for(let i=0; i<15; i++) {
                 const bubble = document.createElement('div');
                 bubble.className = 'pink-bubble';
-                const randomX = Math.random() * (rect.width - 50) + 25;
+                const randomX = Math.random() * (rect.width - 40) + 20;
                 bubble.style.left = randomX + 'px';
                 bubble.style.bottom = '4px';
-                bubble.style.animationDuration = (2.8 + Math.random() * 1.2) + 's';
-                bubble.style.animationDelay = (Math.random() * 0.4) + 's';
+                bubble.style.animationDuration = (2.4 + Math.random() * 1.0) + 's';
+                bubble.style.animationDelay = (Math.random() * 0.3) + 's';
                 box.appendChild(bubble);
-                setTimeout(() => bubble.remove(), 4200);
+                setTimeout(() => bubble.remove(), 3800);
             }
         }
 
@@ -1613,6 +1629,7 @@
                             text: partnerCommentText,
                             replies: []
                         });
+                        dismissedNotificationId = null;
                         saveData();
                         renderHeartMomentsList();
                     }
@@ -1814,7 +1831,7 @@
             }, replyDelayMs);
         }
 
-        // --- 3. 字库模块（所有模块添加后自动清空输入框） ---
+        // --- 3. 字库模块 ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -1925,7 +1942,7 @@
                     addedCount++;
                 }
             });
-            inputEl.value = ''; // 自动清空输入框
+            inputEl.value = '';
             saveData();
             updateCardList();
             alert(`成功添加新字卡 ${addedCount} 条！`);
@@ -1988,7 +2005,7 @@
                     addedCount++;
                 }
             });
-            inputEl.value = ''; // 自动清空输入框
+            inputEl.value = '';
             saveData();
             updateActionList();
             alert(`成功添加新动作 ${addedCount} 条！`);
@@ -2064,7 +2081,7 @@
                     addedCount++;
                 }
             });
-            inputEl.value = ''; // 自动清空输入框
+            inputEl.value = '';
             saveMoodPhrasesArray(arr);
             updateMoodList();
             alert(`成功添加新心情短语 ${addedCount} 条！`);
@@ -2142,7 +2159,7 @@
                             saveData();
                             updateEmojiList();
                             const fileInput = document.getElementById('emojiFileInput');
-                            if (fileInput) fileInput.value = ''; // 自动清空文件选择状态
+                            if (fileInput) fileInput.value = '';
                         }
                     }
                 };
@@ -2156,7 +2173,7 @@
             updateEmojiList();
         }
 
-        // --- 4. 锦书模块（写信区域高度放大三倍） ---
+        // --- 4. 锦书模块 ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
