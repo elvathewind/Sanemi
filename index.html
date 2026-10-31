@@ -549,7 +549,7 @@
             align-items: center;
         }
 
-        /* 优化后的 0.8 倍高度泡泡飘散动画 (-104px) */
+        /* 0.8 倍高度泡泡飘散动画 (-104px) */
         @keyframes bubbleSlowRise {
             0% { transform: translateY(0) scale(0.6); opacity: 0.1; }
             30% { opacity: 0.8; }
@@ -675,7 +675,6 @@
         let currentReplyingTo = null;
         let selectedHeartImg = '';
         
-        // 已读提醒黑名单持久化（防止重复、多条轮流提醒或刷新后失效）
         let dismissedHeartIds = JSON.parse(localStorage.getItem('dismissedHeartIds')) || [];
 
         function saveData() {
@@ -1315,8 +1314,8 @@
             const maxSec = Number(settings.replyDelayMax) || 30;
             const low = Math.min(minSec, maxSec);
             const high = Math.max(minSec, maxSec);
-            const sec = Math.floor(Math.random() * (high - low + 1)) + low;
-            return sec * 1000;
+            const sec = Math.random() * (high - low) + low;
+            return Math.floor(sec * 1000);
         }
 
         function getHeartCommentReplyDelayMs() {
@@ -1333,7 +1332,7 @@
             return sec * 1000;
         }
 
-        // --- 核心更新：重构后的发信息概率分发 (2%拍一拍, 8%表情包, 10%动作, 80%字卡) ---
+        // --- 概率维持不变：2%拍一拍, 8%表情包, 10%动作, 80%字卡 ---
         function triggerPartnerReply() {
             if (settings.readNotBack && Math.random() < 0.4) return;
 
@@ -1346,33 +1345,28 @@
             setTimeout(() => {
                 if(indicator) indicator.innerText = '';
                 
-                const roll = Math.random(); // 0.0 ~ 1.0
+                const roll = Math.random();
 
                 if (roll < 0.02) {
-                    // 2% 概率：拍一拍
                     chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 拍了拍我` });
                 } 
                 else if (roll < 0.10) {
-                    // 8% 概率：表情包
                     if (settings.emojis && settings.emojis.length > 0) {
                         const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
                         chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
                     } else {
-                        // 如果没有表情包，fallback到字卡发送
                         sendCardMessage(partnerNameStr);
                     }
                 } 
                 else if (roll < 0.20) {
-                    // 10% 概率：触发动作库中的动作
                     if (actionLibrary.length > 0) {
                         const randomAct = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
-                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} ${randomAct.content}` });
+                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥${randomAct.content}♥` });
                     } else {
-                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 轻轻靠在了你的肩上` });
+                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥轻轻靠在了你的肩上♥` });
                     }
                 } 
                 else {
-                    // 80% 概率：发送字卡
                     sendCardMessage(partnerNameStr);
                 }
 
@@ -1383,7 +1377,6 @@
 
         function sendCardMessage(partnerNameStr) {
             let hasEmoji = settings.emojis && settings.emojis.length > 0;
-            // 顺带伴随表情包几率 (在字卡中)
             let sendEmoji = hasEmoji && Math.random() < 0.3;
             if (sendEmoji) {
                 const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
@@ -1413,7 +1406,7 @@
             }
         }
 
-        // --- 2. 心迹模块（多ID黑名单持久化，彻底解决反复弹提醒的问题） ---
+        // --- 2. 心迹模块（彻底修复删除旧心迹后新心迹提醒无法弹出的Bug） ---
         let latestHeartNotification = { text: '', targetId: null };
 
         function initHeartMoments(container) {
@@ -1426,13 +1419,11 @@
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
-                    <!-- 动态提醒栏 -->
                     <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.2); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:${latestHeartNotification.text ? 'flex' : 'none'}; justify-content:space-between; align-items:center; cursor:pointer; z-index:2;" onclick="jumpToNotificationTarget()">
                         <span id="heartNotificationText">${latestHeartNotification.text}</span>
                         <span style="font-size:10px; color:var(--sub-text);">查看 ›</span>
                     </div>
 
-                    <!-- 顶部情侣挂件：高度 0.8 倍 (~102px)，头像等比例严格占比 80% (~81px) -->
                     <div style="display:flex; justify-content:center; align-items:center; gap:40px; padding:10px 16px; height:102px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
                         <div class="avatar-box" style="width:81.6px; height:81.6px; border-radius:50%;">${partnerAvatarImg}</div>
                         <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:44px; height:44px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
@@ -1464,11 +1455,14 @@
                 return;
             }
 
+            // 清理已删除心迹留在黑名单里的孤儿 ID，保证黑名单永远同步
+            const existingIds = heartMoments.map(m => m.id);
+            dismissedHeartIds = dismissedHeartIds.filter(id => existingIds.includes(id));
+
             let targetMoment = null;
             let notifyText = '';
 
             for (let m of heartMoments) {
-                // 如果当前心迹 ID 已经在已读黑名单数组中，直接跳过！
                 if (dismissedHeartIds.includes(m.id)) continue;
 
                 if (m.author === 'partner') {
@@ -1496,7 +1490,6 @@
             if (!latestHeartNotification.targetId) return;
             const targetId = latestHeartNotification.targetId;
             
-            // 将当前点击查看的心迹 ID 加入已读黑名单并持久化保存
             if (!dismissedHeartIds.includes(targetId)) {
                 dismissedHeartIds.push(targetId);
                 saveData();
@@ -1662,17 +1655,15 @@
                     if (!mTarget.likes.includes(partnerNameStr)) {
                         mTarget.likes.push(partnerNameStr);
                     }
-                    if (mTarget.comments.length < 10) {
-                        const partnerCommentText = getRandomCardSentences();
-                        mTarget.comments.push({
-                            id: Date.now() + 1,
-                            author: partnerNameStr,
-                            text: partnerCommentText,
-                            replies: []
-                        });
-                        saveData();
-                        renderHeartMomentsList();
-                    }
+                    const partnerCommentText = getRandomCardSentences();
+                    mTarget.comments.push({
+                        id: Date.now() + 1,
+                        author: partnerNameStr,
+                        text: partnerCommentText,
+                        replies: []
+                    });
+                    saveData();
+                    renderHeartMomentsList();
                 }
             }, initialDelayMs);
         }
@@ -1765,7 +1756,6 @@
         function deleteMoment(momentId) {
             if (confirm("确定要删除这条心迹吗？")) {
                 heartMoments = heartMoments.filter(m => m.id !== momentId);
-                // 同时清理黑名单里的记录
                 dismissedHeartIds = dismissedHeartIds.filter(id => id !== momentId);
                 saveData();
                 renderHeartMomentsList();
@@ -1786,10 +1776,6 @@
         function commentMoment(momentId) {
             const moment = heartMoments.find(m => m.id === momentId);
             if (!moment) return;
-            if (moment.comments.length >= 10) {
-                alert('单条心迹回复已达上限（10条）！');
-                return;
-            }
             const text = prompt('写下你的评论：', '');
             if (!text || !text.trim()) return;
 
@@ -1812,16 +1798,15 @@
                     if (!mTarget.likes.includes(partnerNameStr)) {
                         mTarget.likes.push(partnerNameStr);
                     }
-                    if (mTarget.comments.length < 10) {
-                        mTarget.comments.push({
-                            id: Date.now() + 1,
-                            author: partnerNameStr,
-                            text: getRandomCardSentences(),
-                            replies: []
-                        });
-                        saveData();
-                        renderHeartMomentsList();
-                    }
+                    const partnerCommentText = getRandomCardSentences();
+                    mTarget.comments.push({
+                        id: Date.now() + 1,
+                        author: partnerNameStr,
+                        text: partnerCommentText,
+                        replies: []
+                    });
+                    saveData();
+                    renderHeartMomentsList();
                 }
             }, replyDelayMs);
         }
@@ -2211,7 +2196,7 @@
             updateEmojiList();
         }
 
-        // --- 锦书模块 ---
+        // --- 3. 锦书模块（倒叙排列） ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
@@ -2306,7 +2291,9 @@
             const now = Date.now();
             let hasNewUnread = false;
 
-            letters.forEach(item => {
+            const reversedLetters = [...letters].reverse();
+
+            reversedLetters.forEach(item => {
                 if (!item.reply && cardLibrary.length > 0 && now >= item.replyTimestamp) {
                     const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
                     let selected = [];
