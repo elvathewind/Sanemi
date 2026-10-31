@@ -245,7 +245,7 @@
             cursor: pointer;
         }
 
-        /* 蜜语样式：实现真正的 100% 全屏无缝自适应铺满 */
+        /* 蜜语样式 */
         .chat-container {
             display: flex;
             flex-direction: column;
@@ -343,7 +343,6 @@
 
         .chat-img-msg { max-width: 120px; border-radius: 8px; border: 1px solid var(--border-color); }
 
-        /* 绝对防御：强制长文本引用单行截断并锁死在气泡宽度内，绝不溢出遮挡 */
         .quoted-box {
             font-size: 11px;
             opacity: 0.8;
@@ -425,7 +424,7 @@
             padding-left: 4px;
         }
 
-        /* 移动端视频通话悬浮窗与头像高清全屏填充 */
+        /* 视频通话悬浮窗 */
         .video-modal {
             position: absolute;
             top: 60px;
@@ -1244,7 +1243,7 @@
             const removedCount = oldLen - cardLibrary.length;
             saveData();
             updateCardList();
-            alert(`已清理完毕！共为你删除了 ${removedCount} 条重复字卡。`);
+            alert(`已清理完毕! 共为你删除了 ${removedCount} 条重复字卡。`);
         }
 
         function editCard(id) {
@@ -1263,7 +1262,7 @@
             updateCardList();
         }
 
-        // --- 3. 锦书模块（精修：删除冗余提示语，右上角改为优雅浅灰色删除键） ---
+        // --- 3. 锦书模块（无滑动删除，点击右上角灰色删除按钮触发确认弹窗） ---
         function initLetters(container) {
             container.innerHTML = `
                 <div>
@@ -1334,48 +1333,36 @@
                     saveData();
                 }
 
-                const wrapper = document.createElement('div');
-                wrapper.style.cssText = "position:relative; overflow:hidden; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-color);";
-
                 const div = document.createElement('div');
-                div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); position:relative; z-index:2; transition: transform 0.2s ease;";
+                div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px;";
                 
+                // 回信内容区域：带有纵向滚动条，支持长信滚动
                 let replyStatus = item.reply ? 
-                    `<div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color); white-space: pre-wrap;"><strong>回信：</strong>\n${item.reply}</div>` : 
+                    `<div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
+                        <strong>回信：</strong>
+                        <div style="max-height: 180px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap;">${item.reply}</div>
+                    </div>` : 
                     `<div style="font-size:12px; color:var(--sub-text); font-style:italic;">真羡慕这封信，可以比我更早见到你</div>`;
 
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.time}</span>
-                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLetter(${item.id})">删除</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteLetter(${item.id})">删除</button>
                     </div>
                     <div style="font-size:11px; color:var(--sub-text);">预计回信时间: ${item.estTime || '不久之后'}</div>
                     <div><strong>我:</strong> ${item.myLetter}</div>
                     ${replyStatus}
                 `;
 
-                let startX = 0;
-                let currentX = 0;
-                div.ontouchstart = (e) => { startX = e.touches[0].clientX; };
-                div.ontouchmove = (e) => {
-                    currentX = e.touches[0].clientX;
-                    let diff = currentX - startX;
-                    if (diff > 0 && diff < 120) {
-                        div.style.transform = `translateX(${diff}px)`;
-                    }
-                };
-                div.ontouchend = (e) => {
-                    let diff = currentX - startX;
-                    if (diff > 80) {
-                        deleteLetter(item.id);
-                    } else {
-                        div.style.transform = `translateX(0px)`;
-                    }
-                };
-
-                wrapper.appendChild(div);
-                container.appendChild(wrapper);
+                container.appendChild(div);
             });
+        }
+
+        // 点击删除按钮时触发弹窗确认
+        function confirmDeleteLetter(id) {
+            if (confirm("确定要删除这封信吗？")) {
+                deleteLetter(id);
+            }
         }
 
         function deleteLetter(id) {
