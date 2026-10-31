@@ -15,6 +15,7 @@
             --font-size: 14px;
             --custom-font: "宋体", SimSun, STSong, serif;
             --bubble-bg: var(--app-icon-bg);
+            --bubble-text: var(--text-color);
             --my-bubble-bg: #111111;
             --my-bubble-text: #ffffff;
             --chat-bg: var(--card-bg);
@@ -28,6 +29,7 @@
             --border-color: #333333;
             --app-icon-bg: #2a2a2a;
             --bubble-bg: #2a2a2a;
+            --bubble-text: #f0f0f0;
             --my-bubble-bg: #f0f0f0;
             --my-bubble-text: #121212;
             --chat-bg: #1e1e1e;
@@ -336,7 +338,7 @@
             overflow: hidden;
         }
 
-        .message-row.incoming .message-bubble { background-color: var(--bubble-bg); color: var(--text-color); }
+        .message-row.incoming .message-bubble { background-color: var(--bubble-bg); color: var(--bubble-text); }
         .message-row.outgoing .message-bubble { background-color: var(--my-bubble-bg); color: var(--my-bubble-text); }
 
         .chat-img-msg { max-width: 120px; border-radius: 8px; border: 1px solid var(--border-color); }
@@ -611,7 +613,8 @@
             emojis: [],
             myBubbleBg: '',
             myBubbleText: '',
-            partnerBubbleBg: ''
+            partnerBubbleBg: '',
+            partnerBubbleText: ''
         };
 
         let tempSettings = JSON.parse(JSON.stringify(settings));
@@ -652,6 +655,11 @@
                 document.documentElement.style.setProperty('--bubble-bg', settings.partnerBubbleBg);
             } else {
                 document.documentElement.style.removeProperty('--bubble-bg');
+            }
+            if (settings.partnerBubbleText) {
+                document.documentElement.style.setProperty('--bubble-text', settings.partnerBubbleText);
+            } else {
+                document.documentElement.style.removeProperty('--bubble-text');
             }
         }
         applySettings();
@@ -1255,7 +1263,7 @@
             updateCardList();
         }
 
-        // --- 3. 锦书模块（全新升级：右滑或点击删除按钮，绝对不会被遮挡） ---
+        // --- 3. 锦书模块 ---
         function initLetters(container) {
             container.innerHTML = `
                 <div>
@@ -1346,7 +1354,6 @@
                     ${replyStatus}
                 `;
 
-                // 右滑删除交互逻辑
                 let startX = 0;
                 let currentX = 0;
                 div.ontouchstart = (e) => { startX = e.touches[0].clientX; };
@@ -1482,7 +1489,7 @@
             });
         }
 
-        // --- 5. 系统模块（新增气泡与界面颜色自定义） ---
+        // --- 5. 系统模块（新增对方气泡文字颜色控制） ---
         function initSettings(container) {
             container.innerHTML = `
                 <div class="setting-group">
@@ -1511,6 +1518,10 @@
                         <div style="display:flex; align-items:center; justify-content:space-between;">
                             <span>对方气泡背景色：</span>
                             <input type="color" id="set_partnerBubbleBg" value="${tempSettings.partnerBubbleBg || '#eaeaea'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                        </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <span>对方气泡文字色：</span>
+                            <input type="color" id="set_partnerBubbleText" value="${tempSettings.partnerBubbleText || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
                         </div>
                         <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetBubbleColors()">恢复默认气泡颜色</button>
                     </div>
@@ -1564,9 +1575,11 @@
             tempSettings.myBubbleBg = '';
             tempSettings.myBubbleText = '';
             tempSettings.partnerBubbleBg = '';
+            tempSettings.partnerBubbleText = '';
             document.getElementById('set_myBubbleBg').value = '#111111';
             document.getElementById('set_myBubbleText').value = '#ffffff';
             document.getElementById('set_partnerBubbleBg').value = '#eaeaea';
+            document.getElementById('set_partnerBubbleText').value = '#111111';
         }
 
         function renderAvatarPreviews() {
@@ -1632,7 +1645,6 @@
                 img.src = e.target.result;
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    // 核心修复：头像提升至 1200x1200 超清分辨率，背景保持 1200x2000
                     const MAX_WIDTH = targetKey === 'chatBg' ? 1200 : 1200;
                     const MAX_HEIGHT = targetKey === 'chatBg' ? 2000 : 1200;
                     let width = img.width;
@@ -1695,6 +1707,7 @@
             const mbBg = document.getElementById('set_myBubbleBg');
             const mbText = document.getElementById('set_myBubbleText');
             const pbBg = document.getElementById('set_partnerBubbleBg');
+            const pbText = document.getElementById('set_partnerBubbleText');
 
             if(mName) tempSettings.myName = mName.value.trim();
             if(pName) tempSettings.partnerName = pName.value.trim();
@@ -1702,6 +1715,7 @@
             if(mbBg) tempSettings.myBubbleBg = mbBg.value;
             if(mbText) tempSettings.myBubbleText = mbText.value;
             if(pbBg) tempSettings.partnerBubbleBg = pbBg.value;
+            if(pbText) tempSettings.partnerBubbleText = pbText.value;
 
             settings.myName = tempSettings.myName;
             settings.partnerName = tempSettings.partnerName;
@@ -1713,6 +1727,7 @@
             settings.myBubbleBg = tempSettings.myBubbleBg;
             settings.myBubbleText = tempSettings.myBubbleText;
             settings.partnerBubbleBg = tempSettings.partnerBubbleBg;
+            settings.partnerBubbleText = tempSettings.partnerBubbleText;
 
             saveData();
             alert('保存成功！');
