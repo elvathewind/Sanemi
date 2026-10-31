@@ -428,7 +428,7 @@
             padding-left: 4px;
         }
 
-        /* 视频通话悬浮窗（莫兰迪配色升级） */
+        /* 视频通话悬浮窗 */
         .video-modal {
             position: absolute;
             top: 60px;
@@ -860,7 +860,8 @@
                 } else if (currentCallStatus === 'no_answer') {
                     body.innerHTML = `网络不佳或暂时无法接通<br><span style="font-size:10px; color:#aaa;">对方当前网络不佳或不在手机旁</span>`;
                 } else if (currentCallStatus === 'rejected') {
-                    body.innerHTML = `对方拒绝通话<br><span style="font-size:11px; color:#ffcccc; margin-top:4px;">“我现在不太方便，等一下哦”</span>`;
+                    // 修改为指定的松绿色文本，且无引号、哦后面无标点
+                    body.innerHTML = `对方拒绝通话<br><span style="font-size:12px; color:#5f7e71; margin-top:4px; font-weight:bold;">现在有点事，等下哦</span>`;
                 } else {
                     body.innerHTML = `<div style="color:#aaa;">通话已结束</div>`;
                 }
@@ -1389,7 +1390,7 @@
             }
         }
 
-        // --- 2. 心迹模块（评论区字体大小统一调整） ---
+        // --- 2. 心迹模块（彻底统一评论与子回复的字体大小） ---
         function initHeartMoments(container) {
             checkAndProcessPendingHeartInteractions(); 
             selectedHeartImg = '';
@@ -1658,20 +1659,20 @@
                     likesHTML = `<div style="font-size:11px; color:#007aff; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
-                // 评论区字体统一样式修改（所有字号固定采用统一规范，不再忽大忽小）
+                // 强制将评论和子回复的字体完全统一（使用基础字号变量，保证绝对一致）
                 let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px; max-height: 160px; overflow-y: auto;" id="comments-box-${moment.id}">`;
                 if (moment.comments && moment.comments.length > 0) {
                     moment.comments.forEach(com => {
                         let repliesListHTML = '';
                         if (com.replies && com.replies.length > 0) {
                             com.replies.forEach(rep => {
-                                repliesListHTML += `<div style="font-size:12px; line-height:1.4; margin-top:2px; color:var(--text-color); cursor:pointer;" onclick="replyToComment(${moment.id}, ${com.id}, '${rep.author}')"><strong style="color:var(--sub-text); font-weight:bold;">${rep.author}:</strong> ${rep.text}</div>`;
+                                repliesListHTML += `<div style="font-size:var(--font-size); line-height:1.4; margin-top:2px; color:var(--text-color); cursor:pointer;" onclick="replyToComment(${moment.id}, ${com.id}, '${rep.author}')"><strong style="color:var(--sub-text); font-weight:bold; font-size:var(--font-size);">${rep.author}:</strong> <span style="font-size:var(--font-size);">${rep.text}</span></div>`;
                             });
                         }
                         commentsHTML += `
-                            <div style="font-size:12px; line-height:1.4; background:rgba(120,120,120,0.06); padding:6px; border-radius:6px;">
+                            <div style="font-size:var(--font-size); line-height:1.4; background:rgba(120,120,120,0.06); padding:6px; border-radius:6px;">
                                 <div style="cursor:pointer;" onclick="replyToComment(${moment.id}, ${com.id}, '${com.author}')">
-                                    <strong style="font-weight:bold;">${com.author}:</strong> ${com.text}
+                                    <strong style="font-weight:bold; font-size:var(--font-size);">${com.author}:</strong> <span style="font-size:var(--font-size);">${com.text}</span>
                                 </div>
                                 ${repliesListHTML}
                             </div>
@@ -1813,7 +1814,6 @@
                 `;
                 updateActionList();
             } else if (currentLibTab === 'moods') {
-                // 需求2：将“添加/导入心情短语”修改为“添加/导入心情”（删掉“短语”两个字）
                 area.innerHTML = `
                     <input type="text" id="searchMoodInput" placeholder="搜索心情..." oninput="filterMoods()">
                     <textarea id="batchMoodInput" placeholder="批量添加心情（每行一条心情）"></textarea>
