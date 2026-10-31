@@ -428,7 +428,7 @@
             padding-left: 4px;
         }
 
-        /* 视频通话悬浮窗 */
+        /* 视频通话悬浮窗（绝对居中布局） */
         .video-modal {
             position: absolute;
             top: 60px;
@@ -468,20 +468,19 @@
             color: #aaaaaa;
         }
         .video-header:active { cursor: grabbing; }
+        
         .video-body {
             flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: var(--text-color);
-            font-size: 13px;
-            background: #000;
-            gap: 8px;
-            padding: 0;
             text-align: center;
-            overflow: hidden;
+            background: #000;
             position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
         }
         .video-body img { 
             width: 100%; 
@@ -834,14 +833,14 @@
             if (currentCallStatus === 'connecting') {
                 body.innerHTML = settings.partnerAvatar ? 
                     `<div class="video-placeholder-bg" style="background-image: url('${settings.partnerAvatar}')"></div><div class="video-placeholder-content">视频连线中...</div>` : 
-                    `<div style="color:#aaa;">视频连线中...</div>`;
+                    `<div style="color:#aaa; display:flex; justify-content:center; align-items:center; width:100%; height:100%;">视频连线中...</div>`;
             } else if (currentCallStatus === 'incoming') {
                 let callPlaceholderHTML = settings.partnerAvatar ? 
                     `<div class="video-placeholder-bg" style="background-image: url('${settings.partnerAvatar}')"></div><div class="video-placeholder-content">${partnerNameStr} 邀请你进行视频通话...</div>` : 
                     `<div>${partnerNameStr} 邀请你进行视频通话...</div>`;
                 body.innerHTML = `
                     ${callPlaceholderHTML}
-                    <div style="display:flex; gap:12px; margin-top:10px; position:relative; z-index:2;">
+                    <div style="display:flex; gap:12px; margin-top:10px; position:relative; z-index:2; justify-content:center; align-items:center; width:100%;">
                         <button class="btn" style="background:#829e8d; color:#fff; padding:5px 14px; font-size:12px; border-radius:16px;" onclick="acceptCall()">接受</button>
                         <button class="btn" style="background:#b88887; color:#fff; padding:5px 14px; font-size:12px; border-radius:16px;" onclick="closeVideoModal()">拒绝</button>
                     </div>
@@ -853,17 +852,18 @@
 
                 body.innerHTML = settings.partnerAvatar ? 
                     `<img src="${settings.partnerAvatar}"><div id="callTimerDisplay" style="position:absolute; bottom:8px; right:8px; font-size:11px; background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); color:#fff; padding:3px 8px; border-radius:12px; z-index:3;">${timeStr}</div>` : 
-                    `【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span>`;
+                    `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%;">【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span></div>`;
             } else {
                 if (currentCallStatus === 'busy') {
-                    body.innerHTML = `对方忙线中<br><span style="font-size:10px; color:#aaa;">“当前线路正忙，请稍后再拨~”</span>`;
+                    // 无引号，且在小视频正中心
+                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px;">当前线路正忙请稍后再拨</div>`;
                 } else if (currentCallStatus === 'no_answer') {
-                    body.innerHTML = `网络不佳或暂时无法接通<br><span style="font-size:10px; color:#aaa;">对方当前网络不佳或不在手机旁</span>`;
+                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px;">网络不佳或暂时无法接通<br><span style="font-size:10px; color:#aaa; margin-top:4px;">对方当前网络不佳或不在手机旁</span></div>`;
                 } else if (currentCallStatus === 'rejected') {
-                    // 修改为指定的松绿色文本，且无引号、哦后面无标点
-                    body.innerHTML = `对方拒绝通话<br><span style="font-size:12px; color:#5f7e71; margin-top:4px; font-weight:bold;">现在有点事，等下哦</span>`;
+                    // 无引号，松绿色，在小视频正中心
+                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#5f7e71; font-weight:bold; font-size:13px;">现在有点事，等下哦</div>`;
                 } else {
-                    body.innerHTML = `<div style="color:#aaa;">通话已结束</div>`;
+                    body.innerHTML = `<div style="color:#aaa; display:flex; justify-content:center; align-items:center; width:100%; height:100%;">通话已结束</div>`;
                 }
                 
                 callAutoCloseTimer = setTimeout(() => {
@@ -1390,7 +1390,7 @@
             }
         }
 
-        // --- 2. 心迹模块（彻底统一评论与子回复的字体大小） ---
+        // --- 2. 心迹模块（心迹字号和评论字号完全一致为 var(--font-size)） ---
         function initHeartMoments(container) {
             checkAndProcessPendingHeartInteractions(); 
             selectedHeartImg = '';
@@ -1651,7 +1651,8 @@
                     </div>
                 `;
 
-                let textHTML = moment.content ? `<div style="font-size:13px; word-break:break-all; padding-left:36px;">${moment.content}</div>` : '';
+                // 统一心迹正文字号为 var(--font-size)，与评论区字号完全一样
+                let textHTML = moment.content ? `<div style="font-size:var(--font-size); word-break:break-all; padding-left:36px;">${moment.content}</div>` : '';
                 let imgHTML = moment.image ? `<div style="padding-left:36px; margin-top:4px;"><img src="${moment.image}" style="max-width:140px; max-height:140px; border-radius:6px; border:1px solid var(--border-color); object-fit:cover;"></div>` : '';
 
                 let likesHTML = '';
@@ -1659,7 +1660,7 @@
                     likesHTML = `<div style="font-size:11px; color:#007aff; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
-                // 强制将评论和子回复的字体完全统一（使用基础字号变量，保证绝对一致）
+                // 评论与子回复统一字号
                 let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px; max-height: 160px; overflow-y: auto;" id="comments-box-${moment.id}">`;
                 if (moment.comments && moment.comments.length > 0) {
                     moment.comments.forEach(com => {
