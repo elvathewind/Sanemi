@@ -549,7 +549,6 @@
             align-items: center;
         }
 
-        /* 0.8 倍高度泡泡飘散动画 (-104px) */
         @keyframes bubbleSlowRise {
             0% { transform: translateY(0) scale(0.6); opacity: 0.1; }
             30% { opacity: 0.8; }
@@ -569,7 +568,6 @@
             box-shadow: inset -2px -2px 4px rgba(255, 182, 193, 0.6);
         }
 
-        /* 锦书动态飞入信封特效 */
         @keyframes flyInEnvelope {
             0% { transform: translate(-150px, -80px) rotate(-20deg) scale(0.5); opacity: 0; }
             60% { transform: translate(10px, 10px) rotate(5deg) scale(1.05); opacity: 1; }
@@ -674,8 +672,6 @@
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
         let selectedHeartImg = '';
-        
-        let dismissedHeartIds = JSON.parse(localStorage.getItem('dismissedHeartIds')) || [];
 
         function saveData() {
             try {
@@ -686,7 +682,6 @@
                 localStorage.setItem('anniversariesData', JSON.stringify(anniversaries));
                 localStorage.setItem('heartMomentsData', JSON.stringify(heartMoments));
                 localStorage.setItem('siteSettings', JSON.stringify(settings));
-                localStorage.setItem('dismissedHeartIds', JSON.stringify(dismissedHeartIds));
             } catch (e) {
                 console.error('存储空间已满或受限', e);
             }
@@ -795,7 +790,6 @@
             return phrases[hourIndex];
         }
 
-        // --- 视频通话状态 ---
         let callTimerInterval = null;
         let callSeconds = 0;
         let currentCallStatus = 'idle';
@@ -877,7 +871,7 @@
             }
         }
 
-        // --- 1. 蜜语模块 (零延迟上屏) ---
+        // --- 1. 蜜语模块 ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -1391,24 +1385,16 @@
             }
         }
 
-        // --- 2. 智能汇总心迹提醒逻辑 ---
-        let unreadHeartTargetIds = []; // 存储所有未读的互动/新心迹 ID 队列
-
+        // --- 2. 纯净版心迹模块（无提醒栏，仅靠时间差自动补齐互动） ---
         function initHeartMoments(container) {
-            checkPartnerHeartMomentLimit();
+            checkAndProcessPendingHeartInteractions(); // 打开页面时立即根据真实时间差自动补齐点赞和回复
             selectedHeartImg = '';
-            updateSmartHeartNotification();
 
             const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
                 <div style="padding:10px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
-                    <div id="heartNotificationBar" style="padding:8px 12px; background:rgba(255,182,193,0.2); border:1px solid #ffb6c1; border-radius:8px; font-size:12px; color:var(--text-color); display:none; justify-content:space-between; align-items:center; cursor:pointer; z-index:2;" onclick="jumpToSmartNotificationTarget()">
-                        <span id="heartNotificationText"></span>
-                        <span style="font-size:10px; color:var(--sub-text);">查看下一条 ›</span>
-                    </div>
-
                     <div style="display:flex; justify-content:center; align-items:center; gap:40px; padding:10px 16px; height:102px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; position:relative; overflow:hidden;" id="heartHeaderBox">
                         <div class="avatar-box" style="width:81.6px; height:81.6px; border-radius:50%;">${partnerAvatarImg}</div>
                         <div style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:44px; height:44px; position:relative;" onclick="spawnOverflowingBubbles(event)" title="点一点缓缓冒泡">
@@ -1433,81 +1419,39 @@
             renderHeartMomentsList();
         }
 
-        function updateSmartHeartNotification() {
+        // 核心：利用时间差自动补齐，超过3分钟未互动的动态自动完成点赞和回复
+        function checkAndProcessPendingHeartInteractions() {
+            const now = Date.now();
             const partnerNameStr = settings.partnerName || '对方';
-            if (heartMoments.length === 0) {
-                unreadHeartTargetIds = [];
-                renderNotificationBarUI();
-                return;
-            }
+            let updated = false;
 
-            // 清理已删除的心迹在黑名单和未读队列里的残留
-            const existingIds = heartMoments.map(m => m.id);
-            dismissedHeartIds = dismissedHeartIds.filter(id => existingIds.includes(id));
-
-            // 找出所有未在已读黑名单里的互动心迹 ID
-            let freshIds = [];
             heartMoments.forEach(m => {
-                if (dismissedHeartIds.includes(m.id)) return;
-                
-                let hasUnreadActivity = false;
-                if (m.author === 'partner') {
-                    hasUnreadActivity = true;
-                } else if (m.comments && m.comments.some(c => c.author === partnerNameStr)) {
-                    hasUnreadActivity = true;
-                } else if (m.likes && m.likes.includes(partnerNameStr)) {
-                    hasUnreadActivity = true;
-                }
+                if (m.author === 'user') {
+                    const elapsedMs = now - m.id;
+                    const hasLiked = m.likes && m.likes.includes(partnerNameStr);
+                    const hasReplied = m.comments && m.comments.some(c => c.author === partnerNameStr);
 
-                if (hasUnreadActivity && !freshIds.includes(m.id)) {
-                    freshIds.push(m.id);
+                    if (!hasLiked || !hasReplied) {
+                        if (elapsedMs >= 3 * 60 * 1000) {
+                            if (!hasLiked) {
+                                m.likes.push(partnerNameStr);
+                            }
+                            if (!hasReplied) {
+                                m.comments.push({
+                                    id: m.id + 100,
+                                    author: partnerNameStr,
+                                    text: getRandomCardSentences(),
+                                    replies: []
+                                });
+                            }
+                            updated = true;
+                        }
+                    }
                 }
             });
 
-            unreadHeartTargetIds = freshIds;
-            renderNotificationBarUI();
-        }
-
-        function renderNotificationBarUI() {
-            const notifBar = document.getElementById('heartNotificationBar');
-            const notifText = document.getElementById('heartNotificationText');
-            if (!notifBar || !notifText) return;
-
-            if (unreadHeartTargetIds.length === 0) {
-                notifBar.style.display = 'none';
-                return;
-            }
-
-            const totalCount = unreadHeartTargetIds.length;
-            notifBar.style.display = 'flex';
-            if (totalCount === 1) {
-                notifText.innerText = `有一条新的心迹互动待查看`;
-            } else {
-                notifText.innerText = `有 ${totalCount} 条新的心迹互动待查看`;
-            }
-        }
-
-        function jumpToSmartNotificationTarget() {
-            if (unreadHeartTargetIds.length === 0) return;
-
-            // 取出队列中的第一条进行定位
-            const targetId = unreadHeartTargetIds[0];
-            
-            // 立即加入已读黑名单并保存
-            if (!dismissedHeartIds.includes(targetId)) {
-                dismissedHeartIds.push(targetId);
+            if (updated) {
                 saveData();
-            }
-
-            // 从待办队列中移除
-            unreadHeartTargetIds.shift();
-            renderNotificationBarUI();
-
-            const el = document.getElementById(`moment-card-${targetId}`);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.style.borderColor = '#ffb6c1';
-                setTimeout(() => { el.style.borderColor = 'var(--border-color)'; }, 1500);
             }
         }
 
@@ -1585,48 +1529,6 @@
             return selected.join(' ');
         }
 
-        function getUnifiedHeartDelayMs() {
-            const minMs = 3 * 60 * 1000;
-            const maxMs = 15 * 60 * 1000;
-            return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-        }
-
-        function checkPartnerHeartMomentLimit() {
-            const todayStr = new Date().toISOString().slice(0, 10);
-            const partnerPostsToday = heartMoments.filter(m => m.author === 'partner' && m.dateStr === todayStr);
-
-            if (partnerPostsToday.length < 5 && Math.random() < 0.2) {
-                const lastPartnerPost = partnerPostsToday[0];
-                const nowTimestamp = Date.now();
-                const oneHourMs = 60 * 60 * 1000;
-
-                if (!lastPartnerPost || (nowTimestamp - lastPartnerPost.id >= oneHourMs)) {
-                    const text = getRandomCardSentences();
-                    const d = new Date();
-                    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                    
-                    let partnerImg = '';
-                    if (settings.emojis && settings.emojis.length > 0 && Math.random() < 0.6) {
-                        partnerImg = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
-                    }
-
-                    heartMoments.unshift({
-                        id: nowTimestamp,
-                        author: 'partner',
-                        content: text,
-                        image: partnerImg,
-                        time: timeStr,
-                        dateStr: todayStr,
-                        likes: [],
-                        comments: [],
-                        isPinned: false
-                    });
-                    saveData();
-                    updateSmartHeartNotification();
-                }
-            }
-        }
-
         function postUserHeartMoment() {
             const input = document.getElementById('heartInput');
             if(!input) return;
@@ -1639,7 +1541,6 @@
             const d = new Date();
             const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
             const dateStr = d.toISOString().slice(0, 10);
-            const partnerNameStr = settings.partnerName || '对方';
 
             const newMoment = {
                 id: Date.now(),
@@ -1661,29 +1562,10 @@
 
             saveData();
             renderHeartMomentsList();
-
-            const delayMs = getUnifiedHeartDelayMs();
-            setTimeout(() => {
-                const mTarget = heartMoments.find(m => m.id === newMoment.id);
-                if (mTarget) {
-                    if (!mTarget.likes.includes(partnerNameStr)) {
-                        mTarget.likes.push(partnerNameStr);
-                    }
-                    const partnerCommentText = getRandomCardSentences();
-                    mTarget.comments.push({
-                        id: Date.now() + 1,
-                        author: partnerNameStr,
-                        text: partnerCommentText,
-                        replies: []
-                    });
-                    saveData();
-                    renderHeartMomentsList();
-                    updateSmartHeartNotification();
-                }
-            }, delayMs);
         }
 
         function renderHeartMomentsList() {
+            checkAndProcessPendingHeartInteractions();
             const listEl = document.getElementById('heartMomentsList');
             if (!listEl) return;
             listEl.innerHTML = '';
@@ -1771,10 +1653,8 @@
         function deleteMoment(momentId) {
             if (confirm("确定要删除这条心迹吗？")) {
                 heartMoments = heartMoments.filter(m => m.id !== momentId);
-                dismissedHeartIds = dismissedHeartIds.filter(id => id !== momentId);
                 saveData();
                 renderHeartMomentsList();
-                updateSmartHeartNotification();
             }
         }
 
@@ -1796,7 +1676,6 @@
             if (!text || !text.trim()) return;
 
             const myNameStr = settings.myName || '我';
-            const partnerNameStr = settings.partnerName || '对方';
 
             moment.comments.push({
                 id: Date.now(),
@@ -1806,26 +1685,6 @@
             });
             saveData();
             renderHeartMomentsList();
-
-            const delayMs = getUnifiedHeartDelayMs();
-            setTimeout(() => {
-                const mTarget = heartMoments.find(m => m.id === momentId);
-                if (mTarget) {
-                    if (!mTarget.likes.includes(partnerNameStr)) {
-                        mTarget.likes.push(partnerNameStr);
-                    }
-                    const partnerCommentText = getRandomCardSentences();
-                    mTarget.comments.push({
-                        id: Date.now() + 1,
-                        author: partnerNameStr,
-                        text: partnerCommentText,
-                        replies: []
-                    });
-                    saveData();
-                    renderHeartMomentsList();
-                    updateSmartHeartNotification();
-                }
-            }, delayMs);
         }
 
         function replyToComment(momentId, commentId, targetAuthor) {
@@ -1838,7 +1697,6 @@
             if (!text || !text.trim()) return;
 
             const myNameStr = settings.myName || '我';
-            const partnerNameStr = settings.partnerName || '对方';
 
             comment.replies.push({
                 id: Date.now(),
@@ -1847,29 +1705,6 @@
             });
             saveData();
             renderHeartMomentsList();
-
-            const delayMs = getUnifiedHeartDelayMs();
-            setTimeout(() => {
-                const mTarget = heartMoments.find(m => m.id === momentId);
-                if (mTarget) {
-                    if (!mTarget.likes.includes(partnerNameStr)) {
-                        mTarget.likes.push(partnerNameStr);
-                    }
-                    if (Math.random() < 0.8) {
-                        const cTarget = mTarget.comments.find(c => c.id === commentId);
-                        if (cTarget) {
-                            cTarget.replies.push({
-                                id: Date.now() + 1,
-                                author: partnerNameStr,
-                                text: getRandomCardSentences()
-                            });
-                        }
-                    }
-                    saveData();
-                    renderHeartMomentsList();
-                    updateSmartHeartNotification();
-                }
-            }, delayMs);
         }
 
         // --- 字库模块 ---
@@ -2677,7 +2512,7 @@
         }
 
         function exportData() {
-            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, settings, dismissedHeartIds };
+            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, settings };
             const jsonString = JSON.stringify(backupData, null, 2);
             
             const blob = new Blob([jsonString], { type: 'application/json' });
@@ -2707,7 +2542,6 @@
                     if (imported.anniversaries) anniversaries = imported.anniversaries;
                     if (imported.heartMoments) heartMoments = imported.heartMoments;
                     if (imported.settings) settings = imported.settings;
-                    if (imported.dismissedHeartIds) dismissedHeartIds = imported.dismissedHeartIds;
                     saveData();
                     alert('数据恢复同步成功！');
                     location.reload();
