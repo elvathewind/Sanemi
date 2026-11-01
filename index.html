@@ -2258,7 +2258,7 @@
             if (currentLibTab === 'cards') {
                 area.innerHTML = `
                     <input type="text" id="searchInput" placeholder="搜索字卡..." oninput="filterCards()">
-                    <textarea id="batchInput" placeholder="批量添加（每行一条字卡，系统会自动过滤重复内容）"></textarea>
+                    <textarea id="batchInput" placeholder="批量添加字卡"></textarea>
                     <div style="display:flex; gap:8px;">
                         <button class="btn" style="flex:1;" onclick="addBatchCards()">添加/导入字卡</button>
                     </div>
@@ -2269,7 +2269,7 @@
             } else if (currentLibTab === 'actions') {
                 area.innerHTML = `
                     <input type="text" id="searchActionInput" placeholder="搜索动作..." oninput="filterActions()">
-                    <textarea id="batchActionInput" placeholder="批量添加动作（每行一条动作描述，如：轻轻靠在了他的肩上）"></textarea>
+                    <textarea id="batchActionInput" placeholder="批量添加动作"></textarea>
                     <div style="display:flex; gap:8px;">
                         <button class="btn" style="flex:1;" onclick="addBatchActions()">添加/导入动作</button>
                     </div>
@@ -2280,7 +2280,7 @@
             } else if (currentLibTab === 'moods') {
                 area.innerHTML = `
                     <input type="text" id="searchMoodInput" placeholder="搜索心情..." oninput="filterMoods()">
-                    <textarea id="batchMoodInput" placeholder="批量添加心情（每行一条心情）"></textarea>
+                    <textarea id="batchMoodInput" placeholder="批量添加心情"></textarea>
                     <div style="display:flex; gap:8px;">
                         <button class="btn" style="flex:1;" onclick="addBatchMoods()">添加/导入心情</button>
                     </div>
@@ -3069,7 +3069,7 @@
                     </div>
 
                     <form autocomplete="off" onsubmit="return false;" style="display:flex; flex-direction:column; gap:6px;">
-                        <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" autocomplete="off" autocapitalize="off" spellcheck="false" name="no-autofill-name">
+                        <input type="text" id="annivName" placeholder="记录我们相爱的每时每刻" autocomplete="off" autocapitalize="off" spellcheck="false" name="no-autofill-name">
                         <input type="date" id="annivDate" autocomplete="off" name="no-autofill-date">
                         <button class="btn" style="width:100%; margin-top:2px;" onclick="addAnniversary()">保存良辰</button>
                     </form>
@@ -3546,7 +3546,7 @@
             if(!area) return;
 
             if(!sishouData.active) {
-                area.innerHTML = `<div style="font-size:13px; color:var(--sub-text);">当前没有进行中的陪伴计时，快点击上方按钮开启吧~</div>`;
+                area.innerHTML = `<div style="font-size:13px; color:var(--sub-text);">一个人也可以很好，但有你陪伴的时光才是无与伦比的。</div>`;
                 return;
             }
 
@@ -3655,14 +3655,14 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 5. 流年 (精确时间选择器 + 星星标记 + 未完成/已完成双栏 + 拖动排序) ---
+        // --- 5. 流年 (年月日精确到分钟的时间设置 + ⭐️星星 + 松绿色勾勾 + 双栏 + 拖动排序) ---
         function initTodo(container) {
             container.innerHTML = `
                 <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
                     <div style="display:flex; gap:8px; flex-direction:column;">
                         <div style="display:flex; gap:8px;">
-                            <input type="time" id="todoTimeInput" style="width:120px; flex-shrink:0;">
-                            <input type="text" id="todoInput" placeholder="添加新日程或心愿（如：去银行取钱）" onkeydown="if(event.key==='Enter') addTodoItem()" style="flex:1;">
+                            <input type="datetime-local" id="todoTimeInput" style="width:170px; flex-shrink:0;">
+                            <input type="text" id="todoInput" placeholder="添加新日程或心愿" onkeydown="if(event.key==='Enter') addTodoItem()" style="flex:1;">
                         </div>
                         <button class="btn" onclick="addTodoItem()" style="width:100%;">添加日程</button>
                     </div>
@@ -3682,7 +3682,7 @@
 
             todoList.push({
                 id: Date.now(),
-                timeStr: timeStr,
+                timeStr: timeStr ? timeStr.replace('T', ' ') : '',
                 text: text,
                 important: false,
                 completed: false
@@ -3750,8 +3750,7 @@
                     div.style.cssText = `border:1px solid var(--border-color); padding:10px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); user-select:none;`;
                     
                     let timeBadge = item.timeStr ? `<span style="font-size:11px; background:var(--pine-green); color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
-                    let starColor = item.important ? '#f59e0b' : 'var(--sub-text)';
-                    let starSvg = `<svg viewBox="0 0 24 24" width="18" height="18" fill="${item.important ? '#f59e0b' : 'none'}" stroke="${starColor}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+                    let starSymbol = item.important ? '⭐' : '⭐️';
 
                     div.innerHTML = `
                         <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden; cursor:pointer;" onclick="toggleTodoItem(${item.id})">
@@ -3762,7 +3761,7 @@
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                            <span style="cursor:pointer; display:flex; align-items:center;" onclick="toggleTodoImportant(${item.id}, event)" title="标记重要">${starSvg}</span>
+                            <span style="cursor:pointer; display:flex; align-items:center; font-size:16px;" onclick="toggleTodoImportant(${item.id}, event)" title="标记重要">${starSymbol}</span>
                             <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text);" onclick="deleteTodoItem(${item.id})">删除</button>
                             <div class="drag-handle" title="按住拖动排序">☰</div>
                         </div>
@@ -3851,8 +3850,7 @@
                     div.style.cssText = `border:1px solid var(--border-color); padding:10px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); opacity:0.6;`;
                     
                     let timeBadge = item.timeStr ? `<span style="font-size:11px; background:var(--sub-text); color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
-                    let starColor = item.important ? '#f59e0b' : 'var(--sub-text)';
-                    let starSvg = `<svg viewBox="0 0 24 24" width="18" height="18" fill="${item.important ? '#f59e0b' : 'none'}" stroke="${starColor}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+                    let starSymbol = item.important ? '⭐' : '⭐️';
 
                     div.innerHTML = `
                         <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden; cursor:pointer;" onclick="toggleTodoItem(${item.id})">
@@ -3863,7 +3861,7 @@
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                            <span style="display:flex; align-items:center;">${starSvg}</span>
+                            <span style="display:flex; align-items:center; font-size:16px;">${starSymbol}</span>
                             <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text);" onclick="deleteTodoItem(${item.id})">删除</button>
                         </div>
                     `;
