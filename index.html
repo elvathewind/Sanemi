@@ -208,6 +208,7 @@
             display: flex;
             flex-direction: column;
             background-color: var(--card-bg);
+            position: relative;
         }
 
         input, textarea, select {
@@ -345,7 +346,7 @@
         .message-row.incoming .message-bubble { background-color: var(--bubble-bg); color: var(--bubble-text); }
         .message-row.outgoing .message-bubble { background-color: var(--my-bubble-bg); color: var(--my-bubble-text); }
 
-        .chat-img-msg { max-width: 120px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .chat-img-msg { max-width: 130px; max-height: 130px; border-radius: 8px; object-fit: cover; display: block; }
 
         .quoted-box {
             font-size: 11px;
@@ -595,6 +596,31 @@
             z-index: 999;
             animation: flyInEnvelope 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
+
+        /* 浮动电梯按钮 */
+        .scroll-elevator {
+            position: absolute;
+            right: 16px;
+            bottom: 70px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 99;
+        }
+        .elevator-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -663,7 +689,7 @@
             myAvatar: '',
             partnerAvatar: '',
             myName: '我',
-            partnerName: '对方',
+            partnerName: '老公',
             chatBg: '',
             replyDelayMin: '5',
             replyDelayMax: '30',
@@ -675,9 +701,16 @@
             partnerBubbleText: ''
         };
 
+        // 良辰打卡独立存储
+        let annivCheckInData = JSON.parse(localStorage.getItem('annivCheckInData')) || {
+            totalDays: 0,
+            lastCheckInDate: ''
+        };
+
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
         let selectedHeartImg = '';
+        let globalChatActiveInterval = null;
 
         function saveData() {
             try {
@@ -688,6 +721,7 @@
                 localStorage.setItem('anniversariesData', JSON.stringify(anniversaries));
                 localStorage.setItem('heartMomentsData', JSON.stringify(heartMoments));
                 localStorage.setItem('siteSettings', JSON.stringify(settings));
+                localStorage.setItem('annivCheckInData', JSON.stringify(annivCheckInData));
             } catch (e) {
                 console.error('存储空间已满或受限', e);
             }
@@ -724,6 +758,19 @@
             }
         }
         applySettings();
+
+        // 持续检测常驻蜜语界面的随机来电
+        setInterval(() => {
+            const subPage = document.getElementById('subPage');
+            if (subPage && subPage.classList.contains('active')) {
+                const title = document.getElementById('subPageTitle');
+                if (title && title.innerText === '蜜语' && currentCallStatus === 'idle') {
+                    if (Math.random() < 0.05) {
+                        triggerIncomingCallFromPartner();
+                    }
+                }
+            }
+        }, 15000);
 
         function renderDesktop() {
             const grid = document.getElementById('desktopGrid');
@@ -770,9 +817,7 @@
             }
             else if (appId === 'heartMoments') initHeartMoments(contentEl);
             else if (appId === 'cards') initCards(contentEl);
-            else if (appId === 'letters') {
-                initLetters(contentEl);
-            }
+            else if (appId === 'letters') initLetters(contentEl);
             else if (appId === 'anniversary') initAnniversary(contentEl);
             else if (appId === 'settings') {
                 tempSettings = JSON.parse(JSON.stringify(settings));
@@ -861,16 +906,13 @@
                     `<img src="${settings.partnerAvatar}"><div id="callTimerDisplay" style="position:absolute; bottom:8px; right:8px; font-size:11px; background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); color:#fff; padding:3px 8px; border-radius:12px; z-index:3;">${timeStr}</div>` : 
                     `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%;">【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span></div>`;
             } else {
-                if (currentCallStatus === 'busy') {
-                    // 只保留上面一行字，颜色、大小与忙线一致
-                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px;">当前线路正忙请稍后再拨</div>`;
-                } else if (currentCallStatus === 'no_answer') {
-                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px;">当前线路正忙请稍后再拨</div>`;
-                } else if (currentCallStatus === 'rejected') {
-                    body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px;">当前线路正忙请稍后再拨</div>`;
-                } else {
-                    body.innerHTML = `<div style="color:#aaa; display:flex; justify-content:center; align-items:center; width:100%; height:100%;">通话已结束</div>`;
-                }
+                // 统一灰色字体居中呈现
+                let displayPromptText = '当前线路正忙请稍后再拨';
+                if (currentCallStatus === 'busy') displayPromptText = '当前线路正忙请稍后再拨';
+                else if (currentCallStatus === 'no_answer') displayPromptText = '暂时无法接通';
+                else if (currentCallStatus === 'rejected') displayPromptText = '我现在不方便，等下哦';
+
+                body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px; text-align:center;">${displayPromptText}</div>`;
                 
                 callAutoCloseTimer = setTimeout(() => {
                     closeVideoModal();
@@ -913,7 +955,6 @@
                 if(c) c.scrollTop = c.scrollHeight;
             }, 50);
 
-            checkPartnerInitiateCall();
             checkPartnerRandomPoke();
         }
 
@@ -932,6 +973,7 @@
             const text = input.value.trim();
             if(!text) return;
 
+            // 无卡顿秒发
             chatMessages.push({
                 id: Date.now(),
                 sender: 'outgoing',
@@ -945,11 +987,15 @@
             cancelReplyQuote();
             saveData();
             updateChatMessages();
-            triggerPartnerReply();
+
+            // 延迟两秒显示输入中，并由设置决定回复时间
+            setTimeout(() => {
+                triggerPartnerReply();
+            }, 2000);
         }
 
         function triggerPoke(targetWho) {
-            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '对方';
+            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
             let pokeText = '';
             if (targetWho === 'partner') {
@@ -963,13 +1009,15 @@
             updateChatMessages();
 
             if (targetWho === 'partner') {
-                triggerPartnerReply();
+                setTimeout(() => {
+                    triggerPartnerReply();
+                }, 2000);
             }
         }
 
         function checkPartnerRandomPoke() {
             if (Math.random() < 0.10) {
-                const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '对方';
+                const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
                 setTimeout(() => {
                     chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 拍了拍我` });
                     saveData();
@@ -989,7 +1037,7 @@
             modal.id = 'videoModal';
             modal.className = 'video-modal';
             
-            const partnerNameStr = (settings.partnerName || '对方');
+            const partnerNameStr = (settings.partnerName || '老公');
             currentCallStatus = 'connecting';
 
             modal.innerHTML = `
@@ -1011,15 +1059,19 @@
             setTimeout(() => {
                 if (!document.getElementById('videoModal')) return;
                 const rand = Math.random();
-                if (rand < 0.7) {
+                // 概率：已接通75%，线路正忙5%，暂时无法接通5%，我现在不方便5%（剩余10%容错算接通）
+                if (rand < 0.75) {
                     currentCallStatus = 'connected';
                     startCallTimer();
-                } else if (rand < 0.8) {
+                } else if (rand < 0.80) {
                     currentCallStatus = 'busy';
-                } else if (rand < 0.9) {
+                } else if (rand < 0.85) {
                     currentCallStatus = 'no_answer';
-                } else {
+                } else if (rand < 0.90) {
                     currentCallStatus = 'rejected';
+                } else {
+                    currentCallStatus = 'connected';
+                    startCallTimer();
                 }
                 renderVideoBodyContent();
             }, 3000);
@@ -1048,7 +1100,7 @@
                 modal.style.height = '240px';
                 modal.style.width = '200px';
                 el.innerText = '—';
-                headerTitle.innerText = `视频通话 - ${settings.partnerName || '对方'}`;
+                headerTitle.innerText = `视频通话 - ${settings.partnerName || '老公'}`;
                 renderVideoBodyContent();
             } else {
                 body.style.display = 'none';
@@ -1146,40 +1198,44 @@
         let callTimeoutTimer = null;
         function checkPartnerInitiateCall() {
             if (Math.random() < 0.10) {
-                const phoneLayer = document.getElementById('phoneVideoLayer');
-                if(!phoneLayer) return;
-                let modal = document.getElementById('videoModal');
-                if(modal) modal.remove();
-
-                const partnerNameStr = (settings.partnerName || '对方');
-                currentCallStatus = 'incoming';
-
-                modal = document.createElement('div');
-                modal.id = 'videoModal';
-                modal.className = 'video-modal';
-
-                modal.innerHTML = `
-                    <div class="video-header" id="videoModalHeader">
-                        <span id="videoHeaderTitleText">${partnerNameStr} 的来电</span>
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最小化" onclick="toggleMinimizeVideo(this)">—</span>
-                            <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最大化" onclick="toggleFullScreenVideo(this)">□</span>
-                            <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="关闭" onclick="closeVideoModal()">✕</span>
-                        </div>
-                    </div>
-                    <div class="video-body" id="videoBodyContent"></div>
-                `;
-                phoneLayer.appendChild(modal);
-                makeDraggableInPhoneBox(modal, document.getElementById('videoModalHeader'));
-                isVideoFullScreen = false;
-                renderVideoBodyContent();
-
-                if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
-                callTimeoutTimer = setTimeout(() => {
-                    const activeModal = document.getElementById('videoModal');
-                    if (activeModal && currentCallStatus === 'incoming') closeVideoModal();
-                }, 60000);
+                triggerIncomingCallFromPartner();
             }
+        }
+
+        function triggerIncomingCallFromPartner() {
+            const phoneLayer = document.getElementById('phoneVideoLayer');
+            if(!phoneLayer) return;
+            let modal = document.getElementById('videoModal');
+            if(modal) modal.remove();
+
+            const partnerNameStr = (settings.partnerName || '老公');
+            currentCallStatus = 'incoming';
+
+            modal = document.createElement('div');
+            modal.id = 'videoModal';
+            modal.className = 'video-modal';
+
+            modal.innerHTML = `
+                <div class="video-header" id="videoModalHeader">
+                    <span id="videoHeaderTitleText">${partnerNameStr} 的来电</span>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最小化" onclick="toggleMinimizeVideo(this)">—</span>
+                        <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="最大化" onclick="toggleFullScreenVideo(this)">□</span>
+                        <span style="cursor:pointer; font-weight:bold; padding:0 4px;" title="关闭" onclick="closeVideoModal()">✕</span>
+                    </div>
+                </div>
+                <div class="video-body" id="videoBodyContent"></div>
+            `;
+            phoneLayer.appendChild(modal);
+            makeDraggableInPhoneBox(modal, document.getElementById('videoModalHeader'));
+            isVideoFullScreen = false;
+            renderVideoBodyContent();
+
+            if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+            callTimeoutTimer = setTimeout(() => {
+                const activeModal = document.getElementById('videoModal');
+                if (activeModal && currentCallStatus === 'incoming') closeVideoModal();
+            }, 60000);
         }
 
         function acceptCall() {
@@ -1208,13 +1264,16 @@
                     img.src = imgBase64;
                     img.className = 'emoji-item';
                     img.onclick = () => {
+                        // 需求9：表情包直接发送，不套消息气泡框
                         chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'image', content: imgBase64, quoted: currentReplyingTo });
                         currentReplyingTo = null;
                         cancelReplyQuote();
                         saveData();
                         updateChatMessages();
                         picker.remove();
-                        triggerPartnerReply();
+                        setTimeout(() => {
+                            triggerPartnerReply();
+                        }, 2000);
                     };
                     picker.appendChild(img);
                 });
@@ -1228,7 +1287,7 @@
             container.innerHTML = '';
 
             const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '我';
-            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '对方';
+            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
             chatMessages.forEach(msg => {
                 const row = document.createElement('div');
@@ -1249,13 +1308,20 @@
                 const nameHTML = `<div class="message-sender-name" onclick="triggerPoke('${targetWho}')">${name}</div>`;
                 
                 let quotedHTML = msg.quoted ? `<div class="quoted-box">${msg.quoted}</div>` : '';
-                let contentHTML = msg.type === 'image' ? `<div class="message-bubble">${quotedHTML}<img src="${msg.content}" class="chat-img-msg"></div>` : `<div class="message-bubble">${quotedHTML}${msg.content}</div>`;
+                
+                // 需求9：如果是图片/表情包，直接渲染独立图片，不套消息气泡框
+                let contentHTML = '';
+                if (msg.type === 'image') {
+                    contentHTML = `<div style="display:flex; flex-direction:column; max-width:140px;"><img src="${msg.content}" class="chat-img-msg"></div>`;
+                } else {
+                    contentHTML = `<div class="message-bubble">${quotedHTML}${msg.content}</div>`;
+                }
 
                 let pressTimer = null;
                 const startPress = (e) => {
                     if(e.target.closest('.context-menu')) return;
                     pressTimer = setTimeout(() => {
-                        showContextMenu(row, msg.id, msg.type === 'text' ? msg.content : '[图片]');
+                        showContextMenu(row, msg.id, msg.type === 'text' ? msg.content : '[表情包]');
                     }, 600);
                 };
                 const cancelPress = () => {
@@ -1334,7 +1400,7 @@
             if (settings.readNotBack && Math.random() < 0.4) return;
 
             const indicator = document.getElementById('typingIndicator');
-            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '对方';
+            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
             if(indicator) indicator.innerText = `${partnerNameStr}正在输入中...`;
 
             const delayMs = getRandomReplyDelayMs();
@@ -1443,7 +1509,7 @@
 
         function checkAndProcessPendingHeartInteractions() {
             const now = Date.now();
-            const partnerNameStr = settings.partnerName || '对方';
+            const partnerNameStr = settings.partnerName || '老公';
             let updated = false;
 
             heartMoments.forEach(m => {
@@ -1504,7 +1570,7 @@
                                         id: Date.now(),
                                         author: partnerNameStr,
                                         text: getRandomCardSentences(),
-                                        requiredDelayMs: rep.requiredDelayMs
+                                        requiredDelayMs: com.requiredDelayMs
                                     });
                                     updated = true;
                                 }
@@ -1646,7 +1712,7 @@
             let sortedMoments = [...heartMoments].sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
 
             const myNameStr = settings.myName || '我';
-            const partnerNameStr = settings.partnerName || '对方';
+            const partnerNameStr = settings.partnerName || '老公';
 
             sortedMoments.forEach(moment => {
                 const authorName = moment.author === 'user' ? myNameStr : partnerNameStr;
@@ -1792,7 +1858,7 @@
                     <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='moods'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='moods'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('moods')">心情</div>
                     <div style="padding:12px; border:1px solid var(--border-color); border-radius:10px; background:${currentLibTab==='emojis'?'var(--text-color)':'var(--bg-color)'}; color:${currentLibTab==='emojis'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold;" onclick="switchLibTab('emojis')">表情</div>
                 </div>
-                <div id="libContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:8px; overflow-y:auto;"></div>
+                <div id="libContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:8px; overflow-y:auto; position:relative;"></div>
             `;
             renderLibTabContent();
         }
@@ -1815,7 +1881,11 @@
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchCards()">添加/导入字卡</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有字卡 <span id="cardCount">0</span> 条：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:40px;" id="itemContainer"></div>
+                    <div class="scroll-elevator">
+                        <div class="elevator-btn" title="回到顶部" onclick="document.getElementById('libContentArea').scrollTo({top:0, behavior:'smooth'})">▲</div>
+                        <div class="elevator-btn" title="直达底部" onclick="const a=document.getElementById('libContentArea'); a.scrollTo({top:a.scrollHeight, behavior:'smooth'})">▼</div>
+                    </div>
                 `;
                 updateCardList();
             } else if (currentLibTab === 'actions') {
@@ -1826,7 +1896,11 @@
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchActions()">添加/导入动作</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有动作 <span id="actionCount">0</span> 条：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:40px;" id="itemContainer"></div>
+                    <div class="scroll-elevator">
+                        <div class="elevator-btn" title="回到顶部" onclick="document.getElementById('libContentArea').scrollTo({top:0, behavior:'smooth'})">▲</div>
+                        <div class="elevator-btn" title="直达底部" onclick="const a=document.getElementById('libContentArea'); a.scrollTo({top:a.scrollHeight, behavior:'smooth'})">▼</div>
+                    </div>
                 `;
                 updateActionList();
             } else if (currentLibTab === 'moods') {
@@ -1837,7 +1911,11 @@
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchMoods()">添加/导入心情</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有心情 <span id="moodCount">0</span> 条：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="itemContainer"></div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:40px;" id="itemContainer"></div>
+                    <div class="scroll-elevator">
+                        <div class="elevator-btn" title="回到顶部" onclick="document.getElementById('libContentArea').scrollTo({top:0, behavior:'smooth'})">▲</div>
+                        <div class="elevator-btn" title="直达底部" onclick="const a=document.getElementById('libContentArea'); a.scrollTo({top:a.scrollHeight, behavior:'smooth'})">▼</div>
+                    </div>
                 `;
                 updateMoodList();
             } else if (currentLibTab === 'emojis') {
@@ -1845,7 +1923,11 @@
                     <div style="font-weight:bold; font-size:13px;">表情包库管理：</div>
                     <input type="file" id="emojiFileInput" accept="image/*" multiple onchange="uploadEmojisFromLib(event)">
                     <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${settings.emojis ? settings.emojis.length : 0} 个表情：</div>
-                    <div id="itemContainer" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
+                    <div id="itemContainer" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:8px; padding-bottom:40px;"></div>
+                    <div class="scroll-elevator">
+                        <div class="elevator-btn" title="回到顶部" onclick="document.getElementById('libContentArea').scrollTo({top:0, behavior:'smooth'})">▲</div>
+                        <div class="elevator-btn" title="直达底部" onclick="const a=document.getElementById('libContentArea'); a.scrollTo({top:a.scrollHeight, behavior:'smooth'})">▼</div>
+                    </div>
                 `;
                 updateEmojiList();
             }
@@ -1909,9 +1991,11 @@
         }
 
         function deleteCard(id) {
-            cardLibrary = cardLibrary.filter(c => c.id !== id);
-            saveData();
-            updateCardList();
+            if (confirm("确定要删除这条字卡吗？")) {
+                cardLibrary = cardLibrary.filter(c => c.id !== id);
+                saveData();
+                updateCardList();
+            }
         }
 
         function updateActionList(filteredList = actionLibrary) {
@@ -1972,9 +2056,11 @@
         }
 
         function deleteAction(id) {
-            actionLibrary = actionLibrary.filter(a => a.id !== id);
-            saveData();
-            updateActionList();
+            if (confirm("确定要删除这条动作吗？")) {
+                actionLibrary = actionLibrary.filter(a => a.id !== id);
+                saveData();
+                updateActionList();
+            }
         }
 
         function getMoodPhrasesArray() {
@@ -2050,10 +2136,12 @@
         }
 
         function deleteMood(index) {
-            let arr = getMoodPhrasesArray();
-            arr.splice(index, 1);
-            saveMoodPhrasesArray(arr);
-            updateMoodList();
+            if (confirm("确定要删除这条心情吗？")) {
+                let arr = getMoodPhrasesArray();
+                arr.splice(index, 1);
+                saveMoodPhrasesArray(arr);
+                updateMoodList();
+            }
         }
 
         function updateEmojiList() {
@@ -2118,9 +2206,11 @@
         }
 
         function deleteLibEmoji(index) {
-            settings.emojis.splice(index, 1);
-            saveData();
-            updateEmojiList();
+            if (confirm("确定要删除这个表情包吗？")) {
+                settings.emojis.splice(index, 1);
+                saveData();
+                updateEmojiList();
+            }
         }
 
         // --- 3. 锦书模块 ---
@@ -2244,7 +2334,8 @@
                 estTime: estTimeStr,
                 replyTimestamp: now + randomDelay,
                 isRead: false,
-                replyTime: ''
+                replyTime: '',
+                continuationReplies: [] // 需求8：支持收到回信后无限继续回信
             });
 
             document.getElementById('letterInput').value = '';
@@ -2263,6 +2354,24 @@
 
             letter.myReplyToPartner = text.trim();
             letter.myReplyTime = timeStr;
+            saveData();
+            updateLettersList();
+        }
+
+        function continueReplyLetter(id) {
+            const letter = letters.find(l => l.id === id);
+            if (!letter) return;
+            const text = prompt('继续回复：', '');
+            if (!text || !text.trim()) return;
+
+            const d = new Date();
+            const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+
+            if (!letter.continuationReplies) letter.continuationReplies = [];
+            letter.continuationReplies.push({
+                text: text.trim(),
+                time: timeStr
+            });
             saveData();
             updateLettersList();
         }
@@ -2345,11 +2454,23 @@
                     // 类型二：草绿 #5f7e71 - 我已寄出，且已收到回信
                     dotColor = '#5f7e71';
                     topTimeText = `寄出时间: ${item.time} | 回信时间: ${item.replyTime || '已送达'}`;
+                    
+                    let continuationHTML = '';
+                    if (item.continuationReplies && item.continuationReplies.length > 0) {
+                        item.continuationReplies.forEach(cr => {
+                            continuationHTML += `<div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);"><strong>继续回信 (${cr.time}):</strong><div style="white-space:pre-wrap; margin-top:2px;">${cr.text}</div></div>`;
+                        });
+                    }
+
                     cardContentHTML = `
                         <div><strong>我:</strong> ${item.myLetter}</div>
                         <div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
                             <strong>回信：</strong>
                             <div style="max-height: 180px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap;">${item.reply}</div>
+                        </div>
+                        ${continuationHTML}
+                        <div style="margin-top:6px;">
+                            <button class="btn" style="padding:4px 10px; font-size:11px; background:var(--text-color); color:var(--card-bg);" onclick="continueReplyLetter(${item.id})">回信</button>
                         </div>
                     `;
                 }
@@ -2387,8 +2508,28 @@
         }
 
         // --- 良辰模块 ---
+        function checkAndExecutePartnerAnnivCheckIn() {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (annivCheckInData.lastCheckInDate !== todayStr) {
+                // 对方每个自然日必定打卡一次且仅有一次，时间完全随机
+                annivCheckInData.totalDays += 1;
+                annivCheckInData.lastCheckInDate = todayStr;
+                saveData();
+            }
+        }
+
         function initAnniversary(container) {
+            checkAndExecutePartnerAnnivCheckIn();
             container.innerHTML = `
+                <!-- 需求7：置顶独立显示的打卡卡片 -->
+                <div style="border:1px solid var(--border-color); padding:14px; border-radius:10px; background:var(--bg-color); display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div>
+                        <div style="font-weight:bold; font-size:14px;">每日打卡</div>
+                        <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">今日已打卡 / 已打卡 <strong style="color:var(--text-color); font-size:13px;">${annivCheckInData.totalDays}</strong> 天</div>
+                    </div>
+                    <div style="background:#829e8d; color:#fff; padding:6px 14px; border-radius:16px; font-size:12px; font-weight:bold;">已打卡 ✓</div>
+                </div>
+
                 <div>
                     <div style="font-weight:bold; margin-bottom:6px;">添加/管理良辰：</div>
                     <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" style="margin-bottom:6px;">
@@ -2396,7 +2537,7 @@
                     <button class="btn" style="width:100%;" onclick="addAnniversary()">保存良辰</button>
                 </div>
                 <div style="font-weight:bold; margin-top:10px;">良辰倒计时列表：</div>
-                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="anniversaryContainer"></div>
+                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-top:6px;" id="anniversaryContainer"></div>
             `;
             updateAnniversaryList();
         }
@@ -2432,9 +2573,11 @@
         }
 
         function deleteAnniversary(id) {
-            anniversaries = anniversaries.filter(a => a.id !== id);
-            saveData();
-            initAnniversary(document.getElementById('subPageContent'));
+            if (confirm("确定要删除这个良辰纪念日吗？")) {
+                anniversaries = anniversaries.filter(a => a.id !== id);
+                saveData();
+                initAnniversary(document.getElementById('subPageContent'));
+            }
         }
 
         function updateAnniversaryList() {
@@ -2687,7 +2830,7 @@
         }
 
         function exportData() {
-            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, settings };
+            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, settings, annivCheckInData };
             const jsonString = JSON.stringify(backupData, null, 2);
             
             const blob = new Blob([jsonString], { type: 'application/json' });
@@ -2717,6 +2860,7 @@
                     if (imported.anniversaries) anniversaries = imported.anniversaries;
                     if (imported.heartMoments) heartMoments = imported.heartMoments;
                     if (imported.settings) settings = imported.settings;
+                    if (imported.annivCheckInData) annivCheckInData = imported.annivCheckInData;
                     saveData();
                     alert('数据恢复同步成功！');
                     location.reload();
