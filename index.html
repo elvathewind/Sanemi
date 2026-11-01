@@ -758,7 +758,7 @@
             justify-content: center;
         }
 
-        /* 时间滚动选择器样式 */
+        /* 时间滚动选择器样式（去除加粗，极简美观） */
         .picker-wheel-container {
             display: flex;
             justify-content: center;
@@ -788,15 +788,16 @@
             height: 40px;
             line-height: 40px;
             scroll-snap-align: center;
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 16px;
+            font-weight: normal;
             color: var(--sub-text);
             cursor: pointer;
             transition: color 0.2s;
         }
         .picker-wheel-item.selected {
             color: var(--text-color);
-            font-size: 20px;
+            font-size: 18px;
+            font-weight: normal;
         }
         .picker-wheel-highlight {
             position: absolute;
@@ -3245,7 +3246,7 @@
             updateAnniversaryList();
         }
 
-        // --- 4. 厮守模块 (大头像、小闹钟还原、单击摇晃拍一拍、松绿色按钮、高级滚动时间选择器) ---
+        // --- 4. 厮守模块 (恢复小闹钟、去括号、松绿色按钮) ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
@@ -3398,7 +3399,7 @@
             }
         }
 
-        // 高级滑动时间选择器弹窗
+        // 高级滑动时间选择器弹窗（去粗）
         function openTimePickerModal(typeName) {
             let overlay = document.getElementById('loveCustomModal');
             if(overlay) overlay.remove();
@@ -3407,14 +3408,12 @@
             overlay.id = 'loveCustomModal';
             overlay.className = 'love-modal-overlay';
 
-            // 生成小时选项 (0~23)
             let hoursHTML = '<div class="picker-wheel-spacer"></div>';
             for(let h=0; h<=23; h++) {
                 hoursHTML += `<div class="picker-wheel-item" data-val="${h}">${h}小时</div>`;
             }
             hoursHTML += '<div class="picker-wheel-spacer"></div>';
 
-            // 生成分钟选项 (0~59)
             let minsHTML = '<div class="picker-wheel-spacer"></div>';
             for(let m=0; m<=59; m++) {
                 minsHTML += `<div class="picker-wheel-item" data-val="${m}">${m}分钟</div>`;
@@ -3423,26 +3422,25 @@
 
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 340px;">
-                    <div style="font-size:16px; font-weight:bold;">选择倒计时时长</div>
+                    <div style="font-size:16px; font-weight:normal;">选择倒计时时长</div>
                     <div class="picker-wheel-container">
                         <div class="picker-wheel-highlight"></div>
                         <div class="picker-wheel-column" id="pickerHours">${hoursHTML}</div>
                         <div class="picker-wheel-column" id="pickerMins">${minsHTML}</div>
                     </div>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:10px; border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; background:var(--pine-green); color:#fff; border-radius:10px; font-weight:bold;" onclick="confirmTimePicker('${typeName}')">确定</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:10px; border-radius:10px; font-weight:normal;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#fff; border-radius:10px; font-weight:normal;" onclick="confirmTimePicker('${typeName}')">确定</button>
                     </div>
                 </div>
             `;
             document.body.appendChild(overlay);
 
-            // 默认选中 0小时 30分钟
             const hCol = document.getElementById('pickerHours');
             const mCol = document.getElementById('pickerMins');
             if(hCol && mCol) {
-                hCol.scrollTop = 0; // 0小时
-                mCol.scrollTop = 30 * 40; // 30分钟 * 每项高度40px
+                hCol.scrollTop = 0; 
+                mCol.scrollTop = 30 * 40; 
                 setupWheelListener(hCol);
                 setupWheelListener(mCol);
             }
@@ -3555,18 +3553,18 @@
 
             let controlsHTML = '';
             if(sishouData.type === '共眠' || sishouData.type === '缱绻') {
-                controlsHTML = `<button class="btn" style="background:#b88887; color:#fff; width:100%; max-width:200px; border-radius:10px;" onclick="finishSiShouSession('stopped')">结束计时</button>`;
+                controlsHTML = `<button class="btn" style="background:var(--pine-green); color:#fff; width:100%; max-width:200px; border-radius:10px;" onclick="finishSiShouSession('stopped')">结束计时</button>`;
             } else {
                 controlsHTML = `
                     <div style="display:flex; gap:10px; width:100%; max-width:240px; justify-content:center;">
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color); border-radius:10px;" onclick="toggleSiShouPause()">${sishouData.isPaused ? '继续' : '暂停'}</button>
-                        <button class="btn" style="flex:1; background:#b88887; color:#fff; border-radius:10px;" onclick="finishSiShouSession('stopped')">${sishouData.mode==='countup'?'结束':'停止'}</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#fff; border-radius:10px;" onclick="finishSiShouSession('stopped')">停止</button>
                     </div>
                 `;
             }
 
             area.innerHTML = `
-                <div style="font-size:14px; font-weight:bold;">正在${sishouData.type}中（${sishouData.mode==='countup'?'正计时':'倒计时'}）</div>
+                <div style="font-size:14px; font-weight:bold;">正在${sishouData.type}中</div>
                 <div id="sishouTimerClockBox" style="font-size:38px; font-weight:bold; font-family:monospace; margin:4px 0;">${hrs}:${mins}:${secs}</div>
                 ${controlsHTML}
             `;
