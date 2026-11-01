@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -632,7 +633,6 @@
             align-items: center;
             background: var(--bg-color);
             user-select: none;
-            touch-action: none;
             transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s;
         }
         .anniv-item-card.dragging {
@@ -648,8 +648,9 @@
             font-size: 18px;
             letter-spacing: -2px;
             cursor: grab;
-            padding: 0 6px;
+            padding: 2px 8px;
             line-height: 1;
+            touch-action: none;
         }
         .drag-handle:active {
             cursor: grabbing;
@@ -2653,7 +2654,7 @@
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
-                <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
+                <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;" autocomplete="off">
                     <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; flex-direction:column; justify-content:space-between; height:150px; flex-shrink:0;">
                         <div style="display:flex; align-items:center; justify-content:center; gap:20px;">
                             <div style="display:flex; align-items:center;">
@@ -2674,12 +2675,11 @@
                         </div>
                     </div>
 
-                    <div>
-                        <!-- 彻底禁用自动填充 -->
-                        <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-bottom:6px;">
-                        <input type="date" id="annivDate" style="margin-bottom:6px;">
-                        <button class="btn" style="width:100%;" onclick="addAnniversary()">保存良辰</button>
-                    </div>
+                    <form autocomplete="off" onsubmit="return false;" style="display:flex; flex-direction:column; gap:6px;">
+                        <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" autocomplete="off" autocapitalize="off" spellcheck="false" name="no-autofill-name">
+                        <input type="date" id="annivDate" autocomplete="off" name="no-autofill-date">
+                        <button class="btn" style="width:100%; margin-top:2px;" onclick="addAnniversary()">保存良辰</button>
+                    </form>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;" id="anniversaryContainer"></div>
                 </div>
             `;
@@ -2762,7 +2762,6 @@
 
                 const div = document.createElement('div');
                 div.className = 'anniv-item-card';
-                div.draggable = true;
                 div.dataset.index = index;
 
                 div.innerHTML = `
@@ -2772,18 +2771,17 @@
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
-                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAnniversary(${item.id})">修改</button>
-                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAnniversary(${item.id})">删除</button>
+                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color); cursor:pointer;" onclick="editAnniversary(${item.id})">修改</button>
+                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color); cursor:pointer;" onclick="deleteAnniversary(${item.id})">删除</button>
                         <div class="drag-handle" title="按住拖动排序">☰</div>
                     </div>
                 `;
 
-                // 触摸屏拖拽排序逻辑
-                let touchStartY = 0;
+                // 只允许通过右侧 ☰ 拖动手柄进行触摸或鼠标拖拽排序
+                const handle = div.querySelector('.drag-handle');
                 let draggingEl = null;
 
-                div.addEventListener('touchstart', (e) => {
-                    touchStartY = e.touches[0].clientY;
+                handle.addEventListener('touchstart', (e) => {
                     draggingEl = div;
                     div.classList.add('dragging');
                 }, {passive: true});
@@ -2812,13 +2810,18 @@
                     }
                 });
 
-                // PC 鼠标端原生拖拽
+                // PC 鼠标端通过 ☰ 拖拽
+                handle.addEventListener('mousedown', (e) => {
+                    div.draggable = true;
+                });
+
                 div.addEventListener('dragstart', (e) => {
                     div.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
                 });
 
                 div.addEventListener('dragend', () => {
+                    div.draggable = false;
                     div.classList.remove('dragging');
                     syncDomOrderToAnniversaries(container);
                 });
