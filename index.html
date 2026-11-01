@@ -257,7 +257,6 @@
             position: relative;
         }
 
-        /* 心情条宽度与聊天气泡最大宽度 (75%) 保持一致 */
         .mood-bar {
             margin: 0 auto;
             max-width: 75%;
@@ -339,7 +338,7 @@
         }
 
         .message-sender-name {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: normal;
             color: var(--sub-text);
             text-align: center;
@@ -843,11 +842,10 @@
         }
         applySettings();
 
-        // 蜜语后台视频逻辑：在聊天界面 10%，不在聊天界面 5%
+        // 核心回退：只有在【蜜语界面】内，才会有 5% 的概率触发对方主动打视频电话，其他界面绝不主动打！
         setInterval(() => {
-            if (currentCallStatus === 'idle') {
-                const targetProbability = (activeAppId === 'chat') ? 0.10 : 0.05;
-                if (Math.random() < targetProbability) {
+            if (currentCallStatus === 'idle' && activeAppId === 'chat') {
+                if (Math.random() < 0.05) {
                     triggerIncomingCallFromPartner();
                 }
             }
@@ -984,6 +982,8 @@
         }
 
         function closeApp() {
+            // 每次退出应用时，安全关闭视频通话弹窗并重置状态，防止残留
+            closeVideoModal();
             activeAppId = null;
             const subPage = document.getElementById('subPage');
             if(subPage) subPage.classList.remove('active');
@@ -1071,7 +1071,7 @@
             }
         }
 
-        // --- 1. 蜜语模块 (极致性能优化防崩溃版) ---
+        // --- 1. 蜜语模块 (极速加载防崩溃版) ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -1546,7 +1546,6 @@
             const container = document.getElementById('chatMessages');
             if(!container) return;
             
-            // 使用 DocumentFragment 优化渲染性能，防止长聊天记录直接导致浏览器闪退
             const fragment = document.createDocumentFragment();
 
             const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '我';
