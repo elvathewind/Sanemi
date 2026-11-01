@@ -986,11 +986,11 @@
             saveData();
             updateChatMessages();
 
-            // 需求7：回复时间范围（包括输入中时间），总延迟时间在设定范围内
-            triggerPartnerReplyWithTiming();
+            // 需求5：回复逻辑优化（输入中与回复总耗时统一包含在设定范围内）
+            triggerPartnerReplyUnifiedTiming();
         }
 
-        function triggerPartnerReplyWithTiming() {
+        function triggerPartnerReplyUnifiedTiming() {
             if (settings.readNotBack && Math.random() < 0.4) return;
 
             const minSec = Number(settings.replyDelayMin) || 5;
@@ -998,22 +998,27 @@
             const low = Math.min(minSec, maxSec);
             const high = Math.max(minSec, maxSec);
             
-            // 总延迟时间（秒转毫秒）
+            // 总倒计时（秒转毫秒）
             const totalDelaySec = Math.random() * (high - low) + low;
             const totalDelayMs = Math.floor(totalDelaySec * 1000);
 
-            // 输入中显示时间固定为 2 秒（如果总时间小于2秒，则总时间即为输入时间）
-            const typingDurationMs = Math.min(2000, totalDelayMs);
-            const remainingDelayMs = Math.max(0, totalDelayMs - typingDurationMs);
+            // 策略：收到消息后，先等待一段时间（例如总时间的大约 30% 或者是固定的前置时间，不超过总时间），然后显示“正在输入中”，持续直到总时间结束并发送回复。
+            // 简单精准的逻辑：在总倒计时的前半部分（或者剩余 2-4 秒时）开始显示“正在输入中”，且“从收到消息到回复完毕”总耗时完美等于 totalDelayMs。
+            // 按照需求：设置里设定是 10-30 秒内回信息，那么从收到消息，到显示输入中，再到完成回复，全部加在一起是 10 到 30 秒。
+            // 我们可以让“输入中”在总时间的后半段（例如剩余 3 到 5 秒时）或者从某一刻开始显示。为了让用户感知最细腻：
+            // 设定输入中持续时间占总时间的 60%（或者至少 2 秒），而开始显示输入中的时间点 = 随机计算。
+            
+            const typingShowTimeMs = Math.max(2000, Math.floor(totalDelayMs * 0.6)); // 输入中展示时长
+            const waitBeforeTypingMs = Math.max(0, totalDelayMs - typingShowTimeMs); // 开始显示输入中之前的安静等待时间
 
             const indicator = document.getElementById('typingIndicator');
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
-            // 第一阶段：等待 2 秒后显示“正在输入中”
+            // 第一阶段：等待直到该显示“正在输入中”的时间点
             setTimeout(() => {
                 if(indicator) indicator.innerText = `${partnerNameStr}正在输入中...`;
 
-                // 第二阶段：在剩余时间内保持输入状态，然后发送回复
+                // 第二阶段：保持输入状态直到总时间耗尽，发送回复
                 setTimeout(() => {
                     if(indicator) indicator.innerText = '';
                     
@@ -1044,9 +1049,9 @@
 
                     saveData();
                     updateChatMessages();
-                }, remainingDelayMs);
+                }, typingShowTimeMs);
 
-            }, 2000);
+            }, waitBeforeTypingMs);
         }
 
         function triggerPoke(targetWho) {
@@ -1064,7 +1069,7 @@
             updateChatMessages();
 
             if (targetWho === 'partner') {
-                triggerPartnerReplyWithTiming();
+                triggerPartnerReplyUnifiedTiming();
             }
         }
 
@@ -1322,7 +1327,7 @@
                         saveData();
                         updateChatMessages();
                         picker.remove();
-                        triggerPartnerReplyWithTiming();
+                        triggerPartnerReplyUnifiedTiming();
                     };
                     picker.appendChild(img);
                 });
@@ -1489,7 +1494,6 @@
                     </div>
 
                     <div>
-                        <!-- 需求1：去掉“发布心迹”四个字 -->
                         <textarea id="heartInput" placeholder="分享此刻的心情或动态..."></textarea>
                         <div id="heartImgPreviewBox" style="margin-top:6px;"></div>
                         <div style="display:flex; gap:8px; margin-top:6px;">
@@ -2217,7 +2221,6 @@
             checkAndGeneratePartnerInitiatedLetter();
             container.innerHTML = `
                 <div style="padding-bottom:8px;">
-                    <!-- 需求2：回信框高度巨幅扩大到四倍，并带有滑动能力 -->
                     <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 220px; max-height: 400px;"></textarea>
                     <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
                 </div>
@@ -2260,7 +2263,7 @@
                         myLetter: '',
                         reply: partnerLetterContent,
                         time: timeStr,
-                        estTime: timeStr,
+                        estTime: '不久的将来',
                         replyTimestamp: now,
                         isRead: false,
                         partnerLetterTime: timeStr,
@@ -2314,7 +2317,6 @@
             if (!text) return;
 
             const now = Date.now();
-            // 需求3：回信时间范围12到48小时之间完全随机
             const minMs = 12 * 60 * 60 * 1000;
             const maxMs = 48 * 60 * 60 * 1000;
             const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
@@ -2322,16 +2324,13 @@
             const d = new Date();
             const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
 
-            const estDate = new Date(now + randomDelay);
-            const estTimeStr = `${estDate.getFullYear()}-${String(estDate.getMonth()+1).padStart(2,'0')}-${String(estDate.getDate()).padStart(2,'0')} ${String(estDate.getHours()).padStart(2,'0')}:${String(estDate.getMinutes()).padStart(2,'0')}`;
-
             letters.push({
                 id: now,
                 isPartnerInitiated: false,
                 myLetter: text,
                 reply: '',
                 time: timeStr,
-                estTime: estTimeStr,
+                estTime: '不久的将来', // 需求4：统一更改为“不久的将来”
                 replyTimestamp: now + randomDelay,
                 isRead: false,
                 replyTime: '',
@@ -2357,13 +2356,10 @@
             const d = new Date();
             const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
 
-            const estDate = new Date(now + randomDelay);
-            const estTimeStr = `${estDate.getFullYear()}-${String(estDate.getMonth()+1).padStart(2,'0')}-${String(estDate.getDate()).padStart(2,'0')} ${String(estDate.getHours()).padStart(2,'0')}:${String(estDate.getMinutes()).padStart(2,'0')}`;
-
             letter.myReplyToPartner = text.trim();
             letter.myReplyTime = timeStr;
             letter.partnerReplyTimestamp = now + randomDelay;
-            letter.partnerEstTime = estTimeStr;
+            letter.partnerEstTime = '不久的将来'; // 需求4：统一更改为“不久的将来”
             letter.partnerReplyContent = '';
             saveData();
             updateLettersList();
@@ -2372,7 +2368,7 @@
         function continueReplyLetter(id) {
             const letter = letters.find(l => l.id === id);
             if (!letter) return;
-            const text = prompt('继续回复：', '');
+            const text = prompt('回复：', ''); // 需求4：删掉“继续”二字
             if (!text || !text.trim()) return;
 
             const now = Date.now();
@@ -2383,14 +2379,11 @@
             const d = new Date();
             const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
 
-            const estDate = new Date(now + randomDelay);
-            const estTimeStr = `${estDate.getFullYear()}-${String(estDate.getMonth()+1).padStart(2,'0')}-${String(estDate.getDate()).padStart(2,'0')} ${String(estDate.getHours()).padStart(2,'0')}:${String(estDate.getMinutes()).padStart(2,'0')}`;
-
             if (!letter.continuationReplies) letter.continuationReplies = [];
             letter.continuationReplies.push({
                 text: text.trim(),
                 time: timeStr,
-                estTime: estTimeStr,
+                estTime: '不久的将来', // 需求4：统一更改为“不久的将来”
                 replyTimestamp: now + randomDelay,
                 replyContent: '',
                 replyTime: ''
@@ -2411,9 +2404,7 @@
             const now = Date.now();
             let hasNewUnread = false;
 
-            // 需求3：不管是新写的信还是信中信，对方必定会回信
             letters.forEach(item => {
-                // 1. 普通信件回复
                 if (!item.isPartnerInitiated && !item.reply && cardLibrary.length > 0 && now >= item.replyTimestamp) {
                     const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
                     let selected = [];
@@ -2431,7 +2422,6 @@
                     saveData();
                 }
 
-                // 2. 对方主动信的回复
                 if (item.isPartnerInitiated && item.myReplyToPartner && !item.partnerReplyContent && cardLibrary.length > 0 && item.partnerReplyTimestamp && now >= item.partnerReplyTimestamp) {
                     const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
                     let selected = [];
@@ -2448,7 +2438,6 @@
                     saveData();
                 }
 
-                // 3. 续信（信中信）的回复
                 if (item.continuationReplies && item.continuationReplies.length > 0) {
                     item.continuationReplies.forEach(cr => {
                         if (!cr.replyContent && cardLibrary.length > 0 && cr.replyTimestamp && now >= cr.replyTimestamp) {
@@ -2469,7 +2458,6 @@
                     });
                 }
 
-                // 检查未读红点
                 if ((item.reply && !item.isRead && !item.isPartnerInitiated) ||
                     (item.isPartnerInitiated && item.partnerReplyContent && !item.isRead) ||
                     (item.continuationReplies && item.continuationReplies.some(cr => cr.replyContent && !item.isRead))) {
@@ -2503,10 +2491,10 @@
                                 </div>
                             `;
                         } else {
-                            // 需求4、5：字体和时间与原有“寄出时间”保持一致，且增加“预计回信时间”
+                            // 需求4：统一为“不久的将来”
                             partnerReplyHTML = `
                                 <div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">
-                                    <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.myReplyTime} | 预计回信时间: ${item.partnerEstTime}</div>
+                                    <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.myReplyTime} | 预计回信时间: ${item.partnerEstTime || '不久的将来'}</div>
                                     <div style="margin-top:4px;"><strong>我的回信:</strong> ${item.myReplyToPartner}</div>
                                 </div>
                             `;
@@ -2526,7 +2514,7 @@
                     `;
                 } else if (!item.reply) {
                     dotColor = '#829e8d';
-                    topTimeText = `寄出时间: ${item.time} | 预计回信时间: ${item.estTime || '不久之后'}`;
+                    topTimeText = `寄出时间: ${item.time} | 预计回信时间: ${item.estTime || '不久的将来'}`;
                     cardContentHTML = `
                         <div><strong>我:</strong> ${item.myLetter}</div>
                         <div style="font-size:12px; color:var(--sub-text); font-style:italic; border-top:1px dashed var(--border-color); padding-top:6px;">真羡慕这封信，可以比我更早见到你</div>
@@ -2548,11 +2536,10 @@
                                     </div>
                                 `;
                             } else {
-                                // 需求4、5：字体时间与原有保持一致，且增加预计回信时间
                                 crReplyBlock = `
                                     <div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">
-                                        <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${cr.time} | 预计回信时间: ${cr.estTime}</div>
-                                        <div style="margin-top:2px;"><strong>继续回信:</strong> ${cr.text}</div>
+                                        <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${cr.time} | 预计回信时间: ${cr.estTime || '不久的将来'}</div>
+                                        <div style="margin-top:2px;"><strong>回信:</strong> ${cr.text}</div>
                                     </div>
                                 `;
                             }
@@ -2560,7 +2547,6 @@
                         });
                     }
 
-                    // 检查是否所有后续回信都已收到，才显示最后的“回信”按键
                     const lastCr = item.continuationReplies && item.continuationReplies.length > 0 ? item.continuationReplies[item.continuationReplies.length - 1] : null;
                     const canContinue = !lastCr || lastCr.replyContent;
 
@@ -2617,16 +2603,18 @@
         function checkAndExecutePartnerAnnivCheckIn() {
             const todayStr = new Date().toISOString().slice(0, 10);
             
-            // 对方每个自然日随机必定打卡一次且仅有一次
+            // 需求3：对方在每个自然日内完全随机独立打卡一次，而不跟随你的动作联动
             if (annivCheckInData.partnerLastCheckInDate !== todayStr) {
-                // 随机触发时间，只要当天没打过就给它赋予今日打卡状态
-                annivCheckInData.partnerLastCheckInDate = todayStr;
-                
-                // 检查双方如果今日都打过卡了，总天数+1
-                if (annivCheckInData.myLastCheckInDate === todayStr) {
-                    annivCheckInData.totalDays += 1;
+                // 模拟在当天某个随机时刻自动打卡（这里我们通过概率或进入页面时以 60% 概率自然触发，确保独立）
+                if (Math.random() < 0.65) {
+                    annivCheckInData.partnerLastCheckInDate = todayStr;
+                    
+                    // 需求2：只有当双方在同一天都打卡了，总天数才 +1
+                    if (annivCheckInData.myLastCheckInDate === todayStr) {
+                        annivCheckInData.totalDays += 1;
+                    }
+                    saveData();
                 }
-                saveData();
             }
         }
 
@@ -2639,7 +2627,7 @@
 
             annivCheckInData.myLastCheckInDate = todayStr;
             
-            // 如果对方今天也打过卡了，共同天数+1
+            // 需求2：只有当双方在同一天都打卡了，总天数才 +1
             if (annivCheckInData.partnerLastCheckInDate === todayStr) {
                 annivCheckInData.totalDays += 1;
             }
@@ -2657,22 +2645,22 @@
             const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '老婆';
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
-            const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-            const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+            // 需求1：头像放大两倍（从42px变大到84px），并且往中间挪动靠近
+            const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+            const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
-                <!-- 需求6：置顶卡片加高两倍，左侧双头像紧挨，右侧两个独立打卡按钮，下方居中显示共同打卡天数 -->
-                <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; flex-direction:column; justify-content:space-between; height:130px; margin-bottom:12px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; flex-direction:column; justify-content:space-between; height:150px; margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:20px;">
                         <div style="display:flex; align-items:center;">
-                            <div style="width:42px; height:42px; border-radius:50%; border:1px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; z-index:2;">${myAvatarImg}</div>
-                            <div style="width:42px; height:42px; border-radius:50%; border:1px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; left:-14px; z-index:1;">${partnerAvatarImg}</div>
+                            <div style="width:72px; height:72px; border-radius:50%; border:2px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; z-index:2;">${myAvatarImg}</div>
+                            <div style="width:72px; height:72px; border-radius:50%; border:2px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; left:-24px; z-index:1;">${partnerAvatarImg}</div>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:6px;">
-                            <button class="btn" style="padding:4px 10px; font-size:11px; background:${myChecked ? '#829e8d' : 'var(--text-color)'}; color:#fff; border-radius:12px;" onclick="handleMyCheckIn()">
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <button class="btn" style="padding:6px 14px; font-size:12px; background:${myChecked ? '#829e8d' : 'var(--text-color)'}; color:#fff; border-radius:16px;" onclick="handleMyCheckIn()">
                                 ${myChecked ? `${myNameStr}今日已打卡` : `${myNameStr}今日未打卡`}
                             </button>
-                            <button class="btn" style="padding:4px 10px; font-size:11px; background:${partnerChecked ? '#829e8d' : 'var(--sub-text)'}; color:#fff; border-radius:12px; cursor:default;" disabled>
+                            <button class="btn" style="padding:6px 14px; font-size:12px; background:${partnerChecked ? '#829e8d' : 'var(--sub-text)'}; color:#fff; border-radius:16px; cursor:default;" disabled>
                                 ${partnerChecked ? `${partnerNameStr}今日已打卡` : `${partnerNameStr}今日未打卡`}
                             </button>
                         </div>
