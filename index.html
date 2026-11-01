@@ -950,9 +950,13 @@
             const now = Date.now();
             todayRecord.postedTimes.forEach((targetTime, idx) => {
                 const uniqueBatchId = `partner_${todayStr}_${idx}`;
-                const alreadyExistsOrDeleted = heartMoments.some(m => m.uniqueBatchId === uniqueBatchId || m.id === targetTime + idx);
+                // 清理并确保不会跟用户手动删除的记录冲突
+                const deletedList = JSON.parse(localStorage.getItem('deletedHeartBatches') || '[]');
+                if (deletedList.includes(uniqueBatchId)) return;
+
+                const alreadyExists = heartMoments.some(m => m.uniqueBatchId === uniqueBatchId || m.id === targetTime + idx);
                 
-                if (now >= targetTime && !alreadyExistsOrDeleted) {
+                if (now >= targetTime && !alreadyExists) {
                     const contentText = getRandomCardSentences();
                     const d = new Date(targetTime);
                     const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1793,7 +1797,7 @@
             }
         }
 
-        // --- 2. 心迹模块 ---
+        // --- 2. 心迹模块 (彻底修复复活Bug及3:50锁定) ---
         function initHeartMoments(container) {
             checkAndGenerateBackgroundHeartMoments();
             checkAndProcessPendingHeartInteractions(); 
@@ -2109,6 +2113,14 @@
 
         function deleteMoment(momentId) {
             if (confirm("确定要删除这条心迹吗？")) {
+                const moment = heartMoments.find(m => m.id === momentId);
+                if (moment && moment.uniqueBatchId) {
+                    let deletedList = JSON.parse(localStorage.getItem('deletedHeartBatches') || '[]');
+                    if (!deletedList.includes(moment.uniqueBatchId)) {
+                        deletedList.push(moment.uniqueBatchId);
+                        localStorage.setItem('deletedHeartBatches', JSON.stringify(deletedList));
+                    }
+                }
                 heartMoments = heartMoments.filter(m => m.id !== momentId);
                 saveData();
                 renderHeartMomentsList();
@@ -3184,29 +3196,31 @@
             updateAnniversaryList();
         }
 
-        // --- 4. 厮守模块 (全方位视觉与交互大优化) ---
+        // --- 4. 厮守模块 (集成拍一拍动画、无问号、二字不加粗、闹钟可点晃动) ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
+        let partnerPokeClickCount = 0;
+        let partnerPokeTimer = null;
 
         function initSiShou(container) {
             container.innerHTML = `
                 <div style="padding:12px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
-                    <!-- 置顶框：高度约为默认3倍，中间依偎图标可点击摇晃 -->
+                    <!-- 置顶框：中间依偎图标可点击摇晃，对方头像双击可拍一拍 -->
                     <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; align-items:center; justify-content:center; gap:30px; height:135px; flex-shrink:0;">
-                        <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouPartnerAvatarBox"></div>
-                        <div id="alarmClockIcon" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px;" onclick="shakeAlarmClock(this)" title="戳一戳">
+                        <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouPartnerAvatarBox" onclick="handlePartnerAvatarDoubleTap()" title="双击拍一拍对方"></div>
+                        <div id="alarmClockIcon" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px;" onclick="shakeAlarmClock(this)" title="点我摇晃">
                             <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--text-color)" stroke-width="1.8" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                         </div>
                         <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouMyAvatarBox"></div>
                     </div>
 
-                    <!-- 四列二字极简模式选择区（去掉了所有括号和小字） -->
+                    <!-- 四列二字极简模式选择区（不加粗，点击直接触发流程） -->
                     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:bold; border-radius:12px;" onclick="startSiShouFlow('专注')">专注</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:bold; border-radius:12px;" onclick="startSiShouFlow('强身')">强身</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:bold; border-radius:12px;" onclick="startSiShouFlow('共眠')">共眠</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:bold; border-radius:12px;" onclick="startSiShouFlow('缱绻')">缱绻</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('专注')">专注</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('强身')">强身</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('共眠')">共眠</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('缱绻')">缱绻</button>
                     </div>
 
                     <!-- 计时状态显示区 -->
@@ -3235,6 +3249,29 @@
         function shakeAlarmClock(el) {
             el.classList.add('clock-shaking');
             setTimeout(() => { el.classList.remove('clock-shaking'); }, 500);
+        }
+
+        function handlePartnerAvatarDoubleTap() {
+            const partnerBox = document.getElementById('sishouPartnerAvatarBox');
+            if(!partnerBox) return;
+
+            partnerPokeClickCount++;
+            if (partnerPokeClickCount === 1) {
+                partnerPokeTimer = setTimeout(() => {
+                    partnerPokeClickCount = 0;
+                }, 350);
+            } else if (partnerPokeClickCount === 2) {
+                clearTimeout(partnerPokeTimer);
+                partnerPokeClickCount = 0;
+                
+                // 双击触发拍一拍动效
+                partnerBox.classList.add('clock-shaking');
+                setTimeout(() => partnerBox.classList.remove('clock-shaking'), 500);
+
+                const partnerNameStr = settings.partnerName || '老公';
+                chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `我拍了拍 ${partnerNameStr}` });
+                saveData();
+            }
         }
 
         // 统一的高颜值恋爱弹窗函数
@@ -3272,20 +3309,14 @@
             }
 
             const partnerNameStr = settings.partnerName || '老公';
-            const partnerBox = document.getElementById('sishouPartnerAvatarBox');
-            if(partnerBox) {
-                partnerBox.classList.add('clock-shaking');
-                setTimeout(() => partnerBox.classList.remove('clock-shaking'), 500);
-            }
-
             let actionName = '专注';
             if(typeName === '强身') actionName = '运动';
             else if(typeName === '共眠') actionName = '睡觉';
             else if(typeName === '缱绻') actionName = '腻歪';
 
-            // 第一步：显示邀请与接受弹窗
+            // 去掉问号的甜蜜邀请语
             showLoveModal(
-                `邀请${partnerNameStr}和我一起${actionName}？`,
+                `邀请${partnerNameStr}和我一起${actionName}`,
                 [
                     { text: '取消', primary: false, onclick: 'closeLoveModal()' },
                     { text: '发送邀请', primary: true, onclick: `acceptSiShouInvite('${typeName}')` }
@@ -3306,7 +3337,7 @@
         function openSiShouModeSelector(typeName) {
             if(typeName === '共眠') {
                 showLoveModal(
-                    `请问需要哄睡服务吗？`,
+                    `请问需要哄睡服务吗`,
                     [
                         { text: '需要', primary: true, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
                         { text: '不需要也得需要', primary: true, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` }
@@ -3314,7 +3345,7 @@
                 );
             } else if(typeName === '缱绻') {
                 showLoveModal(
-                    `请选择腻歪方式：`,
+                    `请选择腻歪方式`,
                     [
                         { text: '抱抱', primary: false, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
                         { text: '亲亲', primary: false, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
@@ -3322,9 +3353,8 @@
                     ]
                 );
             } else {
-                // 正计时与倒计时作为同一层级的两个精致并列按键
                 showLoveModal(
-                    `请选择计时模式：`,
+                    `请选择计时模式`,
                     [
                         { text: '正计时', primary: false, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
                         { text: '倒计时', primary: true, onclick: `promptCountdownMinutes('${typeName}');` }
@@ -3453,7 +3483,6 @@
             const hours = totalSecs / 3600;
 
             const partnerNameStr = settings.partnerName || '老公';
-            let partnerTitle = settings.partnerName || '老公';
             let wifeTitle = settings.myName || '老婆'; 
             let msg = '';
 
