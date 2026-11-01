@@ -1071,7 +1071,7 @@
             }
         }
 
-        // --- 1. 蜜语模块 ---
+        // --- 1. 蜜语模块 (极致性能优化防崩溃版) ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -1545,7 +1545,9 @@
         function updateChatMessages() {
             const container = document.getElementById('chatMessages');
             if(!container) return;
-            container.innerHTML = '';
+            
+            // 使用 DocumentFragment 优化渲染性能，防止长聊天记录直接导致浏览器闪退
+            const fragment = document.createDocumentFragment();
 
             const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '我';
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
@@ -1558,7 +1560,7 @@
                     const timeDivider = document.createElement('div');
                     timeDivider.className = 'message-time-divider';
                     timeDivider.innerText = formatMessageTime(msg.timestamp);
-                    container.appendChild(timeDivider);
+                    fragment.appendChild(timeDivider);
                 }
                 lastTimestamp = msg.timestamp;
 
@@ -1567,7 +1569,7 @@
                 if (msg.sender === 'system-center') {
                     row.className = `message-row system-center`;
                     row.innerHTML = `<div class="system-action-bubble">${msg.content}</div>`;
-                    container.appendChild(row);
+                    fragment.appendChild(row);
                     return;
                 }
 
@@ -1579,7 +1581,7 @@
                 const avatarNameHTML = `
                     <div class="avatar-name-column">
                         <div class="message-sender-name">${name}</div>
-                        <div class="avatar-box" ondblclick="handleAvatarClick('${targetWho}')" onclick="handleAvatarClick('${targetWho}')">
+                        <div class="avatar-box" onclick="handleAvatarClick('${targetWho}')">
                             ${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}
                         </div>
                     </div>
@@ -1617,8 +1619,11 @@
                 } else {
                     row.innerHTML = `<div class="message-content-wrapper" style="align-items: flex-end;">${contentHTML}</div>${avatarNameHTML}`;
                 }
-                container.appendChild(row);
+                fragment.appendChild(row);
             });
+            
+            container.innerHTML = '';
+            container.appendChild(fragment);
             container.scrollTop = container.scrollHeight;
         }
 
@@ -1946,7 +1951,6 @@
 
                 const card = document.createElement('div');
                 card.id = `moment-card-${moment.id}`;
-                // 将置顶边框和标签改为松绿色 (--pine-green)
                 card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; transition:border-color 0.3s; ${moment.isPinned ? 'border-color: var(--pine-green);' : ''}`;
                 
                 let pinTag = moment.isPinned ? `<span style="font-size:10px; background:var(--pine-green); color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
