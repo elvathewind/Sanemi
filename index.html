@@ -622,7 +622,7 @@
             font-size: 12px;
         }
 
-        /* 良辰长按拖动排序样式 */
+        /* 良辰拖拽排序样式 */
         .anniv-item-card {
             border: 1px solid var(--border-color);
             padding: 12px;
@@ -633,11 +633,7 @@
             background: var(--bg-color);
             user-select: none;
             touch-action: none;
-            cursor: grab;
             transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s;
-        }
-        .anniv-item-card:active {
-            cursor: grabbing;
         }
         .anniv-item-card.dragging {
             opacity: 0.85;
@@ -646,6 +642,17 @@
             z-index: 100;
             background: var(--card-bg);
             border-color: var(--text-color);
+        }
+        .drag-handle {
+            color: #999999;
+            font-size: 18px;
+            letter-spacing: -2px;
+            cursor: grab;
+            padding: 0 6px;
+            line-height: 1;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
         }
     </style>
 </head>
@@ -942,7 +949,6 @@
                     `<img src="${settings.partnerAvatar}"><div id="callTimerDisplay" style="position:absolute; bottom:8px; right:8px; font-size:11px; background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); color:#fff; padding:3px 8px; border-radius:12px; z-index:3;">${timeStr}</div>` : 
                     `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%;">【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span></div>`;
             } else {
-                // 完美居中、固定字号、低饱和克制灰色的状态提示文字（原样照抄用户提供的内容）
                 body.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; width:100%; height:100%; padding:15px; color:#777777; font-size:13px; text-align:center;">${currentCallStatus}</div>`;
                 
                 callAutoCloseTimer = setTimeout(() => {
@@ -1129,7 +1135,6 @@
             setTimeout(() => {
                 if (!document.getElementById('videoModal')) return;
                 
-                // 恢复准确的概率设定：已接通80%，暂时无法接通5%，当前信号差5%，网络异常5%，现在有点忙，等一下哦5%
                 const rand = Math.random();
                 if (rand < 0.80) {
                     currentCallStatus = 'connected';
@@ -2670,11 +2675,11 @@
                     </div>
 
                     <div>
-                        <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" style="margin-bottom:6px;">
+                        <!-- 彻底禁用自动填充 -->
+                        <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-bottom:6px;">
                         <input type="date" id="annivDate" style="margin-bottom:6px;">
                         <button class="btn" style="width:100%;" onclick="addAnniversary()">保存良辰</button>
                     </div>
-                    <div style="font-weight:bold; margin-top:4px;">良辰倒计时列表（长按卡片可自由拖动排序）：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;" id="anniversaryContainer"></div>
                 </div>
             `;
@@ -2761,7 +2766,7 @@
                 div.dataset.index = index;
 
                 div.innerHTML = `
-                    <div style="flex:1; overflow:hidden;">
+                    <div style="flex:1; overflow:hidden; padding-right:8px;">
                         <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
                         <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
                     </div>
@@ -2769,53 +2774,45 @@
                         <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
                         <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAnniversary(${item.id})">修改</button>
                         <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAnniversary(${item.id})">删除</button>
+                        <div class="drag-handle" title="按住拖动排序">☰</div>
                     </div>
                 `;
 
-                // 长按与拖动排序核心逻辑
-                let dragStartY = 0;
-                let isLongPress = false;
-                let longPressTimer = null;
+                // 触摸屏拖拽排序逻辑
+                let touchStartY = 0;
+                let draggingEl = null;
 
                 div.addEventListener('touchstart', (e) => {
-                    dragStartY = e.touches[0].clientY;
-                    isLongPress = false;
-                    longPressTimer = setTimeout(() => {
-                        isLongPress = true;
-                        div.classList.add('dragging');
-                    }, 400); // 400ms 长按触发
+                    touchStartY = e.touches[0].clientY;
+                    draggingEl = div;
+                    div.classList.add('dragging');
                 }, {passive: true});
 
                 div.addEventListener('touchmove', (e) => {
-                    if (!isLongPress) {
-                        if (Math.abs(e.touches[0].clientY - dragStartY) > 10) {
-                            clearTimeout(longPressTimer);
-                        }
-                        return;
-                    }
+                    if (!draggingEl) return;
                     e.preventDefault();
-                    const touchY = e.touches[0].clientY;
+                    const currentY = e.touches[0].clientY;
                     const siblings = [...container.querySelectorAll('.anniv-item-card:not(.dragging)')];
                     const nextSibling = siblings.find(sibling => {
                         const box = sibling.getBoundingClientRect();
-                        return touchY < box.top + box.height / 2;
+                        return currentY < box.top + box.height / 2;
                     });
                     if (nextSibling) {
-                        container.insertBefore(div, nextSibling);
+                        container.insertBefore(draggingEl, nextSibling);
                     } else {
-                        container.appendChild(div);
+                        container.appendChild(draggingEl);
                     }
                 }, {passive: false});
 
                 div.addEventListener('touchend', () => {
-                    clearTimeout(longPressTimer);
-                    if (isLongPress) {
-                        isLongPress = false;
-                        div.classList.remove('dragging');
+                    if (draggingEl) {
+                        draggingEl.classList.remove('dragging');
+                        draggingEl = null;
                         syncDomOrderToAnniversaries(container);
                     }
                 });
 
+                // PC 鼠标端原生拖拽
                 div.addEventListener('dragstart', (e) => {
                     div.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
