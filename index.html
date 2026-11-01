@@ -749,6 +749,7 @@
             font-size: 16px;
             line-height: 1.5;
             color: var(--text-color);
+            text-align: center;
         }
         .love-modal-buttons {
             display: flex;
@@ -1342,6 +1343,7 @@
 
         function triggerPoke(targetWho) {
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
+            const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '我';
 
             let pokeText = '';
             if (targetWho === 'partner') {
@@ -2227,7 +2229,7 @@
             renderHeartMomentsList();
         }
 
-        // --- 字库模块 (标签背景已全改松绿色) ---
+        // --- 字库模块 ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -3243,7 +3245,7 @@
             updateAnniversaryList();
         }
 
-        // --- 4. 厮守模块 (恢复小闹钟) ---
+        // --- 4. 厮守模块 (双方头像均可点击晃动) ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
@@ -3256,7 +3258,7 @@
                         <div id="alarmClockIcon" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px;" onclick="shakeAlarmClock(this)" title="点我摇晃">
                             <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--text-color)" stroke-width="1.8" fill="none"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 16"></polyline><path d="M5.22 5.22l1.56 1.56"></path><path d="M18.78 5.22l-1.56 1.56"></path></svg>
                         </div>
-                        <div class="avatar-box" style="width:84px; height:84px; border-radius:50%;" id="sishouMyAvatarBox"></div>
+                        <div class="avatar-box" style="width:84px; height:84px; border-radius:50%;" id="sishouMyAvatarBox" onclick="handleMyAvatarClick()" title="点击拍一拍自己"></div>
                     </div>
 
                     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
@@ -3301,6 +3303,16 @@
 
             const partnerNameStr = settings.partnerName || '老公';
             chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `我拍了拍 ${partnerNameStr}` });
+            saveData();
+        }
+
+        function handleMyAvatarClick() {
+            const myBox = document.getElementById('sishouMyAvatarBox');
+            if(!myBox) return;
+            myBox.classList.add('clock-shaking');
+            setTimeout(() => myBox.classList.remove('clock-shaking'), 500);
+
+            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `我拍了拍自己` });
             saveData();
         }
 
@@ -3591,11 +3603,17 @@
 
             if(type === '专注') {
                 if(mode === 'countup') {
-                    if(minutes <= 15) msg = `我可爱的妻子就这么坐不住吗？`;
-                    else if(minutes <= 30) msg = `我可爱的妻子开了个好头！`;
-                    else if(minutes <= 45) msg = `我可爱的妻子是不是已经完成任务了？`;
-                    else if(minutes <= 60) msg = `我可爱的妻子怎么这么厉害呀！`;
-                    else msg = `请问这是神吗？我简直认不出我可爱的妻子了！`;
+                    if(minutes >= 15 && minutes <= 30) {
+                        msg = `我可爱的妻子看起来真是干劲满满呢！（嘿嘿加油亲爱的宝贝！靠你啦！）`;
+                    } else if(minutes < 15) {
+                        msg = `我可爱的妻子就这么坐不住吗？`;
+                    } else if(minutes <= 45) {
+                        msg = `我可爱的妻子是不是已经完成任务了？`;
+                    } else if(minutes <= 60) {
+                        msg = `我可爱的妻子怎么这么厉害呀！`;
+                    } else {
+                        msg = `请问这是神吗？我简直认不出我可爱的妻子了！`;
+                    }
                 } else {
                     if(status === 'stopped') {
                         msg = `我可爱的妻子又想跑到哪里去？`;
@@ -3637,18 +3655,18 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 5. 流年 (日程本升级带时间和松绿色勾选框) ---
+        // --- 5. 流年 (精确时间选择器 + 星星标记 + 未完成/已完成双栏 + 拖动排序) ---
         function initTodo(container) {
             container.innerHTML = `
                 <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
                     <div style="display:flex; gap:8px; flex-direction:column;">
                         <div style="display:flex; gap:8px;">
-                            <input type="text" id="todoTimeInput" placeholder="时间（如：下午4点 / 16:00）" style="width:120px; flex-shrink:0;">
+                            <input type="time" id="todoTimeInput" style="width:120px; flex-shrink:0;">
                             <input type="text" id="todoInput" placeholder="添加新日程或心愿（如：去银行取钱）" onkeydown="if(event.key==='Enter') addTodoItem()" style="flex:1;">
                         </div>
                         <button class="btn" onclick="addTodoItem()" style="width:100%;">添加日程</button>
                     </div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="todoListContainer"></div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:16px;" id="todoListContainer"></div>
                 </div>
             `;
             renderTodoList();
@@ -3659,13 +3677,14 @@
             const input = document.getElementById('todoInput');
             if(!input) return;
             const text = input.value.trim();
-            const timeStr = timeInput ? timeInput.value.trim() : '';
+            const timeStr = timeInput ? timeInput.value : '';
             if(!text) return;
 
             todoList.push({
                 id: Date.now(),
                 timeStr: timeStr,
                 text: text,
+                important: false,
                 completed: false
             });
             input.value = '';
@@ -3681,8 +3700,18 @@
                 saveData();
                 renderTodoList();
                 if(item.completed) {
-                    alert('老婆真棒！又完成一项！');
+                    showLoveModal('老婆太厉害啦！又完成一项！❤️', [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
                 }
+            }
+        }
+
+        function toggleTodoImportant(id, event) {
+            event.stopPropagation();
+            const item = todoList.find(t => t.id === id);
+            if(item) {
+                item.important = !item.important;
+                saveData();
+                renderTodoList();
             }
         }
 
@@ -3699,29 +3728,162 @@
             if(!container) return;
             container.innerHTML = '';
 
-            if(todoList.length === 0) {
-                container.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:13px; padding:20px;">暂无流年日程，快在上方添加一个吧~</div>`;
-                return;
-            }
+            const uncompletedItems = todoList.filter(t => !t.completed);
+            const completedItems = todoList.filter(t => t.completed);
 
-            todoList.forEach(item => {
-                const div = document.createElement('div');
-                div.style.cssText = `border:1px solid var(--border-color); padding:10px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); opacity:${item.completed ? '0.6' : '1'};`;
-                
-                let timeBadge = item.timeStr ? `<span style="font-size:11px; background:var(--pine-green); color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
+            // 未完成栏
+            const uncompletedSection = document.createElement('div');
+            uncompletedSection.style.cssText = "display:flex; flex-direction:column; gap:8px;";
+            uncompletedSection.innerHTML = `<div style="font-weight:bold; font-size:13px; color:var(--sub-text);">未完成任务 (${uncompletedItems.length})</div>`;
+            
+            const uncompletedList = document.createElement('div');
+            uncompletedList.style.cssText = "display:flex; flex-direction:column; gap:8px;";
+            
+            if(uncompletedItems.length === 0) {
+                uncompletedList.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:12px; padding:10px; border:1px dashed var(--border-color); border-radius:8px;">暂无未完成任务~</div>`;
+            } else {
+                uncompletedItems.forEach((item, index) => {
+                    const originalIndex = todoList.findIndex(t => t.id === item.id);
+                    const div = document.createElement('div');
+                    div.className = 'anniv-item-card';
+                    div.dataset.index = originalIndex;
+                    div.style.cssText = `border:1px solid var(--border-color); padding:10px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); user-select:none;`;
+                    
+                    let timeBadge = item.timeStr ? `<span style="font-size:11px; background:var(--pine-green); color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
+                    let starColor = item.important ? '#f59e0b' : 'var(--sub-text)';
+                    let starSvg = `<svg viewBox="0 0 24 24" width="18" height="18" fill="${item.important ? '#f59e0b' : 'none'}" stroke="${starColor}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
 
-                div.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden; cursor:pointer;" onclick="toggleTodoItem(${item.id})">
-                        <input type="checkbox" ${item.completed ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green);" onclick="event.stopPropagation(); toggleTodoItem(${item.id})">
-                        <div style="display:flex; align-items:center; flex:1; overflow:hidden; text-decoration:${item.completed ? 'line-through' : 'none'};">
-                            ${timeBadge}
-                            <span style="word-break:break-all; font-size:var(--font-size);">${item.text}</span>
+                    div.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden; cursor:pointer;" onclick="toggleTodoItem(${item.id})">
+                            <input type="checkbox" style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green);" onclick="event.stopPropagation(); toggleTodoItem(${item.id})">
+                            <div style="display:flex; align-items:center; flex:1; overflow:hidden;">
+                                ${timeBadge}
+                                <span style="word-break:break-all; font-size:var(--font-size);">${item.text}</span>
+                            </div>
                         </div>
-                    </div>
-                    <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text); flex-shrink:0; margin-left:8px;" onclick="deleteTodoItem(${item.id})">删除</button>
-                `;
-                container.appendChild(div);
+                        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                            <span style="cursor:pointer; display:flex; align-items:center;" onclick="toggleTodoImportant(${item.id}, event)" title="标记重要">${starSvg}</span>
+                            <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text);" onclick="deleteTodoItem(${item.id})">删除</button>
+                            <div class="drag-handle" title="按住拖动排序">☰</div>
+                        </div>
+                    `;
+
+                    // 添加拖动排序事件
+                    const handle = div.querySelector('.drag-handle');
+                    let draggingEl = null;
+
+                    handle.addEventListener('touchstart', (e) => {
+                        draggingEl = div;
+                        div.classList.add('dragging');
+                    }, {passive: true});
+
+                    div.addEventListener('touchmove', (e) => {
+                        if (!draggingEl) return;
+                        e.preventDefault();
+                        const currentY = e.touches[0].clientY;
+                        const siblings = [...uncompletedList.querySelectorAll('.anniv-item-card:not(.dragging)')];
+                        const nextSibling = siblings.find(sibling => {
+                            const box = sibling.getBoundingClientRect();
+                            return currentY < box.top + box.height / 2;
+                        });
+                        if (nextSibling) {
+                            uncompletedList.insertBefore(draggingEl, nextSibling);
+                        } else {
+                            uncompletedList.appendChild(draggingEl);
+                        }
+                    }, {passive: false});
+
+                    div.addEventListener('touchend', () => {
+                        if (draggingEl) {
+                            draggingEl.classList.remove('dragging');
+                            draggingEl = null;
+                            syncDomOrderToTodoList(uncompletedList);
+                        }
+                    });
+
+                    handle.addEventListener('mousedown', (e) => {
+                        div.draggable = true;
+                    });
+
+                    div.addEventListener('dragstart', (e) => {
+                        div.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+
+                    div.addEventListener('dragend', () => {
+                        div.draggable = false;
+                        div.classList.remove('dragging');
+                        syncDomOrderToTodoList(uncompletedList);
+                    });
+
+                    div.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        const draggingItem = uncompletedList.querySelector('.dragging');
+                        if (!draggingItem || draggingItem === div) return;
+                        const box = div.getBoundingClientRect();
+                        const offset = e.clientY - box.top - box.height / 2;
+                        if (offset < 0) {
+                            uncompletedList.insertBefore(draggingItem, div);
+                        } else {
+                            uncompletedList.insertBefore(draggingItem, div.nextSibling);
+                        }
+                    });
+
+                    uncompletedList.appendChild(div);
+                });
+            }
+            uncompletedSection.appendChild(uncompletedList);
+            container.appendChild(uncompletedSection);
+
+            // 已完成栏
+            const completedSection = document.createElement('div');
+            completedSection.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top:8px;";
+            completedSection.innerHTML = `<div style="font-weight:bold; font-size:13px; color:var(--sub-text);">已完成任务 (${completedItems.length})</div>`;
+
+            const completedList = document.createElement('div');
+            completedList.style.cssText = "display:flex; flex-direction:column; gap:8px;";
+
+            if(completedItems.length === 0) {
+                completedList.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:12px; padding:10px; border:1px dashed var(--border-color); border-radius:8px;">暂无已完成任务~</div>`;
+            } else {
+                completedItems.forEach(item => {
+                    const div = document.createElement('div');
+                    div.style.cssText = `border:1px solid var(--border-color); padding:10px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); opacity:0.6;`;
+                    
+                    let timeBadge = item.timeStr ? `<span style="font-size:11px; background:var(--sub-text); color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
+                    let starColor = item.important ? '#f59e0b' : 'var(--sub-text)';
+                    let starSvg = `<svg viewBox="0 0 24 24" width="18" height="18" fill="${item.important ? '#f59e0b' : 'none'}" stroke="${starColor}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+
+                    div.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden; cursor:pointer;" onclick="toggleTodoItem(${item.id})">
+                            <input type="checkbox" checked style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green);" onclick="event.stopPropagation(); toggleTodoItem(${item.id})">
+                            <div style="display:flex; align-items:center; flex:1; overflow:hidden; text-decoration:line-through;">
+                                ${timeBadge}
+                                <span style="word-break:break-all; font-size:var(--font-size);">${item.text}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                            <span style="display:flex; align-items:center;">${starSvg}</span>
+                            <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text);" onclick="deleteTodoItem(${item.id})">删除</button>
+                        </div>
+                    `;
+                    completedList.appendChild(div);
+                });
+            }
+            completedSection.appendChild(completedList);
+            container.appendChild(completedSection);
+        }
+
+        function syncDomOrderToTodoList(container) {
+            const newUncompletedOrder = [];
+            container.querySelectorAll('.anniv-item-card').forEach(card => {
+                const oldIndex = Number(card.dataset.index);
+                newUncompletedOrder.push(todoList[oldIndex]);
             });
+            const completedItems = todoList.filter(t => t.completed);
+            todoList = [...newUncompletedOrder, ...completedItems];
+            saveData();
+            renderTodoList();
         }
 
         // --- 设置模块 ---
