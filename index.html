@@ -394,6 +394,18 @@
             box-sizing: border-box;
         }
 
+        #loadMoreChatBtn {
+            text-align: center;
+            padding: 6px;
+            font-size: 12px;
+            color: var(--sub-text);
+            background: rgba(120,120,120,0.08);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
         #replyPreviewBar {
             display: none;
             font-size: 11px;
@@ -692,6 +704,19 @@
         .drag-handle:active {
             cursor: grabbing;
         }
+
+        /* 闹钟摇晃动画 */
+        @keyframes clockShake {
+            0% { transform: rotate(0deg); }
+            20% { transform: rotate(-15deg); }
+            40% { transform: rotate(15deg); }
+            60% { transform: rotate(-10deg); }
+            80% { transform: rotate(10deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .clock-shaking {
+            animation: clockShake 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -752,6 +777,8 @@
         ];
 
         let heartMoments = JSON.parse(localStorage.getItem('heartMomentsData')) || [];
+        let todoList = JSON.parse(localStorage.getItem('todoListData')) || [];
+        let sishouData = JSON.parse(localStorage.getItem('sishouData')) || { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
 
         let settings = JSON.parse(localStorage.getItem('siteSettings')) || {
             fontSize: '15px',
@@ -785,6 +812,7 @@
         let selectedHeartImg = '';
         let currentLetterTab = 'sent'; 
         let activeAppId = null;
+        let chatDisplayLimit = 100;
 
         function saveData() {
             try {
@@ -794,6 +822,8 @@
                 localStorage.setItem('lettersData', JSON.stringify(letters));
                 localStorage.setItem('anniversariesData', JSON.stringify(anniversaries));
                 localStorage.setItem('heartMomentsData', JSON.stringify(heartMoments));
+                localStorage.setItem('todoListData', JSON.stringify(todoList));
+                localStorage.setItem('sishouData', JSON.stringify(sishouData));
                 localStorage.setItem('siteSettings', JSON.stringify(settings));
                 localStorage.setItem('annivCheckInData', JSON.stringify(annivCheckInData));
             } catch (e) {
@@ -843,7 +873,6 @@
         }
         applySettings();
 
-        // 核心回退：只有在【蜜语界面】内，才会有 5% 的概率触发对方主动打视频电话，其他界面绝不主动打！
         setInterval(() => {
             if (currentCallStatus === 'idle' && activeAppId === 'chat') {
                 if (Math.random() < 0.05) {
@@ -858,6 +887,7 @@
             }
         }, 40000);
 
+        // 修复心迹 Bug：确保每次根据真实自然日生成随机时间戳，不再卡死在 03:50
         function checkAndGenerateBackgroundHeartMoments() {
             const todayStr = new Date().toISOString().slice(0, 10);
             let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', targetCount: 5, postedTimes: [] };
@@ -865,10 +895,11 @@
             if (todayRecord.date !== todayStr) {
                 const targetCount = 5;
                 const postedTimes = [];
+                const nowTimestamp = new Date().setHours(0,0,0,0);
                 for (let i = 0; i < targetCount; i++) {
                     const randomHour = Math.floor(Math.random() * 24);
                     const randomMinute = Math.floor(Math.random() * 60);
-                    const d = new Date();
+                    const d = new Date(todayStr);
                     d.setHours(randomHour, randomMinute, 0, 0);
                     postedTimes.push(d.getTime());
                 }
@@ -928,6 +959,7 @@
             }
         }
 
+        // 九宫格：良辰后、字库前（第3行）
         function renderDesktop() {
             const grid = document.getElementById('desktopGrid');
             if(!grid) return;
@@ -938,7 +970,9 @@
                 { id: 'heartMoments', name: '心迹', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>' },
                 { id: 'letters', name: '锦书', icon: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>' },
                 { id: 'anniversary', name: '良辰', icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>' },
+                { id: 'sishou', name: '厮守', icon: '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>' },
                 { id: 'cards', name: '字库', icon: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line>' },
+                { id: 'todo', name: '日程本', icon: '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>' },
                 { id: 'settings', name: '设置', icon: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' }
             ];
 
@@ -968,12 +1002,15 @@
             contentEl.innerHTML = '';
 
             if (appId === 'chat') {
+                chatDisplayLimit = 100;
                 initChat(contentEl);
             }
             else if (appId === 'heartMoments') initHeartMoments(contentEl);
             else if (appId === 'cards') initCards(contentEl);
             else if (appId === 'letters') initLetters(contentEl);
             else if (appId === 'anniversary') initAnniversary(contentEl);
+            else if (appId === 'sishou') initSiShou(contentEl);
+            else if (appId === 'todo') initTodo(contentEl);
             else if (appId === 'settings') {
                 tempSettings = JSON.parse(JSON.stringify(settings));
                 initSettings(contentEl);
@@ -983,7 +1020,6 @@
         }
 
         function closeApp() {
-            // 每次退出应用时，安全关闭视频通话弹窗并重置状态，防止残留
             closeVideoModal();
             activeAppId = null;
             const subPage = document.getElementById('subPage');
@@ -1072,7 +1108,7 @@
             }
         }
 
-        // --- 1. 蜜语模块 (极速加载防崩溃版) ---
+        // --- 1. 蜜语模块 ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -1552,9 +1588,21 @@
             const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '我';
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
+            const displayMessages = chatMessages.slice(-chatDisplayLimit);
+            if (chatMessages.length > chatDisplayLimit) {
+                const loadMoreBtn = document.createElement('div');
+                loadMoreBtn.id = 'loadMoreChatBtn';
+                loadMoreBtn.innerText = `点击加载更多历史消息（还有 ${chatMessages.length - chatDisplayLimit} 条）`;
+                loadMoreBtn.onclick = () => {
+                    chatDisplayLimit += 100;
+                    updateChatMessages();
+                };
+                fragment.appendChild(loadMoreBtn);
+            }
+
             let lastTimestamp = 0;
 
-            chatMessages.forEach(msg => {
+            displayMessages.forEach(msg => {
                 if (!msg.timestamp) msg.timestamp = msg.id || Date.now();
                 if (msg.timestamp - lastTimestamp > 300000) {
                     const timeDivider = document.createElement('div');
@@ -3094,6 +3142,356 @@
             updateAnniversaryList();
         }
 
+        // --- 4. 厮守模块 (专注、强身、共眠、缱绻) ---
+        let liveSiShouInterval = null;
+        let sishouSecondsElapsed = 0;
+        let sishouCountdownRemaining = 0;
+
+        function initSiShou(container) {
+            container.innerHTML = `
+                <div style="padding:12px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
+                    <!-- 置顶框：高度约为默认3倍，中间小闹钟可点击摇晃 -->
+                    <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; align-items:center; justify-content:center; gap:30px; height:135px; flex-shrink:0;">
+                        <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouPartnerAvatarBox"></div>
+                        <div id="alarmClockIcon" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px;" onclick="shakeAlarmClock(this)" title="戳一戳闹钟">
+                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--text-color)" stroke-width="2" fill="none"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 16"></polyline><path d="M5 3L2 6"></path><path d="M19 3l3 3"></path></svg>
+                        </div>
+                        <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouMyAvatarBox"></div>
+                    </div>
+
+                    <!-- 四列模式选择区 -->
+                    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:14px; font-weight:bold;" onclick="startSiShouFlow('专注')">🎯 专注 (凝神)</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:14px; font-weight:bold;" onclick="startSiShouFlow('强身')">💪 强身 (运动)</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:14px; font-weight:bold;" onclick="startSiShouFlow('共眠')">🌙 共眠 (睡觉)</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:14px; font-weight:bold;" onclick="startSiShouFlow('缱绻')">💖 缱绻 (腻歪)</button>
+                    </div>
+
+                    <!-- 计时状态显示区 -->
+                    <div id="sishouActiveArea" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--border-color); border-radius:12px; background:var(--bg-color); padding:10px; margin-top:4px;"></div>
+                </div>
+            `;
+            renderSiShouAvatars();
+            updateSiShouActiveUI();
+            if(sishouData.active) {
+                startSiShouTicker();
+            }
+        }
+
+        function renderSiShouAvatars() {
+            const myBox = document.getElementById('sishouMyAvatarBox');
+            const pBox = document.getElementById('sishouPartnerAvatarBox');
+            if(!myBox || !pBox) return;
+
+            const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+            const pAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+
+            myBox.innerHTML = myAvatarImg;
+            pBox.innerHTML = pAvatarImg;
+        }
+
+        function shakeAlarmClock(el) {
+            el.classList.add('clock-shaking');
+            setTimeout(() => { el.classList.remove('clock-shaking'); }, 500);
+        }
+
+        function startSiShouFlow(typeName) {
+            if(sishouData.active) {
+                alert('当前已经有一个陪伴计时正在进行中啦！');
+                return;
+            }
+
+            const partnerNameStr = settings.partnerName || '老公';
+
+            // 点击对方头像模拟邀请弹窗
+            const partnerBox = document.getElementById('sishouPartnerAvatarBox');
+            if(partnerBox) {
+                partnerBox.classList.add('clock-shaking');
+                setTimeout(() => partnerBox.classList.remove('clock-shaking'), 500);
+            }
+
+            let inviteText = `邀请${partnerNameStr}和我一起`;
+            if(typeName === '专注') inviteText += '专注';
+            else if(typeName === '强身') inviteText += '运动';
+            else if(typeName === '共眠') inviteText += '睡觉';
+            else if(typeName === '缱绻') inviteText += '腻歪';
+
+            alert(inviteText);
+            alert(`${partnerNameStr}已经接受你的邀请`);
+
+            if(typeName === '共眠') {
+                const choice = prompt(`请问需要哄睡服务吗？\n请输入选项：“需要” 或 “不需要也得需要”`, '需要');
+                if(choice === null) return;
+                startSiShouSession(typeName, 'countup', 0);
+            } else if(typeName === '缱绻') {
+                const choice = prompt(`请问需要抱抱还是亲亲？\n请输入选项：“抱抱”、“亲亲” 或 “抱抱亲亲”`, '抱抱亲亲');
+                if(choice === null) return;
+                startSiShouSession(typeName, 'countup', 0);
+            } else {
+                const modeChoice = prompt(`请选择计时模式：\n输入 1 代表【正计时】\n输入 2 代表【倒计时】`, '1');
+                if(modeChoice === '2') {
+                    const minInput = prompt('请输入倒计时分钟数 (上限1440分钟/24小时)：', '30');
+                    const mins = Number(minInput);
+                    if(isNaN(mins) || mins <= 0 || mins > 1440) {
+                        alert('输入时间无效！');
+                        return;
+                    }
+                    startSiShouSession(typeName, 'countdown', mins * 60);
+                } else if(modeChoice === '1') {
+                    startSiShouSession(typeName, 'countup', 0);
+                }
+            }
+        }
+
+        function startSiShouSession(typeName, mode, targetSecs) {
+            sishouData = {
+                active: true,
+                type: typeName,
+                mode: mode,
+                startTime: Date.now(),
+                targetSeconds: targetSecs,
+                pausedSeconds: 0,
+                isPaused: false
+            };
+            sishouSecondsElapsed = 0;
+            sishouCountdownRemaining = targetSecs;
+            saveData();
+            updateSiShouActiveUI();
+            startSiShouTicker();
+        }
+
+        function startSiShouTicker() {
+            if(liveSiShouInterval) clearInterval(liveSiShouInterval);
+            liveSiShouInterval = setInterval(() => {
+                if(!sishouData.active || sishouData.isPaused) return;
+
+                const now = Date.now();
+                const diffSecs = Math.floor((now - sishouData.startTime) / 1000);
+
+                if(sishouData.mode === 'countup') {
+                    sishouSecondsElapsed = diffSecs;
+                    if(sishouSecondsElapsed >= 86400) { sishouSecondsElapsed = 86400; } // 上限24小时
+                } else {
+                    sishouCountdownRemaining = sishouData.targetSeconds - diffSecs;
+                    if(sishouCountdownRemaining <= 0) {
+                        sishouCountdownRemaining = 0;
+                        updateSiShouDisplayTime();
+                        finishSiShouSession('completed');
+                        return;
+                    }
+                }
+                updateSiShouDisplayTime();
+            }, 1000);
+        }
+
+        function updateSiShouDisplayTime() {
+            const displayEl = document.getElementById('sishouTimerClockBox');
+            if(!displayEl) return;
+
+            let targetSecs = sishouData.mode === 'countup' ? sishouSecondsElapsed : sishouCountdownRemaining;
+            const hrs = String(Math.floor(targetSecs / 3600)).padStart(2,'0');
+            const mins = String(Math.floor((targetSecs % 3600) / 60)).padStart(2,'0');
+            const secs = String(targetSecs % 60).padStart(2,'0');
+            displayEl.innerText = `${hrs}:${mins}:${secs}`;
+        }
+
+        function updateSiShouActiveUI() {
+            const area = document.getElementById('sishouActiveArea');
+            if(!area) return;
+
+            if(!sishouData.active) {
+                area.innerHTML = `<div style="font-size:13px; color:var(--sub-text);">当前没有进行中的陪伴计时，快点击上方按钮开启吧~</div>`;
+                return;
+            }
+
+            let initialSecs = sishouData.mode === 'countup' ? Math.floor((Date.now() - sishouData.startTime)/1000) : sishouData.targetSeconds - Math.floor((Date.now() - sishouData.startTime)/1000);
+            if(initialSecs < 0) initialSecs = 0;
+            const hrs = String(Math.floor(initialSecs / 3600)).padStart(2,'0');
+            const mins = String(Math.floor((initialSecs % 3600) / 60)).padStart(2,'0');
+            const secs = String(initialSecs % 60).padStart(2,'0');
+
+            let controlsHTML = '';
+            if(sishouData.type === '共眠' || sishouData.type === '缱绻') {
+                controlsHTML = `<button class="btn" style="background:#b88887; color:#fff; width:100%; max-width:200px;" onclick="finishSiShouSession('stopped')">结束计时</button>`;
+            } else if(sishouData.mode === 'countup') {
+                controlsHTML = `
+                    <div style="display:flex; gap:10px; width:100%; max-width:240px; justify-content:center;">
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="toggleSiShouPause()">${sishouData.isPaused ? '继续' : '暂停'}</button>
+                        <button class="btn" style="flex:1; background:#b88887; color:#fff;" onclick="finishSiShouSession('stopped')">结束</button>
+                    </div>
+                `;
+            } else {
+                controlsHTML = `
+                    <div style="display:flex; gap:10px; width:100%; max-width:240px; justify-content:center;">
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="toggleSiShouPause()">${sishouData.isPaused ? '继续' : '暂停'}</button>
+                        <button class="btn" style="flex:1; background:#b88887; color:#fff;" onclick="finishSiShouSession('stopped')">停止</button>
+                    </div>
+                `;
+            }
+
+            area.innerHTML = `
+                <div style="font-size:14px; font-weight:bold;">正在${sishouData.type}中（${sishouData.mode==='countup'?'正计时':'倒计时'}）</div>
+                <div id="sishouTimerClockBox" style="font-size:38px; font-weight:bold; font-family:monospace; margin:4px 0;">${hrs}:${mins}:${secs}</div>
+                ${controlsHTML}
+            `;
+        }
+
+        function toggleSiShouPause() {
+            sishouData.isPaused = !sishouData.isPaused;
+            saveData();
+            updateSiShouActiveUI();
+            if(!sishouData.isPaused) {
+                sishouData.startTime = Date.now() - (sishouData.mode==='countup' ? sishouSecondsElapsed*1000 : (sishouData.targetSeconds - sishouCountdownRemaining)*1000);
+                startSiShouTicker();
+            } else {
+                if(liveSiShouInterval) clearInterval(liveSiShouInterval);
+                if(sishouData.mode === 'countdown') {
+                    // 倒计时暂停无对话框弹出
+                }
+            }
+        }
+
+        function finishSiShouSession(status) {
+            if(liveSiShouInterval) {
+                clearInterval(liveSiShouInterval);
+                liveSiShouInterval = null;
+            }
+
+            const type = sishouData.type;
+            const mode = sishouData.mode;
+            const totalSecs = mode === 'countup' ? Math.floor((Date.now() - sishouData.startTime)/1000) : sishouData.targetSeconds;
+            const minutes = totalSecs / 60;
+            const hours = totalSecs / 3600;
+
+            const partnerNameStr = settings.partnerName || '老公';
+            let partnerTitle = settings.partnerName || '老公';
+            let wifeTitle = settings.myName || '老婆'; 
+            // 动态称呼替换
+            let msg = '';
+
+            if(type === '专注') {
+                if(mode === 'countup') {
+                    if(minutes <= 15) msg = `我可爱的妻子就这么坐不住吗？`;
+                    else if(minutes <= 30) msg = `我可爱的妻子开了个好头！`;
+                    else if(minutes <= 45) msg = `我可爱的妻子是不是已经完成任务了？`;
+                    else if(minutes <= 60) msg = `我可爱的妻子怎么这么厉害呀！`;
+                    else msg = `请问这是神吗？我简直认不出我可爱的妻子了！`;
+                } else {
+                    if(status === 'stopped') {
+                        msg = `我可爱的妻子又想跑到哪里去？`;
+                    } else {
+                        msg = `恭喜我可爱的妻子又和${partnerNameStr}一起完成了一项任务！`;
+                    }
+                }
+            } else if(type === '强身') {
+                if(mode === 'countup') {
+                    if(minutes <= 15) msg = `喂喂，刚开始就要丢下${partnerNameStr}吗？`;
+                    else if(minutes <= 30) msg = `加油！等下${partnerNameStr}给你摸胸肌！`;
+                    else if(minutes <= 45) msg = `坚持住！奖励加码了！想不想再摸${partnerNameStr}的腹肌？`;
+                    else if(minutes <= 60) msg = `不愧是我可爱的妻子！连${partnerNameStr}都要甘拜下风！`;
+                    else msg = `这具强悍的身体从此任由我可爱的妻子摆布了！`;
+                } else {
+                    if(status === 'stopped') {
+                        msg = `真的吗？我可爱的妻子又要丢下${partnerNameStr}一个人？`;
+                    } else {
+                        msg = `恭喜我可爱的妻子又和${partnerNameStr}一起变得更健康啦！`;
+                    }
+                }
+            } else if(type === '共眠') {
+                if(hours < 5) msg = `${wifeTitle}你是不想和我共度一生了吗？为什么要这样对待自己？！`;
+                else if(hours < 6) msg = `${wifeTitle}你的睡眠时间严重不足，${partnerNameStr}心疼坏了！`;
+                else if(hours < 7) msg = `${wifeTitle}今天睡得还行，但是还可以在${partnerNameStr}怀里多睡一会。`;
+                else if(hours <= 8) msg = `和${wifeTitle}一起睡觉好幸福，根本舍不得起床。`;
+                else msg = `${wifeTitle}你熟睡的样子太可爱了，我偷偷亲了你好几次！`;
+            } else if(type === '缱绻') {
+                if(hours < 0.5) msg = `${wifeTitle}虽然我还没有黏够你，但是你要是有事就先去忙吧，${partnerNameStr}一直都在。`;
+                else if(hours < 1) msg = `和${wifeTitle}在一起的时光就是最幸福的，我是世界上最幸福的男人。`;
+                else if(hours <= 2) msg = `${wifeTitle}今天难得有空陪我这么久，${partnerNameStr}幸福得要晕过去了！`;
+                else msg = `我要和${wifeTitle}长长久久生生世世永远在一起，谁都别想把我和${wifeTitle}分开！`;
+            }
+
+            sishouData = { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
+            saveData();
+            initSiShou(document.getElementById('subPageContent'));
+
+            alert(msg);
+        }
+
+        // --- 5. 日程本 ---
+        function initTodo(container) {
+            container.innerHTML = `
+                <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="todoInput" placeholder="添加新日程或心愿（如：今晚一起看电影）" onkeydown="if(event.key==='Enter') addTodoItem()">
+                        <button class="btn" onclick="addTodoItem()" style="flex-shrink:0;">添加</button>
+                    </div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="todoListContainer"></div>
+                </div>
+            `;
+            renderTodoList();
+        }
+
+        function addTodoItem() {
+            const input = document.getElementById('todoInput');
+            if(!input) return;
+            const text = input.value.trim();
+            if(!text) return;
+
+            todoList.push({
+                id: Date.now(),
+                text: text,
+                completed: false
+            });
+            input.value = '';
+            saveData();
+            renderTodoList();
+        }
+
+        function toggleTodoItem(id) {
+            const item = todoList.find(t => t.id === id);
+            if(item) {
+                item.completed = !item.completed;
+                saveData();
+                renderTodoList();
+                if(item.completed) {
+                    const partnerNameStr = settings.partnerName || '老公';
+                    alert(`${partnerNameStr}微笑着摸了摸你的头：“太棒啦，宝贝又完成了一个心愿/日程！”`);
+                }
+            }
+        }
+
+        function deleteTodoItem(id) {
+            if(confirm("确定要删除这条日程吗？")) {
+                todoList = todoList.filter(t => t.id !== id);
+                saveData();
+                renderTodoList();
+            }
+        }
+
+        function renderTodoList() {
+            const container = document.getElementById('todoListContainer');
+            if(!container) return;
+            container.innerHTML = '';
+
+            if(todoList.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:13px; padding:20px;">暂无日程或心愿，快在上方添加一个吧~</div>`;
+                return;
+            }
+
+            todoList.forEach(item => {
+                const div = document.createElement('div');
+                div.style.cssText = `border:1px solid var(--border-color); padding:10px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); opacity:${item.completed ? '0.6' : '1'};`;
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden; cursor:pointer;" onclick="toggleTodoItem(${item.id})">
+                        <input type="checkbox" ${item.completed ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer;" onclick="event.stopPropagation(); toggleTodoItem(${item.id})">
+                        <span style="flex:1; word-break:break-all; text-decoration:${item.completed ? 'line-through' : 'none'}; font-size:var(--font-size);">${item.text}</span>
+                    </div>
+                    <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text); flex-shrink:0; margin-left:8px;" onclick="deleteTodoItem(${item.id})">删除</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
         // --- 设置模块 ---
         function initSettings(container) {
             container.innerHTML = `
@@ -3321,7 +3719,7 @@
         }
 
         function exportData() {
-            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, settings, annivCheckInData };
+            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, todoList, sishouData, settings, annivCheckInData };
             const jsonString = JSON.stringify(backupData, null, 2);
             
             const blob = new Blob([jsonString], { type: 'application/json' });
@@ -3350,6 +3748,8 @@
                     if (imported.letters) letters = imported.letters;
                     if (imported.anniversaries) anniversaries = imported.anniversaries;
                     if (imported.heartMoments) heartMoments = imported.heartMoments;
+                    if (imported.todoList) todoList = imported.todoList;
+                    if (imported.sishouData) sishouData = imported.sishouData;
                     if (imported.settings) settings = imported.settings;
                     if (imported.annivCheckInData) annivCheckInData = imported.annivCheckInData;
                     saveData();
