@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -240,6 +239,7 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
+            text-align: center;
         }
 
         /* 蜜语样式 */
@@ -717,6 +717,46 @@
         .clock-shaking {
             animation: clockShake 0.5s ease-in-out;
         }
+
+        /* 恋爱弹窗遮罩 */
+        .love-modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            animation: fadeInModal 0.2s ease;
+        }
+        @keyframes fadeInModal {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .love-modal-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            width: 82%;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .love-modal-text {
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--text-color);
+        }
+        .love-modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -887,15 +927,14 @@
             }
         }, 40000);
 
-        // 修复心迹 Bug：确保每次根据真实自然日生成随机时间戳，不再卡死在 03:50
+        // --- 彻底修复心迹 Bug：严格按自然日真实时间轴随机散布 5 条动态，且删除后绝不复活 ---
         function checkAndGenerateBackgroundHeartMoments() {
             const todayStr = new Date().toISOString().slice(0, 10);
-            let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', targetCount: 5, postedTimes: [] };
+            let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', postedTimes: [] };
 
             if (todayRecord.date !== todayStr) {
                 const targetCount = 5;
                 const postedTimes = [];
-                const nowTimestamp = new Date().setHours(0,0,0,0);
                 for (let i = 0; i < targetCount; i++) {
                     const randomHour = Math.floor(Math.random() * 24);
                     const randomMinute = Math.floor(Math.random() * 60);
@@ -904,14 +943,16 @@
                     postedTimes.push(d.getTime());
                 }
                 postedTimes.sort((a, b) => a - b);
-                todayRecord = { date: todayStr, targetCount, postedTimes };
+                todayRecord = { date: todayStr, postedTimes };
                 localStorage.setItem('partnerHeartRecord', JSON.stringify(todayRecord));
             }
 
             const now = Date.now();
             todayRecord.postedTimes.forEach((targetTime, idx) => {
-                const alreadyPosted = heartMoments.some(m => m.dateStr === todayStr && m.author === 'partner' && m.batchIndex === idx);
-                if (now >= targetTime && !alreadyPosted) {
+                const uniqueBatchId = `partner_${todayStr}_${idx}`;
+                const alreadyExistsOrDeleted = heartMoments.some(m => m.uniqueBatchId === uniqueBatchId || m.id === targetTime + idx);
+                
+                if (now >= targetTime && !alreadyExistsOrDeleted) {
                     const contentText = getRandomCardSentences();
                     const d = new Date(targetTime);
                     const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -919,6 +960,7 @@
 
                     heartMoments.unshift({
                         id: targetTime + idx,
+                        uniqueBatchId: uniqueBatchId,
                         author: 'partner',
                         content: contentText,
                         image: '',
@@ -927,8 +969,7 @@
                         likes: [],
                         comments: [],
                         isPinned: false,
-                        requiredDelayMs: assignedDelayMs,
-                        batchIndex: idx
+                        requiredDelayMs: assignedDelayMs
                     });
                     saveData();
                     const subPage = document.getElementById('subPage');
@@ -970,7 +1011,7 @@
                 { id: 'heartMoments', name: '心迹', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>' },
                 { id: 'letters', name: '锦书', icon: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>' },
                 { id: 'anniversary', name: '良辰', icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>' },
-                { id: 'sishou', name: '厮守', icon: '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>' },
+                { id: 'sishou', name: '厮守', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>' },
                 { id: 'cards', name: '字库', icon: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line>' },
                 { id: 'todo', name: '日程本', icon: '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>' },
                 { id: 'settings', name: '设置', icon: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' }
@@ -1956,6 +1997,7 @@
 
             const newMoment = {
                 id: Date.now(),
+                uniqueBatchId: `user_${Date.now()}`,
                 author: 'user',
                 content: text,
                 image: selectedHeartImg,
@@ -3142,7 +3184,7 @@
             updateAnniversaryList();
         }
 
-        // --- 4. 厮守模块 (专注、强身、共眠、缱绻) ---
+        // --- 4. 厮守模块 (全方位视觉与交互大优化) ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
@@ -3150,21 +3192,21 @@
         function initSiShou(container) {
             container.innerHTML = `
                 <div style="padding:12px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
-                    <!-- 置顶框：高度约为默认3倍，中间小闹钟可点击摇晃 -->
+                    <!-- 置顶框：高度约为默认3倍，中间依偎图标可点击摇晃 -->
                     <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; align-items:center; justify-content:center; gap:30px; height:135px; flex-shrink:0;">
                         <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouPartnerAvatarBox"></div>
-                        <div id="alarmClockIcon" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px;" onclick="shakeAlarmClock(this)" title="戳一戳闹钟">
-                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--text-color)" stroke-width="2" fill="none"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 16"></polyline><path d="M5 3L2 6"></path><path d="M19 3l3 3"></path></svg>
+                        <div id="alarmClockIcon" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px;" onclick="shakeAlarmClock(this)" title="戳一戳">
+                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--text-color)" stroke-width="1.8" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                         </div>
                         <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouMyAvatarBox"></div>
                     </div>
 
-                    <!-- 四列模式选择区 -->
+                    <!-- 四列二字极简模式选择区（去掉了所有括号和小字） -->
                     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:14px; font-weight:bold;" onclick="startSiShouFlow('专注')">🎯 专注 (凝神)</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:14px; font-weight:bold;" onclick="startSiShouFlow('强身')">💪 强身 (运动)</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:14px; font-weight:bold;" onclick="startSiShouFlow('共眠')">🌙 共眠 (睡觉)</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:14px; font-weight:bold;" onclick="startSiShouFlow('缱绻')">💖 缱绻 (腻歪)</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:bold; border-radius:12px;" onclick="startSiShouFlow('专注')">专注</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:bold; border-radius:12px;" onclick="startSiShouFlow('强身')">强身</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:bold; border-radius:12px;" onclick="startSiShouFlow('共眠')">共眠</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:bold; border-radius:12px;" onclick="startSiShouFlow('缱绻')">缱绻</button>
                     </div>
 
                     <!-- 计时状态显示区 -->
@@ -3195,6 +3237,34 @@
             setTimeout(() => { el.classList.remove('clock-shaking'); }, 500);
         }
 
+        // 统一的高颜值恋爱弹窗函数
+        function showLoveModal(messageHTML, buttonsArray) {
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            let buttonsHTML = '';
+            buttonsArray.forEach(btn => {
+                buttonsHTML += `<button class="btn" style="flex:1; background:${btn.primary ? 'var(--text-color)' : 'var(--bg-color)'}; color:${btn.primary ? 'var(--card-bg)' : 'var(--text-color)'}; border:1px solid var(--border-color); padding:10px; border-radius:10px; font-weight:bold;" onclick="${btn.onclick}">${btn.text}</button>`;
+            });
+
+            overlay.innerHTML = `
+                <div class="love-modal-card">
+                    <div class="love-modal-text">${messageHTML}</div>
+                    <div class="love-modal-buttons">${buttonsHTML}</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function closeLoveModal() {
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+        }
+
         function startSiShouFlow(typeName) {
             if(sishouData.active) {
                 alert('当前已经有一个陪伴计时正在进行中啦！');
@@ -3202,45 +3272,76 @@
             }
 
             const partnerNameStr = settings.partnerName || '老公';
-
-            // 点击对方头像模拟邀请弹窗
             const partnerBox = document.getElementById('sishouPartnerAvatarBox');
             if(partnerBox) {
                 partnerBox.classList.add('clock-shaking');
                 setTimeout(() => partnerBox.classList.remove('clock-shaking'), 500);
             }
 
-            let inviteText = `邀请${partnerNameStr}和我一起`;
-            if(typeName === '专注') inviteText += '专注';
-            else if(typeName === '强身') inviteText += '运动';
-            else if(typeName === '共眠') inviteText += '睡觉';
-            else if(typeName === '缱绻') inviteText += '腻歪';
+            let actionName = '专注';
+            if(typeName === '强身') actionName = '运动';
+            else if(typeName === '共眠') actionName = '睡觉';
+            else if(typeName === '缱绻') actionName = '腻歪';
 
-            alert(inviteText);
-            alert(`${partnerNameStr}已经接受你的邀请`);
+            // 第一步：显示邀请与接受弹窗
+            showLoveModal(
+                `邀请${partnerNameStr}和我一起${actionName}？`,
+                [
+                    { text: '取消', primary: false, onclick: 'closeLoveModal()' },
+                    { text: '发送邀请', primary: true, onclick: `acceptSiShouInvite('${typeName}')` }
+                ]
+            );
+        }
 
+        function acceptSiShouInvite(typeName) {
+            const partnerNameStr = settings.partnerName || '老公';
+            showLoveModal(
+                `${partnerNameStr}已经接受你的邀请♥`,
+                [
+                    { text: '继续', primary: true, onclick: `openSiShouModeSelector('${typeName}')` }
+                ]
+            );
+        }
+
+        function openSiShouModeSelector(typeName) {
             if(typeName === '共眠') {
-                const choice = prompt(`请问需要哄睡服务吗？\n请输入选项：“需要” 或 “不需要也得需要”`, '需要');
-                if(choice === null) return;
-                startSiShouSession(typeName, 'countup', 0);
+                showLoveModal(
+                    `请问需要哄睡服务吗？`,
+                    [
+                        { text: '需要', primary: true, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
+                        { text: '不需要也得需要', primary: true, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` }
+                    ]
+                );
             } else if(typeName === '缱绻') {
-                const choice = prompt(`请问需要抱抱还是亲亲？\n请输入选项：“抱抱”、“亲亲” 或 “抱抱亲亲”`, '抱抱亲亲');
-                if(choice === null) return;
-                startSiShouSession(typeName, 'countup', 0);
+                showLoveModal(
+                    `请选择腻歪方式：`,
+                    [
+                        { text: '抱抱', primary: false, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
+                        { text: '亲亲', primary: false, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
+                        { text: '抱抱亲亲', primary: true, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` }
+                    ]
+                );
             } else {
-                const modeChoice = prompt(`请选择计时模式：\n输入 1 代表【正计时】\n输入 2 代表【倒计时】`, '1');
-                if(modeChoice === '2') {
-                    const minInput = prompt('请输入倒计时分钟数 (上限1440分钟/24小时)：', '30');
-                    const mins = Number(minInput);
-                    if(isNaN(mins) || mins <= 0 || mins > 1440) {
-                        alert('输入时间无效！');
-                        return;
-                    }
-                    startSiShouSession(typeName, 'countdown', mins * 60);
-                } else if(modeChoice === '1') {
-                    startSiShouSession(typeName, 'countup', 0);
-                }
+                // 正计时与倒计时作为同一层级的两个精致并列按键
+                showLoveModal(
+                    `请选择计时模式：`,
+                    [
+                        { text: '正计时', primary: false, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
+                        { text: '倒计时', primary: true, onclick: `promptCountdownMinutes('${typeName}');` }
+                    ]
+                );
             }
+        }
+
+        function promptCountdownMinutes(typeName) {
+            closeLoveModal();
+            const minInput = prompt('请输入倒计时分钟数 (上限1440分钟/24小时)：', '30');
+            const mins = Number(minInput);
+            if(isNaN(mins) || mins <= 0 || mins > 1440) {
+                alert('输入时间无效！');
+                return;
+            }
+            startSiShouSession(typeName, 'countdown', mins * 60);
         }
 
         function startSiShouSession(typeName, mode, targetSecs) {
@@ -3270,7 +3371,7 @@
 
                 if(sishouData.mode === 'countup') {
                     sishouSecondsElapsed = diffSecs;
-                    if(sishouSecondsElapsed >= 86400) { sishouSecondsElapsed = 86400; } // 上限24小时
+                    if(sishouSecondsElapsed >= 86400) { sishouSecondsElapsed = 86400; }
                 } else {
                     sishouCountdownRemaining = sishouData.targetSeconds - diffSecs;
                     if(sishouCountdownRemaining <= 0) {
@@ -3312,19 +3413,12 @@
 
             let controlsHTML = '';
             if(sishouData.type === '共眠' || sishouData.type === '缱绻') {
-                controlsHTML = `<button class="btn" style="background:#b88887; color:#fff; width:100%; max-width:200px;" onclick="finishSiShouSession('stopped')">结束计时</button>`;
-            } else if(sishouData.mode === 'countup') {
-                controlsHTML = `
-                    <div style="display:flex; gap:10px; width:100%; max-width:240px; justify-content:center;">
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="toggleSiShouPause()">${sishouData.isPaused ? '继续' : '暂停'}</button>
-                        <button class="btn" style="flex:1; background:#b88887; color:#fff;" onclick="finishSiShouSession('stopped')">结束</button>
-                    </div>
-                `;
+                controlsHTML = `<button class="btn" style="background:#b88887; color:#fff; width:100%; max-width:200px; border-radius:10px;" onclick="finishSiShouSession('stopped')">结束计时</button>`;
             } else {
                 controlsHTML = `
                     <div style="display:flex; gap:10px; width:100%; max-width:240px; justify-content:center;">
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="toggleSiShouPause()">${sishouData.isPaused ? '继续' : '暂停'}</button>
-                        <button class="btn" style="flex:1; background:#b88887; color:#fff;" onclick="finishSiShouSession('stopped')">停止</button>
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color); border-radius:10px;" onclick="toggleSiShouPause()">${sishouData.isPaused ? '继续' : '暂停'}</button>
+                        <button class="btn" style="flex:1; background:#b88887; color:#fff; border-radius:10px;" onclick="finishSiShouSession('stopped')">${sishouData.mode==='countup'?'结束':'停止'}</button>
                     </div>
                 `;
             }
@@ -3343,11 +3437,6 @@
             if(!sishouData.isPaused) {
                 sishouData.startTime = Date.now() - (sishouData.mode==='countup' ? sishouSecondsElapsed*1000 : (sishouData.targetSeconds - sishouCountdownRemaining)*1000);
                 startSiShouTicker();
-            } else {
-                if(liveSiShouInterval) clearInterval(liveSiShouInterval);
-                if(sishouData.mode === 'countdown') {
-                    // 倒计时暂停无对话框弹出
-                }
             }
         }
 
@@ -3366,7 +3455,6 @@
             const partnerNameStr = settings.partnerName || '老公';
             let partnerTitle = settings.partnerName || '老公';
             let wifeTitle = settings.myName || '老婆'; 
-            // 动态称呼替换
             let msg = '';
 
             if(type === '专注') {
@@ -3414,7 +3502,7 @@
             saveData();
             initSiShou(document.getElementById('subPageContent'));
 
-            alert(msg);
+            showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
         // --- 5. 日程本 ---
