@@ -12,13 +12,15 @@
             --sub-text: #666666;
             --border-color: #cccccc;
             --app-icon-bg: #eaeaea;
-            --font-size: 15px; /* 整体聊天字体适度放大 */
+            --font-size: 15px;
             --custom-font: "宋体", SimSun, STSong, serif;
             --bubble-bg: var(--app-icon-bg);
             --bubble-text: var(--text-color);
             --my-bubble-bg: #111111;
             --my-bubble-text: #ffffff;
             --chat-bg: var(--card-bg);
+            --mood-bg: rgba(255, 255, 255, 0.65);
+            --mood-text: #666666;
         }
 
         [data-theme="dark"] {
@@ -33,6 +35,8 @@
             --my-bubble-bg: #f0f0f0;
             --my-bubble-text: #121212;
             --chat-bg: #1e1e1e;
+            --mood-bg: rgba(30, 30, 30, 0.65);
+            --mood-text: #aaaaaa;
         }
 
         * {
@@ -251,18 +255,23 @@
             position: relative;
         }
 
+        /* 心情条毛玻璃质感、略微缩短 */
         .mood-bar {
-            padding: 6px 10px;
+            margin: 0 auto;
+            width: 70%;
+            padding: 5px 12px;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 12px;
-            color: var(--sub-text);
-            background: var(--card-bg);
+            color: var(--mood-text);
+            background: var(--mood-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             display: flex;
             justify-content: center;
             align-items: center;
             text-align: center;
-            opacity: 0.9;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .chat-messages {
@@ -317,13 +326,14 @@
 
         .message-row.outgoing .message-content-wrapper { align-items: flex-end; }
 
+        /* 蜜语双方昵称字号适度加大 */
         .message-sender-name {
-            font-size: 11px;
+            font-size: 13px;
+            font-weight: bold;
             color: var(--sub-text);
             margin-bottom: 2px;
         }
 
-        /* 蜜语双人头像适度放大：从 32px 改为 42px */
         .avatar-box {
             width: 42px;
             height: 42px;
@@ -357,7 +367,6 @@
 
         .chat-img-msg { max-width: 130px; max-height: 130px; border-radius: 8px; object-fit: cover; display: block; }
 
-        /* 引用部分强制保持小于正常聊天字体的 11px，且过长保持省略号 */
         .quoted-box {
             font-size: 11px !important;
             opacity: 0.8;
@@ -519,7 +528,6 @@
             border-radius: 8px;
         }
 
-        /* 蜜语聊天界面自由增删的表情包选择面板 */
         .emoji-picker {
             position: absolute;
             bottom: calc(100% + 6px);
@@ -641,32 +649,6 @@
             animation: flyInEnvelope 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
-        /* 浮动电梯按钮 */
-        .scroll-elevator {
-            position: absolute;
-            right: 16px;
-            bottom: 70px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            z-index: 99;
-        }
-        .elevator-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            font-size: 12px;
-        }
-
-        /* 良辰拖拽排序样式 */
         .anniv-item-card {
             border: 1px solid var(--border-color);
             padding: 12px;
@@ -775,7 +757,9 @@
             myBubbleBg: '',
             myBubbleText: '',
             partnerBubbleBg: '',
-            partnerBubbleText: ''
+            partnerBubbleText: '',
+            moodBgColor: '',
+            moodTextColor: ''
         };
 
         let annivCheckInData = JSON.parse(localStorage.getItem('annivCheckInData')) || {
@@ -833,10 +817,20 @@
             } else {
                 document.documentElement.style.removeProperty('--bubble-text');
             }
+            if (settings.moodBgColor) {
+                document.documentElement.style.setProperty('--mood-bg', settings.moodBgColor);
+            } else {
+                document.documentElement.style.removeProperty('--mood-bg');
+            }
+            if (settings.moodTextColor) {
+                document.documentElement.style.setProperty('--mood-text', settings.moodTextColor);
+            } else {
+                document.documentElement.style.removeProperty('--mood-text');
+            }
         }
         applySettings();
 
-        // 蜜语后台全局定时器：独立 10% 概率触发主动发消息或打电话
+        // 蜜语后台定时器
         setInterval(() => {
             if (Math.random() < 0.10 && currentCallStatus === 'idle') {
                 triggerIncomingCallFromPartner();
@@ -849,16 +843,14 @@
             }
         }, 40000);
 
-        // 心迹后台主动发布检查器：确保每天 3~5 条随机时间发布，修复未主动发布的问题
+        // 心迹：每个自然日固定 5 条，发布时间完全随机
         function checkAndGenerateBackgroundHeartMoments() {
             const todayStr = new Date().toISOString().slice(0, 10);
-            let todayMoments = heartMoments.filter(m => m.dateStr === todayStr && m.author === 'partner');
-            let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', targetCount: 0, postedTimes: [] };
+            let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', targetCount: 5, postedTimes: [] };
 
             if (todayRecord.date !== todayStr) {
-                const targetCount = Math.floor(Math.random() * 3) + 3; // 3 到 5 条
+                const targetCount = 5;
                 const postedTimes = [];
-                // 在当天 24 小时内随机生成几个时间戳
                 for (let i = 0; i < targetCount; i++) {
                     const randomHour = Math.floor(Math.random() * 24);
                     const randomMinute = Math.floor(Math.random() * 60);
@@ -875,7 +867,6 @@
             todayRecord.postedTimes.forEach((targetTime, idx) => {
                 const alreadyPosted = heartMoments.some(m => m.dateStr === todayStr && m.author === 'partner' && m.batchIndex === idx);
                 if (now >= targetTime && !alreadyPosted) {
-                    const partnerNameStr = settings.partnerName || '老公';
                     const contentText = getRandomCardSentences();
                     const d = new Date(targetTime);
                     const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1190,16 +1181,13 @@
             }, waitBeforeTypingMs);
         }
 
-        // 头像交互处理：单击无动作，仅双击触发拍一拍
         let avatarClickTimer = null;
         function handleAvatarClick(targetWho) {
             if (avatarClickTimer) {
-                // 双击触发
                 clearTimeout(avatarClickTimer);
                 avatarClickTimer = null;
                 triggerPoke(targetWho);
             } else {
-                // 单击计时等待判断是否为双击
                 avatarClickTimer = setTimeout(() => {
                     avatarClickTimer = null;
                 }, 300);
@@ -1437,7 +1425,6 @@
             renderVideoBodyContent();
         }
 
-        // 蜜语表情面板：支持在聊天界面直接自由添加与删除表情包
         function toggleEmojiPicker(e) {
             e.stopPropagation();
             let picker = document.getElementById('emojiPicker');
@@ -1497,7 +1484,6 @@
                         loadedCount++;
                         if (loadedCount === files.length) {
                             saveData();
-                            // 刷新面板
                             const picker = document.getElementById('emojiPicker');
                             if(picker) picker.remove();
                             toggleEmojiPicker({ stopPropagation: () => {} });
@@ -1519,7 +1505,6 @@
             }
         }
 
-        // 格式化时间戳：当天显示 24 小时制时间，过去显示几月几号
         function formatMessageTime(timestamp) {
             if (!timestamp) return '';
             const date = new Date(timestamp);
@@ -1551,7 +1536,6 @@
             let lastTimestamp = 0;
 
             chatMessages.forEach(msg => {
-                // 自动时间条逻辑：每条消息与上一条间隔超过 5 分钟则展示时间条
                 if (!msg.timestamp) msg.timestamp = msg.id || Date.now();
                 if (msg.timestamp - lastTimestamp > 300000) {
                     const timeDivider = document.createElement('div');
@@ -2066,7 +2050,7 @@
             renderHeartMomentsList();
         }
 
-        // --- 字库模块 ---
+        // --- 字库模块（已彻底删除右下角无效的上下箭头按钮） ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -2100,11 +2084,7 @@
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchCards()">添加/导入字卡</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有字卡 <span id="cardCount">0</span> 条：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:40px;" id="itemContainer"></div>
-                    <div class="scroll-elevator">
-                        <div class="elevator-btn" title="回到顶部" onclick="document.getElementById('libContentArea').scrollTo({top:0, behavior:'smooth'})">▲</div>
-                        <div class="elevator-btn" title="直达底部" onclick="const a=document.getElementById('libContentArea'); a.scrollTo({top:a.scrollHeight, behavior:'smooth'})">▼</div>
-                    </div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:20px;" id="itemContainer"></div>
                 `;
                 updateCardList();
             } else if (currentLibTab === 'actions') {
@@ -2115,11 +2095,7 @@
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchActions()">添加/导入动作</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有动作 <span id="actionCount">0</span> 条：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:40px;" id="itemContainer"></div>
-                    <div class="scroll-elevator">
-                        <div class="elevator-btn" title="回到顶部" onclick="document.getElementById('libContentArea').scrollTo({top:0, behavior:'smooth'})">▲</div>
-                        <div class="elevator-btn" title="直达底部" onclick="const a=document.getElementById('libContentArea'); a.scrollTo({top:a.scrollHeight, behavior:'smooth'})">▼</div>
-                    </div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:20px;" id="itemContainer"></div>
                 `;
                 updateActionList();
             } else if (currentLibTab === 'moods') {
@@ -2130,11 +2106,7 @@
                         <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchMoods()">添加/导入心情</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有心情 <span id="moodCount">0</span> 条：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:40px;" id="itemContainer"></div>
-                    <div class="scroll-elevator">
-                        <div class="elevator-btn" title="回到顶部" onclick="document.getElementById('libContentArea').scrollTo({top:0, behavior:'smooth'})">▲</div>
-                        <div class="elevator-btn" title="直达底部" onclick="const a=document.getElementById('libContentArea'); a.scrollTo({top:a.scrollHeight, behavior:'smooth'})">▼</div>
-                    </div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:20px;" id="itemContainer"></div>
                 `;
                 updateMoodList();
             } else if (currentLibTab === 'emojis') {
@@ -2142,17 +2114,12 @@
                     <div style="font-weight:bold; font-size:13px;">表情包库管理：</div>
                     <input type="file" id="emojiFileInput" accept="image/*" multiple onchange="uploadEmojisFromLib(event)">
                     <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${settings.emojis ? settings.emojis.length : 0} 个表情：</div>
-                    <div id="itemContainer" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:8px; padding-bottom:40px;"></div>
-                    <div class="scroll-elevator">
-                        <div class="elevator-btn" title="回到顶部" onclick="document.getElementById('libContentArea').scrollTo({top:0, behavior:'smooth'})">▲</div>
-                        <div class="elevator-btn" title="直达底部" onclick="const a=document.getElementById('libContentArea'); a.scrollTo({top:a.scrollHeight, behavior:'smooth'})">▼</div>
-                    </div>
+                    <div id="itemContainer" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:8px; padding-bottom:20px;"></div>
                 `;
                 updateEmojiList();
             }
         }
 
-        // 字库列表（已完全移除无效的上下箭头，界面更简洁）
         function updateCardList(filteredList = cardLibrary) {
             const listContainer = document.getElementById('itemContainer');
             const countEl = document.getElementById('cardCount');
@@ -2715,7 +2682,9 @@
                 }
             });
 
-            // 根据当前标签页过滤：寄出的信 (isPartnerInitiated === false) vs 收到的信 (isPartnerInitiated === true)
+            // 锦书分类过滤：
+            // 'sent' 模块：只存放你主动寄出的信 (!item.isPartnerInitiated)
+            // 'received' 模块：存放对方主动寄出的信以及对方回复你的信 (item.isPartnerInitiated)
             const filteredLetters = letters.filter(item => {
                 if (currentLetterTab === 'sent') return !item.isPartnerInitiated;
                 else return item.isPartnerInitiated;
@@ -2731,7 +2700,6 @@
             sortedLetters.forEach(item => {
                 const div = document.createElement('div');
                 div.id = `letter-item-${item.id}`;
-                // 锦书对话框略微缩进，左右留出空隙，不紧贴手机边缘
                 div.style.cssText = "margin: 0 8px; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
                 
                 let heartColor = '';
@@ -3169,6 +3137,21 @@
                     </div>
 
                     <div class="setting-group">
+                        <div class="setting-label">✨ 心情栏颜色自定义</div>
+                        <div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <span>心情栏背景色 (支持半透明)：</span>
+                                <input type="text" id="set_moodBgColor" value="${tempSettings.moodBgColor || 'rgba(255, 255, 255, 0.65)'}" style="flex:1; margin-left:10px;">
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <span>心情栏文字颜色：</span>
+                                <input type="color" id="set_moodTextColor" value="${tempSettings.moodTextColor || '#666666'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                            </div>
+                            <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetMoodColors()">恢复默认心情栏颜色</button>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
                         <div class="setting-label">数据恢复与备份</div>
                         <div style="display:flex; gap:8px;">
                             <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="exportData()">手动导出备份</button>
@@ -3195,6 +3178,13 @@
             document.getElementById('set_myBubbleText').value = '#ffffff';
             document.getElementById('set_partnerBubbleBg').value = '#eaeaea';
             document.getElementById('set_partnerBubbleText').value = '#111111';
+        }
+
+        function resetMoodColors() {
+            tempSettings.moodBgColor = '';
+            tempSettings.moodTextColor = '';
+            document.getElementById('set_moodBgColor').value = 'rgba(255, 255, 255, 0.65)';
+            document.getElementById('set_moodTextColor').value = '#666666';
         }
 
         function renderAvatarPreviews() {
@@ -3266,6 +3256,8 @@
             const mbText = document.getElementById('set_myBubbleText');
             const pbBg = document.getElementById('set_partnerBubbleBg');
             const pbText = document.getElementById('set_partnerBubbleText');
+            const mBg = document.getElementById('set_moodBgColor');
+            const mText = document.getElementById('set_moodTextColor');
 
             if(mName) tempSettings.myName = mName.value.trim();
             if(pName) tempSettings.partnerName = pName.value.trim();
@@ -3275,6 +3267,8 @@
             if(mbText) tempSettings.myBubbleText = mbText.value;
             if(pbBg) tempSettings.partnerBubbleBg = pbBg.value;
             if(pbText) tempSettings.partnerBubbleText = pbText.value;
+            if(mBg) tempSettings.moodBgColor = mBg.value.trim();
+            if(mText) tempSettings.moodTextColor = mText.value;
 
             settings.myName = tempSettings.myName;
             settings.partnerName = tempSettings.partnerName;
@@ -3287,6 +3281,8 @@
             settings.myBubbleText = tempSettings.myBubbleText;
             settings.partnerBubbleBg = tempSettings.partnerBubbleBg;
             settings.partnerBubbleText = tempSettings.partnerBubbleText;
+            settings.moodBgColor = tempSettings.moodBgColor;
+            settings.moodTextColor = tempSettings.moodTextColor;
 
             saveData();
             alert('保存成功！');
