@@ -739,7 +739,7 @@
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 24px;
-            width: 82%;
+            width: 86%;
             max-width: 320px;
             display: flex;
             flex-direction: column;
@@ -756,6 +756,58 @@
             display: flex;
             gap: 10px;
             justify-content: center;
+        }
+
+        /* 时间滚动选择器样式 */
+        .picker-wheel-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            height: 140px;
+            position: relative;
+            margin: 4px 0;
+            overflow: hidden;
+            mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+        }
+        .picker-wheel-column {
+            flex: 1;
+            height: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
+            text-align: center;
+            position: relative;
+        }
+        .picker-wheel-column::-webkit-scrollbar { display: none; }
+        .picker-wheel-spacer {
+            height: 50px;
+        }
+        .picker-wheel-item {
+            height: 40px;
+            line-height: 40px;
+            scroll-snap-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--sub-text);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .picker-wheel-item.selected {
+            color: var(--text-color);
+            font-size: 20px;
+        }
+        .picker-wheel-highlight {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            pointer-events: none;
+            background: rgba(120,120,120,0.04);
         }
     </style>
 </head>
@@ -927,7 +979,6 @@
             }
         }, 40000);
 
-        // --- 彻底修复心迹 Bug：严格按自然日真实时间轴随机散布 5 条动态，且删除后绝不复活 ---
         function checkAndGenerateBackgroundHeartMoments() {
             const todayStr = new Date().toISOString().slice(0, 10);
             let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', postedTimes: [] };
@@ -950,7 +1001,6 @@
             const now = Date.now();
             todayRecord.postedTimes.forEach((targetTime, idx) => {
                 const uniqueBatchId = `partner_${todayStr}_${idx}`;
-                // 清理并确保不会跟用户手动删除的记录冲突
                 const deletedList = JSON.parse(localStorage.getItem('deletedHeartBatches') || '[]');
                 if (deletedList.includes(uniqueBatchId)) return;
 
@@ -1004,7 +1054,6 @@
             }
         }
 
-        // 九宫格：良辰后、字库前（第3行）
         function renderDesktop() {
             const grid = document.getElementById('desktopGrid');
             if(!grid) return;
@@ -1132,7 +1181,7 @@
                 body.innerHTML = `
                     ${callPlaceholderHTML}
                     <div style="display:flex; gap:12px; margin-top:10px; position:relative; z-index:2; justify-content:center; align-items:center; width:100%;">
-                        <button class="btn" style="background:#829e8d; color:#fff; padding:5px 14px; font-size:12px; border-radius:16px;" onclick="acceptCall()">接受</button>
+                        <button class="btn" style="background:var(--pine-green); color:#fff; padding:5px 14px; font-size:12px; border-radius:16px;" onclick="acceptCall()">接受</button>
                         <button class="btn" style="background:#b88887; color:#fff; padding:5px 14px; font-size:12px; border-radius:16px;" onclick="closeVideoModal()">拒绝</button>
                     </div>
                 `;
@@ -1797,7 +1846,7 @@
             }
         }
 
-        // --- 2. 心迹模块 (彻底修复复活Bug及3:50锁定) ---
+        // --- 2. 心迹模块 ---
         function initHeartMoments(container) {
             checkAndGenerateBackgroundHeartMoments();
             checkAndProcessPendingHeartInteractions(); 
@@ -1822,7 +1871,7 @@
                         <div style="display:flex; gap:8px; margin-top:6px;">
                             <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color); font-size:12px;" onclick="document.getElementById('localImgInput').click()">选择配图</button>
                             <input type="file" id="localImgInput" style="display:none" accept="image/*" onchange="pickLocalImage(event)">
-                            <button class="btn" style="flex:1; font-size:12px;" onclick="postUserHeartMoment()">发布新动态</button>
+                            <button class="btn" style="flex:1; font-size:12px; background:var(--pine-green); color:#fff;" onclick="postUserHeartMoment()">发布新动态</button>
                         </div>
                     </div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px; margin-top:4px;" id="heartMomentsList"></div>
@@ -2211,7 +2260,7 @@
                     <input type="text" id="searchInput" placeholder="搜索字卡..." oninput="filterCards()">
                     <textarea id="batchInput" placeholder="批量添加（每行一条字卡，系统会自动过滤重复内容）"></textarea>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchCards()">添加/导入字卡</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#fff;" onclick="addBatchCards()">添加/导入字卡</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有字卡 <span id="cardCount">0</span> 条：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:20px;" id="itemContainer"></div>
@@ -2222,7 +2271,7 @@
                     <input type="text" id="searchActionInput" placeholder="搜索动作..." oninput="filterActions()">
                     <textarea id="batchActionInput" placeholder="批量添加动作（每行一条动作描述，如：轻轻靠在了他的肩上）"></textarea>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchActions()">添加/导入动作</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#fff;" onclick="addBatchActions()">添加/导入动作</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有动作 <span id="actionCount">0</span> 条：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:20px;" id="itemContainer"></div>
@@ -2233,7 +2282,7 @@
                     <input type="text" id="searchMoodInput" placeholder="搜索心情..." oninput="filterMoods()">
                     <textarea id="batchMoodInput" placeholder="批量添加心情（每行一条心情）"></textarea>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="addBatchMoods()">添加/导入心情</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#fff;" onclick="addBatchMoods()">添加/导入心情</button>
                     </div>
                     <div style="font-size:12px; color:var(--sub-text);">共有心情 <span id="moodCount">0</span> 条：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:20px;" id="itemContainer"></div>
@@ -2559,7 +2608,7 @@
                 area.innerHTML = `
                     <div style="padding-bottom:4px;">
                         <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 160px; max-height: 300px;"></textarea>
-                        <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
+                        <button class="btn" style="width:100%; margin-top:8px; background:var(--pine-green); color:#fff;" onclick="sendLetter()">寄出信件</button>
                     </div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
                 `;
@@ -2859,7 +2908,7 @@
 
                     let replySection = item.myReplyToPartner ? partnerReplyHTML : `
                         <div style="margin-top:6px;">
-                            <button class="btn" style="padding:4px 10px; font-size:11px; background:var(--text-color); color:var(--card-bg);" onclick="replyToPartnerLetter(${item.id})">回复此信</button>
+                            <button class="btn" style="padding:4px 10px; font-size:11px; background:var(--pine-green); color:#fff;" onclick="replyToPartnerLetter(${item.id})">回复此信</button>
                         </div>
                     `;
 
@@ -2908,7 +2957,7 @@
 
                     let continueBtnHTML = canContinue ? `
                         <div style="margin-top:6px;">
-                            <button class="btn" style="padding:4px 10px; font-size:11px; background:var(--text-color); color:var(--card-bg);" onclick="continueReplyLetter(${item.id})">回信</button>
+                            <button class="btn" style="padding:4px 10px; font-size:11px; background:var(--pine-green); color:#fff;" onclick="continueReplyLetter(${item.id})">回信</button>
                         </div>
                     ` : '';
 
@@ -3006,7 +3055,7 @@
                                 <div style="width:72px; height:72px; border-radius:50%; border:2px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; left:-24px; z-index:1;">${partnerAvatarImg}</div>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:8px;">
-                                <button class="btn" style="padding:6px 14px; font-size:12px; background:${myChecked ? '#829e8d' : 'var(--text-color)'}; color:#fff; border-radius:16px;" onclick="handleMyCheckIn()">
+                                <button class="btn" style="padding:6px 14px; font-size:12px; background:${myChecked ? '#829e8d' : 'var(--pine-green)'}; color:#fff; border-radius:16px;" onclick="handleMyCheckIn()">
                                     ${myChecked ? `${myNameStr}今日已打卡` : `${myNameStr}今日未打卡`}
                                 </button>
                                 <button class="btn" style="padding:6px 14px; font-size:12px; background:${partnerChecked ? '#829e8d' : 'var(--sub-text)'}; color:#fff; border-radius:16px; cursor:default;" disabled>
@@ -3022,7 +3071,7 @@
                     <form autocomplete="off" onsubmit="return false;" style="display:flex; flex-direction:column; gap:6px;">
                         <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" autocomplete="off" autocapitalize="off" spellcheck="false" name="no-autofill-name">
                         <input type="date" id="annivDate" autocomplete="off" name="no-autofill-date">
-                        <button class="btn" style="width:100%; margin-top:2px;" onclick="addAnniversary()">保存良辰</button>
+                        <button class="btn" style="width:100%; margin-top:2px; background:var(--pine-green); color:#fff;" onclick="addAnniversary()">保存良辰</button>
                     </form>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;" id="anniversaryContainer"></div>
                 </div>
@@ -3196,26 +3245,24 @@
             updateAnniversaryList();
         }
 
-        // --- 4. 厮守模块 (集成拍一拍动画、无问号、二字不加粗、闹钟可点晃动) ---
+        // --- 4. 厮守模块 (大头像、小闹钟还原、单击摇晃拍一拍、松绿色按钮、高级滚动时间选择器) ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
-        let partnerPokeClickCount = 0;
-        let partnerPokeTimer = null;
 
         function initSiShou(container) {
             container.innerHTML = `
                 <div style="padding:12px; display:flex; flex-direction:column; gap:12px; height:100%; position:relative;">
-                    <!-- 置顶框：中间依偎图标可点击摇晃，对方头像双击可拍一拍 -->
-                    <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; align-items:center; justify-content:center; gap:30px; height:135px; flex-shrink:0;">
-                        <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouPartnerAvatarBox" onclick="handlePartnerAvatarDoubleTap()" title="双击拍一拍对方"></div>
+                    <!-- 置顶框：头像放大为 84px，中间为可点小闹钟 -->
+                    <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; align-items:center; justify-content:center; gap:24px; height:140px; flex-shrink:0;">
+                        <div class="avatar-box" style="width:84px; height:84px; border-radius:50%;" id="sishouPartnerAvatarBox" onclick="handlePartnerAvatarClick()" title="点击拍一拍对方"></div>
                         <div id="alarmClockIcon" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:48px; height:48px;" onclick="shakeAlarmClock(this)" title="点我摇晃">
-                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--text-color)" stroke-width="1.8" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--text-color)" stroke-width="1.8" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path><line x1="2" y1="2" x2="5" y2="5"></line><line x1="22" y1="2" x2="19" y2="5"></line></svg>
                         </div>
-                        <div class="avatar-box" style="width:68px; height:68px; border-radius:50%;" id="sishouMyAvatarBox"></div>
+                        <div class="avatar-box" style="width:84px; height:84px; border-radius:50%;" id="sishouMyAvatarBox"></div>
                     </div>
 
-                    <!-- 四列二字极简模式选择区（不加粗，点击直接触发流程） -->
+                    <!-- 四列二字极简模式选择区（不加粗） -->
                     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
                         <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('专注')">专注</button>
                         <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('强身')">强身</button>
@@ -3239,8 +3286,8 @@
             const pBox = document.getElementById('sishouPartnerAvatarBox');
             if(!myBox || !pBox) return;
 
-            const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-            const pAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+            const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+            const pAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             myBox.innerHTML = myAvatarImg;
             pBox.innerHTML = pAvatarImg;
@@ -3251,30 +3298,17 @@
             setTimeout(() => { el.classList.remove('clock-shaking'); }, 500);
         }
 
-        function handlePartnerAvatarDoubleTap() {
+        function handlePartnerAvatarClick() {
             const partnerBox = document.getElementById('sishouPartnerAvatarBox');
             if(!partnerBox) return;
+            partnerBox.classList.add('clock-shaking');
+            setTimeout(() => partnerBox.classList.remove('clock-shaking'), 500);
 
-            partnerPokeClickCount++;
-            if (partnerPokeClickCount === 1) {
-                partnerPokeTimer = setTimeout(() => {
-                    partnerPokeClickCount = 0;
-                }, 350);
-            } else if (partnerPokeClickCount === 2) {
-                clearTimeout(partnerPokeTimer);
-                partnerPokeClickCount = 0;
-                
-                // 双击触发拍一拍动效
-                partnerBox.classList.add('clock-shaking');
-                setTimeout(() => partnerBox.classList.remove('clock-shaking'), 500);
-
-                const partnerNameStr = settings.partnerName || '老公';
-                chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `我拍了拍 ${partnerNameStr}` });
-                saveData();
-            }
+            const partnerNameStr = settings.partnerName || '老公';
+            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `我拍了拍 ${partnerNameStr}` });
+            saveData();
         }
 
-        // 统一的高颜值恋爱弹窗函数
         function showLoveModal(messageHTML, buttonsArray) {
             let overlay = document.getElementById('loveCustomModal');
             if(overlay) overlay.remove();
@@ -3285,7 +3319,9 @@
 
             let buttonsHTML = '';
             buttonsArray.forEach(btn => {
-                buttonsHTML += `<button class="btn" style="flex:1; background:${btn.primary ? 'var(--text-color)' : 'var(--bg-color)'}; color:${btn.primary ? 'var(--card-bg)' : 'var(--text-color)'}; border:1px solid var(--border-color); padding:10px; border-radius:10px; font-weight:bold;" onclick="${btn.onclick}">${btn.text}</button>`;
+                let btnBg = btn.primary ? 'var(--pine-green)' : 'var(--bg-color)';
+                let btnColor = btn.primary ? '#ffffff' : 'var(--text-color)';
+                buttonsHTML += `<button class="btn" style="flex:1; background:${btnBg}; color:${btnColor}; border:1px solid var(--border-color); padding:10px; border-radius:10px; font-weight:bold;" onclick="${btn.onclick}">${btn.text}</button>`;
             });
 
             overlay.innerHTML = `
@@ -3314,7 +3350,6 @@
             else if(typeName === '共眠') actionName = '睡觉';
             else if(typeName === '缱绻') actionName = '腻歪';
 
-            // 去掉问号的甜蜜邀请语
             showLoveModal(
                 `邀请${partnerNameStr}和我一起${actionName}`,
                 [
@@ -3357,21 +3392,98 @@
                     `请选择计时模式`,
                     [
                         { text: '正计时', primary: false, onclick: `startSiShouSession('${typeName}', 'countup', 0); closeLoveModal();` },
-                        { text: '倒计时', primary: true, onclick: `promptCountdownMinutes('${typeName}');` }
+                        { text: '倒计时', primary: true, onclick: `openTimePickerModal('${typeName}');` }
                     ]
                 );
             }
         }
 
-        function promptCountdownMinutes(typeName) {
-            closeLoveModal();
-            const minInput = prompt('请输入倒计时分钟数 (上限1440分钟/24小时)：', '30');
-            const mins = Number(minInput);
-            if(isNaN(mins) || mins <= 0 || mins > 1440) {
-                alert('输入时间无效！');
+        // 高级滑动时间选择器弹窗
+        function openTimePickerModal(typeName) {
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            // 生成小时选项 (0~23)
+            let hoursHTML = '<div class="picker-wheel-spacer"></div>';
+            for(let h=0; h<=23; h++) {
+                hoursHTML += `<div class="picker-wheel-item" data-val="${h}">${h}小时</div>`;
+            }
+            hoursHTML += '<div class="picker-wheel-spacer"></div>';
+
+            // 生成分钟选项 (0~59)
+            let minsHTML = '<div class="picker-wheel-spacer"></div>';
+            for(let m=0; m<=59; m++) {
+                minsHTML += `<div class="picker-wheel-item" data-val="${m}">${m}分钟</div>`;
+            }
+            minsHTML += '<div class="picker-wheel-spacer"></div>';
+
+            overlay.innerHTML = `
+                <div class="love-modal-card" style="width: 90%; max-width: 340px;">
+                    <div style="font-size:16px; font-weight:bold;">选择倒计时时长</div>
+                    <div class="picker-wheel-container">
+                        <div class="picker-wheel-highlight"></div>
+                        <div class="picker-wheel-column" id="pickerHours">${hoursHTML}</div>
+                        <div class="picker-wheel-column" id="pickerMins">${minsHTML}</div>
+                    </div>
+                    <div class="love-modal-buttons">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:10px; border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#fff; border-radius:10px; font-weight:bold;" onclick="confirmTimePicker('${typeName}')">确定</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            // 默认选中 0小时 30分钟
+            const hCol = document.getElementById('pickerHours');
+            const mCol = document.getElementById('pickerMins');
+            if(hCol && mCol) {
+                hCol.scrollTop = 0; // 0小时
+                mCol.scrollTop = 30 * 40; // 30分钟 * 每项高度40px
+                setupWheelListener(hCol);
+                setupWheelListener(mCol);
+            }
+        }
+
+        function setupWheelListener(col) {
+            const items = col.querySelectorAll('.picker-wheel-item');
+            const updateSelection = () => {
+                const scrollTop = col.scrollTop;
+                const index = Math.round(scrollTop / 40);
+                items.forEach((item, idx) => {
+                    if(idx === index) item.classList.add('selected');
+                    else item.classList.remove('selected');
+                });
+            };
+            col.addEventListener('scroll', () => {
+                requestAnimationFrame(updateSelection);
+            }, {passive: true});
+            updateSelection();
+        }
+
+        function confirmTimePicker(typeName) {
+            const hCol = document.getElementById('pickerHours');
+            const mCol = document.getElementById('pickerMins');
+            let hours = 0, mins = 30;
+            if(hCol) {
+                const hIdx = Math.round(hCol.scrollTop / 40);
+                hours = hIdx;
+            }
+            if(mCol) {
+                const mIdx = Math.round(mCol.scrollTop / 40);
+                mins = mIdx;
+            }
+
+            const totalSecs = (hours * 3600) + (mins * 60);
+            if(totalSecs <= 0) {
+                alert('请选择大于0分钟的时长！');
                 return;
             }
-            startSiShouSession(typeName, 'countdown', mins * 60);
+            closeLoveModal();
+            startSiShouSession(typeName, 'countdown', totalSecs);
         }
 
         function startSiShouSession(typeName, mode, targetSecs) {
@@ -3540,7 +3652,7 @@
                 <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
                     <div style="display:flex; gap:8px;">
                         <input type="text" id="todoInput" placeholder="添加新日程或心愿（如：今晚一起看电影）" onkeydown="if(event.key==='Enter') addTodoItem()">
-                        <button class="btn" onclick="addTodoItem()" style="flex-shrink:0;">添加</button>
+                        <button class="btn" onclick="addTodoItem()" style="flex-shrink:0; background:var(--pine-green); color:#fff;">添加</button>
                     </div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;" id="todoListContainer"></div>
                 </div>
@@ -3701,7 +3813,7 @@
                     </div>
 
                     <div style="display:flex; gap:10px; margin-top:10px; margin-bottom:20px;">
-                        <button class="btn" style="flex:1; background-color:#333333; color:#ffffff;" onclick="saveSettingsChanges()">保存修改</button>
+                        <button class="btn" style="flex:1; background-color:var(--pine-green); color:#ffffff;" onclick="saveSettingsChanges()">保存修改</button>
                         <button class="btn" style="flex:1; background-color:transparent; border:1px solid var(--border-color); color:var(--sub-text);" onclick="cancelSettingsChanges()">取消修改</button>
                     </div>
                 </div>
