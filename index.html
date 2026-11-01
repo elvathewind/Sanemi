@@ -21,6 +21,7 @@
             --chat-bg: var(--card-bg);
             --mood-bg: rgba(255, 255, 255, 0.65);
             --mood-text: #666666;
+            --pine-green: #4a7c59;
         }
 
         [data-theme="dark"] {
@@ -37,6 +38,7 @@
             --chat-bg: #1e1e1e;
             --mood-bg: rgba(30, 30, 30, 0.65);
             --mood-text: #aaaaaa;
+            --pine-green: #5c946e;
         }
 
         * {
@@ -783,7 +785,7 @@
         let currentReplyingTo = null;
         let selectedHeartImg = '';
         let currentLetterTab = 'sent'; 
-        let activeAppId = null; // 记录当前打开的应用ID
+        let activeAppId = null;
 
         function saveData() {
             try {
@@ -842,9 +844,7 @@
         }
         applySettings();
 
-        // 蜜语后台定时器：根据是否在蜜语聊天界面动态调整视频发起概率
-        // 处于蜜语聊天界面 (activeAppId === 'chat')：10% 概率 (0.10)
-        // 不在蜜语聊天界面：5% 概率 (0.05)
+        // 蜜语后台视频逻辑：在聊天界面 10%，不在聊天界面 5%
         setInterval(() => {
             if (currentCallStatus === 'idle') {
                 const targetProbability = (activeAppId === 'chat') ? 0.10 : 0.05;
@@ -860,7 +860,6 @@
             }
         }, 40000);
 
-        // 心迹：每个自然日固定 5 条，发布时间完全随机
         function checkAndGenerateBackgroundHeartMoments() {
             const todayStr = new Date().toISOString().slice(0, 10);
             let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', targetCount: 5, postedTimes: [] };
@@ -961,7 +960,7 @@
         renderDesktop();
 
         function openApp(appId, appName) {
-            activeAppId = appId; // 记录当前打开的应用
+            activeAppId = appId;
             const subPage = document.getElementById('subPage');
             const titleEl = document.getElementById('subPageTitle');
             const contentEl = document.getElementById('subPageContent');
@@ -986,7 +985,7 @@
         }
 
         function closeApp() {
-            activeAppId = null; // 清除当前应用记录
+            activeAppId = null;
             const subPage = document.getElementById('subPage');
             if(subPage) subPage.classList.remove('active');
             renderDesktop();
@@ -1578,7 +1577,6 @@
                 const name = msg.sender === 'incoming' ? partnerNameStr : myNameStr;
                 const targetWho = msg.sender === 'incoming' ? 'partner' : 'me';
                 
-                // 昵称移到头像上方，保持字号但取消加粗
                 const avatarNameHTML = `
                     <div class="avatar-name-column">
                         <div class="message-sender-name">${name}</div>
@@ -1949,9 +1947,10 @@
 
                 const card = document.createElement('div');
                 card.id = `moment-card-${moment.id}`;
-                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; transition:border-color 0.3s; ${moment.isPinned ? 'border-color: #007aff;' : ''}`;
+                // 将置顶边框和标签改为松绿色 (--pine-green)
+                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; transition:border-color 0.3s; ${moment.isPinned ? 'border-color: var(--pine-green);' : ''}`;
                 
-                let pinTag = moment.isPinned ? `<span style="font-size:10px; background:#007aff; color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
+                let pinTag = moment.isPinned ? `<span style="font-size:10px; background:var(--pine-green); color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
 
                 let headerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -1968,7 +1967,7 @@
 
                 let likesHTML = '';
                 if (moment.likes && moment.likes.length > 0) {
-                    likesHTML = `<div style="font-size:11px; color:#4a7c59; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
+                    likesHTML = `<div style="font-size:11px; color:var(--pine-green); padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
                 let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px; max-height: 160px; overflow-y: auto;" id="comments-box-${moment.id}">`;
