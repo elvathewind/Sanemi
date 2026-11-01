@@ -22,6 +22,7 @@
             --chat-bg: var(--card-bg);
             --mood-bg: rgba(255, 255, 255, 0.65);
             --mood-text: #666666;
+            --pine-green: #4a7c59;
         }
 
         [data-theme="dark"] {
@@ -38,6 +39,7 @@
             --chat-bg: #1e1e1e;
             --mood-bg: rgba(30, 30, 30, 0.65);
             --mood-text: #aaaaaa;
+            --pine-green: #5c946e;
         }
 
         * {
@@ -256,10 +258,10 @@
             position: relative;
         }
 
-        /* 心情条毛玻璃质感、略微缩短 */
         .mood-bar {
             margin: 0 auto;
-            width: 70%;
+            max-width: 75%;
+            width: 75%;
             padding: 5px 12px;
             border: 1px solid var(--border-color);
             border-radius: 12px;
@@ -273,6 +275,7 @@
             align-items: center;
             text-align: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-sizing: border-box;
         }
 
         .chat-messages {
@@ -327,12 +330,20 @@
 
         .message-row.outgoing .message-content-wrapper { align-items: flex-end; }
 
-        /* 蜜语双方昵称字号适度加大 */
+        .avatar-name-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+            gap: 2px;
+        }
+
         .message-sender-name {
-            font-size: 13px;
-            font-weight: bold;
+            font-size: 12px;
+            font-weight: normal;
             color: var(--sub-text);
-            margin-bottom: 2px;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .avatar-box {
@@ -772,7 +783,8 @@
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
         let selectedHeartImg = '';
-        let currentLetterTab = 'sent'; // 'sent' 或 'received'
+        let currentLetterTab = 'sent'; 
+        let activeAppId = null;
 
         function saveData() {
             try {
@@ -831,10 +843,12 @@
         }
         applySettings();
 
-        // 蜜语后台定时器
+        // 核心回退：只有在【蜜语界面】内，才会有 5% 的概率触发对方主动打视频电话，其他界面绝不主动打！
         setInterval(() => {
-            if (Math.random() < 0.10 && currentCallStatus === 'idle') {
-                triggerIncomingCallFromPartner();
+            if (currentCallStatus === 'idle' && activeAppId === 'chat') {
+                if (Math.random() < 0.05) {
+                    triggerIncomingCallFromPartner();
+                }
             }
         }, 30000);
 
@@ -844,7 +858,6 @@
             }
         }, 40000);
 
-        // 心迹：每个自然日固定 5 条，发布时间完全随机
         function checkAndGenerateBackgroundHeartMoments() {
             const todayStr = new Date().toISOString().slice(0, 10);
             let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', targetCount: 5, postedTimes: [] };
@@ -945,6 +958,7 @@
         renderDesktop();
 
         function openApp(appId, appName) {
+            activeAppId = appId;
             const subPage = document.getElementById('subPage');
             const titleEl = document.getElementById('subPageTitle');
             const contentEl = document.getElementById('subPageContent');
@@ -969,6 +983,9 @@
         }
 
         function closeApp() {
+            // 每次退出应用时，安全关闭视频通话弹窗并重置状态，防止残留
+            closeVideoModal();
+            activeAppId = null;
             const subPage = document.getElementById('subPage');
             if(subPage) subPage.classList.remove('active');
             renderDesktop();
@@ -1055,7 +1072,7 @@
             }
         }
 
-        // --- 1. 蜜语模块 ---
+        // --- 1. 蜜语模块 (极速加载防崩溃版) ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -1529,7 +1546,8 @@
         function updateChatMessages() {
             const container = document.getElementById('chatMessages');
             if(!container) return;
-            container.innerHTML = '';
+            
+            const fragment = document.createDocumentFragment();
 
             const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '我';
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
@@ -1542,7 +1560,7 @@
                     const timeDivider = document.createElement('div');
                     timeDivider.className = 'message-time-divider';
                     timeDivider.innerText = formatMessageTime(msg.timestamp);
-                    container.appendChild(timeDivider);
+                    fragment.appendChild(timeDivider);
                 }
                 lastTimestamp = msg.timestamp;
 
@@ -1551,7 +1569,7 @@
                 if (msg.sender === 'system-center') {
                     row.className = `message-row system-center`;
                     row.innerHTML = `<div class="system-action-bubble">${msg.content}</div>`;
-                    container.appendChild(row);
+                    fragment.appendChild(row);
                     return;
                 }
 
@@ -1560,8 +1578,14 @@
                 const name = msg.sender === 'incoming' ? partnerNameStr : myNameStr;
                 const targetWho = msg.sender === 'incoming' ? 'partner' : 'me';
                 
-                const avatarHTML = `<div class="avatar-box" ondblclick="handleAvatarClick('${targetWho}')" onclick="handleAvatarClick('${targetWho}')">${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}</div>`;
-                const nameHTML = `<div class="message-sender-name">${name}</div>`;
+                const avatarNameHTML = `
+                    <div class="avatar-name-column">
+                        <div class="message-sender-name">${name}</div>
+                        <div class="avatar-box" onclick="handleAvatarClick('${targetWho}')">
+                            ${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}
+                        </div>
+                    </div>
+                `;
                 
                 let quotedHTML = msg.quoted ? `<div class="quoted-box">${msg.quoted}</div>` : '';
                 
@@ -1591,12 +1615,15 @@
                 row.onmouseleave = cancelPress;
 
                 if (msg.sender === 'incoming') {
-                    row.innerHTML = `${avatarHTML}<div class="message-content-wrapper">${nameHTML}${contentHTML}</div>`;
+                    row.innerHTML = `${avatarNameHTML}<div class="message-content-wrapper">${contentHTML}</div>`;
                 } else {
-                    row.innerHTML = `<div class="message-content-wrapper" style="align-items: flex-end;">${nameHTML}${contentHTML}</div>${avatarHTML}`;
+                    row.innerHTML = `<div class="message-content-wrapper" style="align-items: flex-end;">${contentHTML}</div>${avatarNameHTML}`;
                 }
-                container.appendChild(row);
+                fragment.appendChild(row);
             });
+            
+            container.innerHTML = '';
+            container.appendChild(fragment);
             container.scrollTop = container.scrollHeight;
         }
 
@@ -1924,9 +1951,9 @@
 
                 const card = document.createElement('div');
                 card.id = `moment-card-${moment.id}`;
-                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; transition:border-color 0.3s; ${moment.isPinned ? 'border-color: #007aff;' : ''}`;
+                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; transition:border-color 0.3s; ${moment.isPinned ? 'border-color: var(--pine-green);' : ''}`;
                 
-                let pinTag = moment.isPinned ? `<span style="font-size:10px; background:#007aff; color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
+                let pinTag = moment.isPinned ? `<span style="font-size:10px; background:var(--pine-green); color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
 
                 let headerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -1943,7 +1970,7 @@
 
                 let likesHTML = '';
                 if (moment.likes && moment.likes.length > 0) {
-                    likesHTML = `<div style="font-size:11px; color:#4a7c59; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
+                    likesHTML = `<div style="font-size:11px; color:var(--pine-green); padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
                 let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px; max-height: 160px; overflow-y: auto;" id="comments-box-${moment.id}">`;
@@ -2051,7 +2078,7 @@
             renderHeartMomentsList();
         }
 
-        // --- 字库模块（已彻底删除右下角无效的上下箭头按钮） ---
+        // --- 字库模块 ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -2683,9 +2710,6 @@
                 }
             });
 
-            // 锦书分类过滤：
-            // 'sent' 模块：只存放你主动寄出的信 (!item.isPartnerInitiated)
-            // 'received' 模块：存放对方主动寄出的信以及对方回复你的信 (item.isPartnerInitiated)
             const filteredLetters = letters.filter(item => {
                 if (currentLetterTab === 'sent') return !item.isPartnerInitiated;
                 else return item.isPartnerInitiated;
