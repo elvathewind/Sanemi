@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -13,7 +12,7 @@
             --sub-text: #666666;
             --border-color: #cccccc;
             --app-icon-bg: #eaeaea;
-            --font-size: 14px;
+            --font-size: 15px; /* 整体聊天字体适度放大 */
             --custom-font: "宋体", SimSun, STSong, serif;
             --bubble-bg: var(--app-icon-bg);
             --bubble-text: var(--text-color);
@@ -275,6 +274,14 @@
             padding: 10px 0;
         }
 
+        .message-time-divider {
+            font-size: 11px;
+            color: var(--sub-text);
+            text-align: center;
+            margin: 6px 0;
+            user-select: none;
+        }
+
         .message-row {
             display: flex;
             width: 100%;
@@ -311,15 +318,15 @@
         .message-row.outgoing .message-content-wrapper { align-items: flex-end; }
 
         .message-sender-name {
-            font-size: 10px;
+            font-size: 11px;
             color: var(--sub-text);
             margin-bottom: 2px;
-            cursor: pointer;
         }
 
+        /* 蜜语双人头像适度放大：从 32px 改为 42px */
         .avatar-box {
-            width: 32px;
-            height: 32px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             border: 1px solid var(--border-color);
             overflow: hidden;
@@ -342,6 +349,7 @@
             max-width: 100%;
             box-sizing: border-box;
             overflow: hidden;
+            font-size: var(--font-size);
         }
 
         .message-row.incoming .message-bubble { background-color: var(--bubble-bg); color: var(--bubble-text); }
@@ -349,8 +357,9 @@
 
         .chat-img-msg { max-width: 130px; max-height: 130px; border-radius: 8px; object-fit: cover; display: block; }
 
+        /* 引用部分强制保持小于正常聊天字体的 11px，且过长保持省略号 */
         .quoted-box {
-            font-size: 11px;
+            font-size: 11px !important;
             opacity: 0.8;
             border-left: 2px solid currentColor;
             padding-left: 6px;
@@ -510,7 +519,7 @@
             border-radius: 8px;
         }
 
-        /* 表情包选择栏 */
+        /* 蜜语聊天界面自由增删的表情包选择面板 */
         .emoji-picker {
             position: absolute;
             bottom: calc(100% + 6px);
@@ -523,22 +532,56 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
-            max-height: 180px;
+            max-height: 200px;
             overflow-y: auto;
             z-index: 100;
             box-shadow: 0 4px 16px rgba(0,0,0,0.12);
         }
-        .emoji-item {
+        .emoji-cell {
+            position: relative;
             width: 100%;
             aspect-ratio: 1;
             border-radius: 8px;
             border: 1px solid var(--border-color);
+            overflow: hidden;
+            background: var(--app-icon-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .emoji-item {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
             cursor: pointer;
-            transition: transform 0.1s;
         }
-        .emoji-item:active {
-            transform: scale(0.95);
+        .emoji-add-btn {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            border: 2px dashed var(--border-color);
+            background: none;
+            color: var(--sub-text);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .emoji-delete-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
         }
 
         .setting-group {
@@ -717,7 +760,7 @@
         let heartMoments = JSON.parse(localStorage.getItem('heartMomentsData')) || [];
 
         let settings = JSON.parse(localStorage.getItem('siteSettings')) || {
-            fontSize: '14px',
+            fontSize: '15px',
             customFont: '"宋体", SimSun, STSong, serif',
             readNotBack: false,
             myAvatar: '',
@@ -744,6 +787,7 @@
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
         let selectedHeartImg = '';
+        let currentLetterTab = 'sent'; // 'sent' 或 'received'
 
         function saveData() {
             try {
@@ -804,6 +848,67 @@
                 triggerBackgroundInitiateChatMessage();
             }
         }, 40000);
+
+        // 心迹后台主动发布检查器：确保每天 3~5 条随机时间发布，修复未主动发布的问题
+        function checkAndGenerateBackgroundHeartMoments() {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            let todayMoments = heartMoments.filter(m => m.dateStr === todayStr && m.author === 'partner');
+            let todayRecord = JSON.parse(localStorage.getItem('partnerHeartRecord')) || { date: '', targetCount: 0, postedTimes: [] };
+
+            if (todayRecord.date !== todayStr) {
+                const targetCount = Math.floor(Math.random() * 3) + 3; // 3 到 5 条
+                const postedTimes = [];
+                // 在当天 24 小时内随机生成几个时间戳
+                for (let i = 0; i < targetCount; i++) {
+                    const randomHour = Math.floor(Math.random() * 24);
+                    const randomMinute = Math.floor(Math.random() * 60);
+                    const d = new Date();
+                    d.setHours(randomHour, randomMinute, 0, 0);
+                    postedTimes.push(d.getTime());
+                }
+                postedTimes.sort((a, b) => a - b);
+                todayRecord = { date: todayStr, targetCount, postedTimes };
+                localStorage.setItem('partnerHeartRecord', JSON.stringify(todayRecord));
+            }
+
+            const now = Date.now();
+            todayRecord.postedTimes.forEach((targetTime, idx) => {
+                const alreadyPosted = heartMoments.some(m => m.dateStr === todayStr && m.author === 'partner' && m.batchIndex === idx);
+                if (now >= targetTime && !alreadyPosted) {
+                    const partnerNameStr = settings.partnerName || '老公';
+                    const contentText = getRandomCardSentences();
+                    const d = new Date(targetTime);
+                    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                    const assignedDelayMs = Math.floor((Math.random() * (30 - 3) + 3) * 60 * 1000);
+
+                    heartMoments.unshift({
+                        id: targetTime + idx,
+                        author: 'partner',
+                        content: contentText,
+                        image: '',
+                        time: timeStr,
+                        dateStr: todayStr,
+                        likes: [],
+                        comments: [],
+                        isPinned: false,
+                        requiredDelayMs: assignedDelayMs,
+                        batchIndex: idx
+                    });
+                    saveData();
+                    const subPage = document.getElementById('subPage');
+                    if (subPage && subPage.classList.contains('active')) {
+                        const title = document.getElementById('subPageTitle');
+                        if (title && title.innerText === '心迹') {
+                            renderHeartMomentsList();
+                        }
+                    }
+                }
+            });
+        }
+
+        setInterval(() => {
+            checkAndGenerateBackgroundHeartMoments();
+        }, 30000);
 
         function triggerBackgroundInitiateChatMessage() {
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
@@ -1011,6 +1116,7 @@
 
             chatMessages.push({
                 id: Date.now(),
+                timestamp: Date.now(),
                 sender: 'outgoing',
                 type: 'text',
                 content: text,
@@ -1055,12 +1161,12 @@
                     const roll = Math.random();
 
                     if (roll < 0.02) {
-                        chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 拍了拍我` });
+                        chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 拍了拍我` });
                     } 
                     else if (roll < 0.10) {
                         if (settings.emojis && settings.emojis.length > 0) {
                             const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
-                            chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
+                            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
                         } else {
                             sendCardMessage(partnerNameStr);
                         }
@@ -1068,9 +1174,9 @@
                     else if (roll < 0.20) {
                         if (actionLibrary.length > 0) {
                             const randomAct = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
-                            chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥${randomAct.content}♥` });
+                            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥${randomAct.content}♥` });
                         } else {
-                            chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥轻轻靠在了你的肩上♥` });
+                            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥轻轻靠在了你的肩上♥` });
                         }
                     } 
                     else {
@@ -1084,6 +1190,22 @@
             }, waitBeforeTypingMs);
         }
 
+        // 头像交互处理：单击无动作，仅双击触发拍一拍
+        let avatarClickTimer = null;
+        function handleAvatarClick(targetWho) {
+            if (avatarClickTimer) {
+                // 双击触发
+                clearTimeout(avatarClickTimer);
+                avatarClickTimer = null;
+                triggerPoke(targetWho);
+            } else {
+                // 单击计时等待判断是否为双击
+                avatarClickTimer = setTimeout(() => {
+                    avatarClickTimer = null;
+                }, 300);
+            }
+        }
+
         function triggerPoke(targetWho) {
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
@@ -1094,7 +1216,7 @@
                 pokeText = `我拍了拍自己`;
             }
 
-            chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: pokeText });
+            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: pokeText });
             saveData();
             updateChatMessages();
 
@@ -1315,6 +1437,7 @@
             renderVideoBodyContent();
         }
 
+        // 蜜语表情面板：支持在聊天界面直接自由添加与删除表情包
         function toggleEmojiPicker(e) {
             e.stopPropagation();
             let picker = document.getElementById('emojiPicker');
@@ -1326,26 +1449,95 @@
             picker.id = 'emojiPicker';
             picker.className = 'emoji-picker';
             
-            if (!settings.emojis || settings.emojis.length === 0) {
-                picker.innerHTML = `<div style="grid-column: span 4; font-size:12px; text-align:center; color:var(--sub-text); padding:10px;">暂无表情，请在【字库】添加</div>`;
-            } else {
-                settings.emojis.forEach((imgBase64) => {
-                    const img = document.createElement('img');
-                    img.src = imgBase64;
-                    img.className = 'emoji-item';
-                    img.onclick = () => {
-                        chatMessages.push({ id: Date.now(), sender: 'outgoing', type: 'image', content: imgBase64, quoted: currentReplyingTo });
-                        currentReplyingTo = null;
-                        cancelReplyQuote();
-                        saveData();
-                        updateChatMessages();
-                        picker.remove();
-                        triggerPartnerReplyUnifiedTiming();
-                    };
-                    picker.appendChild(img);
+            let htmlContent = `<button class="emoji-add-btn" onclick="document.getElementById('chatEmojiUploadInput').click()" title="添加表情">+</button><input type="file" id="chatEmojiUploadInput" style="display:none" accept="image/*" multiple onchange="uploadEmojisFromChat(event)">`;
+
+            if (settings.emojis && settings.emojis.length > 0) {
+                settings.emojis.forEach((imgBase64, idx) => {
+                    htmlContent += `
+                        <div class="emoji-cell">
+                            <img src="${imgBase64}" class="emoji-item" onclick="sendChatEmoji('${imgBase64}')">
+                            <div class="emoji-delete-badge" onclick="deleteChatEmoji(${idx}, event)">×</div>
+                        </div>
+                    `;
                 });
             }
+            picker.innerHTML = htmlContent;
             bottomArea.appendChild(picker);
+        }
+
+        function sendChatEmoji(imgBase64) {
+            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'outgoing', type: 'image', content: imgBase64, quoted: currentReplyingTo });
+            currentReplyingTo = null;
+            cancelReplyQuote();
+            saveData();
+            updateChatMessages();
+            const picker = document.getElementById('emojiPicker');
+            if(picker) picker.remove();
+            triggerPartnerReplyUnifiedTiming();
+        }
+
+        function uploadEmojisFromChat(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+            if(!settings.emojis) settings.emojis = [];
+
+            let loadedCount = 0;
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 150;
+                        canvas.height = 150;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, 150, 150);
+                        settings.emojis.push(canvas.toDataURL('image/jpeg', 0.8));
+                        loadedCount++;
+                        if (loadedCount === files.length) {
+                            saveData();
+                            // 刷新面板
+                            const picker = document.getElementById('emojiPicker');
+                            if(picker) picker.remove();
+                            toggleEmojiPicker({ stopPropagation: () => {} });
+                        }
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function deleteChatEmoji(index, event) {
+            event.stopPropagation();
+            if (confirm("确定要删除这个表情包吗？")) {
+                settings.emojis.splice(index, 1);
+                saveData();
+                const picker = document.getElementById('emojiPicker');
+                if(picker) picker.remove();
+                toggleEmojiPicker({ stopPropagation: () => {} });
+            }
+        }
+
+        // 格式化时间戳：当天显示 24 小时制时间，过去显示几月几号
+        function formatMessageTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const mins = String(date.getMinutes()).padStart(2, '0');
+
+            const isToday = date.getFullYear() === now.getFullYear() &&
+                            date.getMonth() === now.getMonth() &&
+                            date.getDate() === now.getDate();
+
+            if (isToday) {
+                return `${hours}:${mins}`;
+            } else {
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                return `${month}月${day}日 ${hours}:${mins}`;
+            }
         }
 
         function updateChatMessages() {
@@ -1356,7 +1548,19 @@
             const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '我';
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
+            let lastTimestamp = 0;
+
             chatMessages.forEach(msg => {
+                // 自动时间条逻辑：每条消息与上一条间隔超过 5 分钟则展示时间条
+                if (!msg.timestamp) msg.timestamp = msg.id || Date.now();
+                if (msg.timestamp - lastTimestamp > 300000) {
+                    const timeDivider = document.createElement('div');
+                    timeDivider.className = 'message-time-divider';
+                    timeDivider.innerText = formatMessageTime(msg.timestamp);
+                    container.appendChild(timeDivider);
+                }
+                lastTimestamp = msg.timestamp;
+
                 const row = document.createElement('div');
                 
                 if (msg.sender === 'system-center') {
@@ -1371,8 +1575,8 @@
                 const name = msg.sender === 'incoming' ? partnerNameStr : myNameStr;
                 const targetWho = msg.sender === 'incoming' ? 'partner' : 'me';
                 
-                const avatarHTML = `<div class="avatar-box" onclick="triggerPoke('${targetWho}')">${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}</div>`;
-                const nameHTML = `<div class="message-sender-name" onclick="triggerPoke('${targetWho}')">${name}</div>`;
+                const avatarHTML = `<div class="avatar-box" ondblclick="handleAvatarClick('${targetWho}')" onclick="handleAvatarClick('${targetWho}')">${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}</div>`;
+                const nameHTML = `<div class="message-sender-name">${name}</div>`;
                 
                 let quotedHTML = msg.quoted ? `<div class="quoted-box">${msg.quoted}</div>` : '';
                 
@@ -1458,7 +1662,7 @@
             let sendEmoji = hasEmoji && Math.random() < 0.3;
             if (sendEmoji) {
                 const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
-                chatMessages.push({ id: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
+                chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
             }
 
             if (cardLibrary.length > 0) {
@@ -1482,14 +1686,15 @@
                     partnerQuoted = randomMsg.content;
                 }
 
-                chatMessages.push({ id: Date.now() + 1, sender: 'incoming', type: 'text', content: selectedTexts.join(' '), quoted: partnerQuoted });
+                chatMessages.push({ id: Date.now() + 1, timestamp: Date.now(), sender: 'incoming', type: 'text', content: selectedTexts.join(' '), quoted: partnerQuoted });
             } else {
-                chatMessages.push({ id: Date.now() + 1, sender: 'incoming', type: 'text', content: '今天天气很好。' });
+                chatMessages.push({ id: Date.now() + 1, timestamp: Date.now(), sender: 'incoming', type: 'text', content: '今天天气很好。' });
             }
         }
 
         // --- 2. 心迹模块 ---
         function initHeartMoments(container) {
+            checkAndGenerateBackgroundHeartMoments();
             checkAndProcessPendingHeartInteractions(); 
             selectedHeartImg = '';
 
@@ -1947,6 +2152,7 @@
             }
         }
 
+        // 字库列表（已完全移除无效的上下箭头，界面更简洁）
         function updateCardList(filteredList = cardLibrary) {
             const listContainer = document.getElementById('itemContainer');
             const countEl = document.getElementById('cardCount');
@@ -2233,12 +2439,39 @@
         function initLetters(container) {
             checkAndGeneratePartnerInitiatedLetter();
             container.innerHTML = `
-                <div style="padding-bottom:8px;">
-                    <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 220px; max-height: 400px;"></textarea>
-                    <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
+                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; padding:10px 10px 0 10px; background:var(--card-bg);">
+                    <div style="padding:10px; border:1px solid var(--border-color); border-radius:10px; background:${currentLetterTab==='sent'?'var(--text-color)':'var(--bg-color)'}; color:${currentLetterTab==='sent'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold; font-size:13px;" onclick="switchLetterTab('sent')">寄出的信</div>
+                    <div style="padding:10px; border:1px solid var(--border-color); border-radius:10px; background:${currentLetterTab==='received'?'var(--text-color)':'var(--bg-color)'}; color:${currentLetterTab==='received'?'var(--card-bg)':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold; font-size:13px;" onclick="switchLetterTab('received')">收到的信</div>
                 </div>
-                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-top:4px;" id="letterListContainer"></div>
+                <div id="letterTabContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:10px; overflow-y:auto; position:relative;"></div>
             `;
+            renderLetterTabContent(container);
+        }
+
+        function switchLetterTab(tab) {
+            currentLetterTab = tab;
+            initLetters(document.getElementById('subPageContent'));
+        }
+
+        function renderLetterTabContent(container) {
+            const area = document.getElementById('letterTabContentArea');
+            if(!area) return;
+            area.innerHTML = '';
+
+            if (currentLetterTab === 'sent') {
+                area.innerHTML = `
+                    <div style="padding-bottom:4px;">
+                        <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 160px; max-height: 300px;"></textarea>
+                        <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
+                    </div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
+                `;
+            }
+
             checkAndSpawnFlyingEnvelope(container);
             updateLettersList();
         }
@@ -2296,7 +2529,13 @@
                 activeFlyingEnvelopeEl = null;
             }
 
-            const unreadReadyLetter = letters.find(item => item.reply && !item.isRead);
+            const unreadReadyLetter = letters.find(item => {
+                const isSentReady = !item.isPartnerInitiated && item.reply && !item.isRead;
+                const isReceivedReady = item.isPartnerInitiated && (item.partnerReplyContent && !item.isRead || (!item.myReplyToPartner && !item.isRead));
+                const isContinuationReady = item.continuationReplies && item.continuationReplies.some(cr => cr.replyContent && !item.isRead);
+                return isSentReady || isReceivedReady || isContinuationReady;
+            });
+
             if (!unreadReadyLetter) return;
 
             const badge = document.createElement('div');
@@ -2326,7 +2565,9 @@
         }
 
         function sendLetter() {
-            const text = document.getElementById('letterInput').value.trim();
+            const inputEl = document.getElementById('letterInput');
+            if(!inputEl) return;
+            const text = inputEl.value.trim();
             if (!text) return;
 
             const now = Date.now();
@@ -2350,7 +2591,7 @@
                 continuationReplies: []
             });
 
-            document.getElementById('letterInput').value = '';
+            inputEl.value = '';
             saveData();
             updateLettersList();
         }
@@ -2409,10 +2650,6 @@
             const container = document.getElementById('letterListContainer');
             if (!container) return;
             container.innerHTML = '';
-            if (letters.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:var(--sub-text); font-size:13px; padding:20px;">暂无信件记录</div>';
-                return;
-            }
 
             const now = Date.now();
             let hasNewUnread = false;
@@ -2472,18 +2709,30 @@
                 }
 
                 if ((item.reply && !item.isRead && !item.isPartnerInitiated) ||
-                    (item.isPartnerInitiated && item.partnerReplyContent && !item.isRead) ||
+                    (item.isPartnerInitiated && (item.partnerReplyContent && !item.isRead || (!item.myReplyToPartner && !item.isRead))) ||
                     (item.continuationReplies && item.continuationReplies.some(cr => cr.replyContent && !item.isRead))) {
                     hasNewUnread = true;
                 }
             });
 
-            const sortedLetters = [...letters].sort((a, b) => b.id - a.id);
+            // 根据当前标签页过滤：寄出的信 (isPartnerInitiated === false) vs 收到的信 (isPartnerInitiated === true)
+            const filteredLetters = letters.filter(item => {
+                if (currentLetterTab === 'sent') return !item.isPartnerInitiated;
+                else return item.isPartnerInitiated;
+            });
+
+            const sortedLetters = [...filteredLetters].sort((a, b) => b.id - a.id);
+
+            if (sortedLetters.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:13px; padding:20px;">暂无${currentLetterTab==='sent'?'寄出':'收到'}的信件记录</div>`;
+                return;
+            }
 
             sortedLetters.forEach(item => {
                 const div = document.createElement('div');
                 div.id = `letter-item-${item.id}`;
-                div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
+                // 锦书对话框略微缩进，左右留出空隙，不紧贴手机边缘
+                div.style.cssText = "margin: 0 8px; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
                 
                 let heartColor = '';
                 let topTimeText = '';
@@ -2777,7 +3026,6 @@
                     </div>
                 `;
 
-                // 只允许通过右侧 ☰ 拖动手柄进行触摸或鼠标拖拽排序
                 const handle = div.querySelector('.drag-handle');
                 let draggingEl = null;
 
@@ -2810,7 +3058,6 @@
                     }
                 });
 
-                // PC 鼠标端通过 ☰ 拖拽
                 handle.addEventListener('mousedown', (e) => {
                     div.draggable = true;
                 });
