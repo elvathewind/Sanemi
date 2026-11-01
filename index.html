@@ -621,6 +621,32 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             font-size: 12px;
         }
+
+        /* 良辰长按拖动排序样式 */
+        .anniv-item-card {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-color);
+            user-select: none;
+            touch-action: none;
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s;
+        }
+        .anniv-item-card:active {
+            cursor: grabbing;
+        }
+        .anniv-item-card.dragging {
+            opacity: 0.85;
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+            z-index: 100;
+            background: var(--card-bg);
+            border-color: var(--text-color);
+        }
     </style>
 </head>
 <body>
@@ -758,7 +784,7 @@
         }
         applySettings();
 
-        // 蜜语后台全局定时器：彻底解绑，独立 10% 概率触发主动发消息或打电话
+        // 蜜语后台全局定时器：独立 10% 概率触发主动发消息或打电话
         setInterval(() => {
             if (Math.random() < 0.10 && currentCallStatus === 'idle') {
                 triggerIncomingCallFromPartner();
@@ -916,12 +942,8 @@
                     `<img src="${settings.partnerAvatar}"><div id="callTimerDisplay" style="position:absolute; bottom:8px; right:8px; font-size:11px; background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); color:#fff; padding:3px 8px; border-radius:12px; z-index:3;">${timeStr}</div>` : 
                     `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%;">【已接通】<br><span id="callTimerDisplay" style="font-size:16px; font-weight:bold;">${timeStr}</span></div>`;
             } else {
-                let displayPromptText = '当前线路正忙请稍后再拨';
-                if (currentCallStatus === 'busy') displayPromptText = '当前线路正忙请稍后再拨';
-                else if (currentCallStatus === 'no_answer') displayPromptText = '暂时无法接通';
-                else if (currentCallStatus === 'rejected') displayPromptText = '我现在不方便，等下哦';
-
-                body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; padding:10px; color:#cccccc; font-size:13px; text-align:center;">${displayPromptText}</div>`;
+                // 完美居中、固定字号、低饱和克制灰色的状态提示文字（原样照抄用户提供的内容）
+                body.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; width:100%; height:100%; padding:15px; color:#777777; font-size:13px; text-align:center;">${currentCallStatus}</div>`;
                 
                 callAutoCloseTimer = setTimeout(() => {
                     closeVideoModal();
@@ -992,7 +1014,6 @@
             currentReplyingTo = null;
             cancelReplyQuote();
             
-            // 异步保存与渲染，彻底解决发送卡顿感
             requestAnimationFrame(() => {
                 saveData();
                 updateChatMessages();
@@ -1107,19 +1128,20 @@
 
             setTimeout(() => {
                 if (!document.getElementById('videoModal')) return;
+                
+                // 恢复准确的概率设定：已接通80%，暂时无法接通5%，当前信号差5%，网络异常5%，现在有点忙，等一下哦5%
                 const rand = Math.random();
-                if (rand < 0.75) {
+                if (rand < 0.80) {
                     currentCallStatus = 'connected';
                     startCallTimer();
-                } else if (rand < 0.80) {
-                    currentCallStatus = 'busy';
                 } else if (rand < 0.85) {
-                    currentCallStatus = 'no_answer';
+                    currentCallStatus = '暂时无法接通';
                 } else if (rand < 0.90) {
-                    currentCallStatus = 'rejected';
+                    currentCallStatus = '当前信号差';
+                } else if (rand < 0.95) {
+                    currentCallStatus = '网络异常';
                 } else {
-                    currentCallStatus = 'connected';
-                    startCallTimer();
+                    currentCallStatus = '现在有点忙，等一下哦';
                 }
                 renderVideoBodyContent();
             }, 3000);
@@ -1710,7 +1732,6 @@
                 
                 let pinTag = moment.isPinned ? `<span style="font-size:10px; background:#007aff; color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
 
-                // 需求6：发布动态人名字号放大一号 (设为 15px 粗体，比正文大)
                 let headerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div class="avatar-box" style="width:28px;height:28px;">
@@ -1724,7 +1745,6 @@
                 let textHTML = moment.content ? `<div style="font-size:var(--font-size); word-break:break-all; padding-left:36px;">${moment.content}</div>` : '';
                 let imgHTML = moment.image ? `<div style="padding-left:36px; margin-top:4px;"><img src="${moment.image}" style="max-width:140px; max-height:140px; border-radius:6px; border:1px solid var(--border-color); object-fit:cover;"></div>` : '';
 
-                // 需求7：夜间模式/默认心迹点赞颜色改成低饱和松绿色 (#4a7c59)
                 let likesHTML = '';
                 if (moment.likes && moment.likes.length > 0) {
                     likesHTML = `<div style="font-size:11px; color:#4a7c59; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
@@ -2463,9 +2483,8 @@
                 let topTimeText = '';
                 let cardContentHTML = '';
 
-                // 锦书信件心形区分：淡绿 (#a8c5b5), 松绿 (#6b9080), 墨绿色 (#324a3f) 保持低饱和度
                 if (item.isPartnerInitiated) {
-                    heartColor = '#6b9080'; // 松绿色
+                    heartColor = '#ff6b6b';
                     topTimeText = `写信时间: ${item.partnerLetterTime || item.time}`;
                     
                     let partnerReplyHTML = '';
@@ -2500,14 +2519,14 @@
                         ${replySection}
                     `;
                 } else if (!item.reply) {
-                    heartColor = '#a8c5b5'; // 淡淡的浅绿色
+                    heartColor = '#ff8787';
                     topTimeText = `寄出时间: ${item.time} | 预计回信时间: ${item.estTime || '不久的将来'}`;
                     cardContentHTML = `
                         <div><strong>我:</strong> ${item.myLetter}</div>
                         <div style="font-size:12px; color:var(--sub-text); font-style:italic; border-top:1px dashed var(--border-color); padding-top:6px;">真羡慕这封信，可以比我更早见到你</div>
                     `;
                 } else {
-                    heartColor = '#324a3f'; // 墨绿色
+                    heartColor = '#fa5252';
                     topTimeText = `寄出时间: ${item.time} | 回信时间: ${item.replyTime || '已送达'}`;
                     
                     let continuationHTML = '';
@@ -2628,7 +2647,6 @@
             const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
-            // 增加容器内边距 Padding 避免贴边
             container.innerHTML = `
                 <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
                     <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; flex-direction:column; justify-content:space-between; height:150px; flex-shrink:0;">
@@ -2652,12 +2670,11 @@
                     </div>
 
                     <div>
-                        <!-- 删除了“添加/管理良辰”这一行字 -->
                         <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" style="margin-bottom:6px;">
                         <input type="date" id="annivDate" style="margin-bottom:6px;">
                         <button class="btn" style="width:100%;" onclick="addAnniversary()">保存良辰</button>
                     </div>
-                    <div style="font-weight:bold; margin-top:4px;">良辰倒计时列表（可自由拖动排序）：</div>
+                    <div style="font-weight:bold; margin-top:4px;">良辰倒计时列表（长按卡片可自由拖动排序）：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;" id="anniversaryContainer"></div>
                 </div>
             `;
@@ -2702,16 +2719,6 @@
             }
         }
 
-        function moveAnniversary(index, direction) {
-            const targetIndex = index + direction;
-            if (targetIndex < 0 || targetIndex >= anniversaries.length) return;
-            const temp = anniversaries[index];
-            anniversaries[index] = anniversaries[targetIndex];
-            anniversaries[targetIndex] = temp;
-            saveData();
-            updateAnniversaryList();
-        }
-
         function updateAnniversaryList() {
             const container = document.getElementById('anniversaryContainer');
             if (!container) return;
@@ -2749,17 +2756,14 @@
                 }
 
                 const div = document.createElement('div');
-                div.style.cssText = "border:1px solid var(--border-color); padding:12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
+                div.className = 'anniv-item-card';
+                div.draggable = true;
+                div.dataset.index = index;
+
                 div.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:8px; flex:1;">
-                        <div style="display:flex; flex-direction:column; gap:2px;">
-                            <button class="btn" style="padding:1px 4px; font-size:9px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="moveAnniversary(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.3;"' : ''}>▲</button>
-                            <button class="btn" style="padding:1px 4px; font-size:9px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="moveAnniversary(${index}, 1)" ${index === anniversaries.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>▼</button>
-                        </div>
-                        <div style="flex:1; overflow:hidden;">
-                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
-                            <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
-                        </div>
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+                        <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
@@ -2767,8 +2771,87 @@
                         <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteAnniversary(${item.id})">删除</button>
                     </div>
                 `;
+
+                // 长按与拖动排序核心逻辑
+                let dragStartY = 0;
+                let isLongPress = false;
+                let longPressTimer = null;
+
+                div.addEventListener('touchstart', (e) => {
+                    dragStartY = e.touches[0].clientY;
+                    isLongPress = false;
+                    longPressTimer = setTimeout(() => {
+                        isLongPress = true;
+                        div.classList.add('dragging');
+                    }, 400); // 400ms 长按触发
+                }, {passive: true});
+
+                div.addEventListener('touchmove', (e) => {
+                    if (!isLongPress) {
+                        if (Math.abs(e.touches[0].clientY - dragStartY) > 10) {
+                            clearTimeout(longPressTimer);
+                        }
+                        return;
+                    }
+                    e.preventDefault();
+                    const touchY = e.touches[0].clientY;
+                    const siblings = [...container.querySelectorAll('.anniv-item-card:not(.dragging)')];
+                    const nextSibling = siblings.find(sibling => {
+                        const box = sibling.getBoundingClientRect();
+                        return touchY < box.top + box.height / 2;
+                    });
+                    if (nextSibling) {
+                        container.insertBefore(div, nextSibling);
+                    } else {
+                        container.appendChild(div);
+                    }
+                }, {passive: false});
+
+                div.addEventListener('touchend', () => {
+                    clearTimeout(longPressTimer);
+                    if (isLongPress) {
+                        isLongPress = false;
+                        div.classList.remove('dragging');
+                        syncDomOrderToAnniversaries(container);
+                    }
+                });
+
+                div.addEventListener('dragstart', (e) => {
+                    div.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                div.addEventListener('dragend', () => {
+                    div.classList.remove('dragging');
+                    syncDomOrderToAnniversaries(container);
+                });
+
+                div.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const draggingItem = container.querySelector('.dragging');
+                    if (!draggingItem || draggingItem === div) return;
+                    const box = div.getBoundingClientRect();
+                    const offset = e.clientY - box.top - box.height / 2;
+                    if (offset < 0) {
+                        container.insertBefore(draggingItem, div);
+                    } else {
+                        container.insertBefore(draggingItem, div.nextSibling);
+                    }
+                });
+
                 container.appendChild(div);
             });
+        }
+
+        function syncDomOrderToAnniversaries(container) {
+            const newOrder = [];
+            container.querySelectorAll('.anniv-item-card').forEach(card => {
+                const oldIndex = Number(card.dataset.index);
+                newOrder.push(anniversaries[oldIndex]);
+            });
+            anniversaries = newOrder;
+            saveData();
+            updateAnniversaryList();
         }
 
         // --- 设置模块 ---
