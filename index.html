@@ -255,10 +255,11 @@
             position: relative;
         }
 
-        /* 心情条毛玻璃质感、略微缩短 (70%) */
+        /* 心情条毛玻璃质感、宽度与聊天气泡最大宽度 (75%) 对齐 */
         .mood-bar {
             margin: 0 auto;
-            width: 70%;
+            max-width: 75%;
+            width: fit-content;
             padding: 5px 12px;
             border: 1px solid var(--border-color);
             border-radius: 12px;
@@ -326,12 +327,22 @@
 
         .message-row.outgoing .message-content-wrapper { align-items: flex-end; }
 
-        /* 蜜语双方昵称字号适度加大至 13px */
+        /* 头像与昵称组合块 */
+        .avatar-name-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+            gap: 2px;
+        }
+
+        /* 蜜语双方昵称字号 13px，取消加粗效果 */
         .message-sender-name {
             font-size: 13px;
-            font-weight: bold;
+            font-weight: normal;
             color: var(--sub-text);
-            margin-bottom: 2px;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .avatar-box {
@@ -771,7 +782,8 @@
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
         let selectedHeartImg = '';
-        let currentLetterTab = 'sent'; // 'sent' 或 'received'
+        let currentLetterTab = 'sent'; 
+        let activeAppId = null; // 记录当前打开的应用ID
 
         function saveData() {
             try {
@@ -830,10 +842,15 @@
         }
         applySettings();
 
-        // 蜜语后台定时器
+        // 蜜语后台定时器：根据是否在蜜语聊天界面动态调整视频发起概率
+        // 处于蜜语聊天界面 (activeAppId === 'chat')：10% 概率 (0.10)
+        // 不在蜜语聊天界面：5% 概率 (0.05)
         setInterval(() => {
-            if (Math.random() < 0.10 && currentCallStatus === 'idle') {
-                triggerIncomingCallFromPartner();
+            if (currentCallStatus === 'idle') {
+                const targetProbability = (activeAppId === 'chat') ? 0.10 : 0.05;
+                if (Math.random() < targetProbability) {
+                    triggerIncomingCallFromPartner();
+                }
             }
         }, 30000);
 
@@ -944,6 +961,7 @@
         renderDesktop();
 
         function openApp(appId, appName) {
+            activeAppId = appId; // 记录当前打开的应用
             const subPage = document.getElementById('subPage');
             const titleEl = document.getElementById('subPageTitle');
             const contentEl = document.getElementById('subPageContent');
@@ -968,6 +986,7 @@
         }
 
         function closeApp() {
+            activeAppId = null; // 清除当前应用记录
             const subPage = document.getElementById('subPage');
             if(subPage) subPage.classList.remove('active');
             renderDesktop();
@@ -1559,8 +1578,15 @@
                 const name = msg.sender === 'incoming' ? partnerNameStr : myNameStr;
                 const targetWho = msg.sender === 'incoming' ? 'partner' : 'me';
                 
-                const avatarHTML = `<div class="avatar-box" ondblclick="handleAvatarClick('${targetWho}')" onclick="handleAvatarClick('${targetWho}')">${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}</div>`;
-                const nameHTML = `<div class="message-sender-name">${name}</div>`;
+                // 昵称移到头像上方，保持字号但取消加粗
+                const avatarNameHTML = `
+                    <div class="avatar-name-column">
+                        <div class="message-sender-name">${name}</div>
+                        <div class="avatar-box" ondblclick="handleAvatarClick('${targetWho}')" onclick="handleAvatarClick('${targetWho}')">
+                            ${avatar ? `<img src="${avatar}">` : '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}
+                        </div>
+                    </div>
+                `;
                 
                 let quotedHTML = msg.quoted ? `<div class="quoted-box">${msg.quoted}</div>` : '';
                 
@@ -1590,9 +1616,9 @@
                 row.onmouseleave = cancelPress;
 
                 if (msg.sender === 'incoming') {
-                    row.innerHTML = `${avatarHTML}<div class="message-content-wrapper">${nameHTML}${contentHTML}</div>`;
+                    row.innerHTML = `${avatarNameHTML}<div class="message-content-wrapper">${contentHTML}</div>`;
                 } else {
-                    row.innerHTML = `<div class="message-content-wrapper" style="align-items: flex-end;">${nameHTML}${contentHTML}</div>${avatarHTML}`;
+                    row.innerHTML = `<div class="message-content-wrapper" style="align-items: flex-end;">${contentHTML}</div>${avatarNameHTML}`;
                 }
                 container.appendChild(row);
             });
@@ -2050,7 +2076,7 @@
             renderHeartMomentsList();
         }
 
-        // --- 字库模块（已彻底删除右下角无效的上下箭头按钮） ---
+        // --- 字库模块 ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -2682,9 +2708,6 @@
                 }
             });
 
-            // 锦书分类过滤：
-            // 'sent' 模块：只存放你主动寄出的信 (!item.isPartnerInitiated)
-            // 'received' 模块：存放对方主动寄出的信以及对方回复你的信 (item.isPartnerInitiated)
             const filteredLetters = letters.filter(item => {
                 if (currentLetterTab === 'sent') return !item.isPartnerInitiated;
                 else return item.isPartnerInitiated;
