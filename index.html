@@ -3655,13 +3655,13 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 5. 流年 (年月日精确到分钟的时间设置 + ⭐️星星 + 松绿色勾勾 + 双栏 + 拖动排序) ---
+        // --- 5. 流年 (自由文本时间 + ⭐️/⭐ 两态星星 + 双栏 + 拖动排序) ---
         function initTodo(container) {
             container.innerHTML = `
                 <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
                     <div style="display:flex; gap:8px; flex-direction:column;">
                         <div style="display:flex; gap:8px;">
-                            <input type="datetime-local" id="todoTimeInput" style="width:170px; flex-shrink:0;">
+                            <input type="text" id="todoTimeInput" placeholder="时间（如：28年 / 18号8:55）" style="width:140px; flex-shrink:0;">
                             <input type="text" id="todoInput" placeholder="添加新日程或心愿" onkeydown="if(event.key==='Enter') addTodoItem()" style="flex:1;">
                         </div>
                         <button class="btn" onclick="addTodoItem()" style="width:100%;">添加日程</button>
@@ -3677,12 +3677,12 @@
             const input = document.getElementById('todoInput');
             if(!input) return;
             const text = input.value.trim();
-            const timeStr = timeInput ? timeInput.value : '';
+            const timeStr = timeInput ? timeInput.value.trim() : '';
             if(!text) return;
 
             todoList.push({
                 id: Date.now(),
-                timeStr: timeStr ? timeStr.replace('T', ' ') : '',
+                timeStr: timeStr,
                 text: text,
                 important: false,
                 completed: false
