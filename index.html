@@ -257,11 +257,11 @@
             position: relative;
         }
 
-        /* 心情条毛玻璃质感、宽度与聊天气泡最大宽度 (75%) 对齐 */
+        /* 心情条宽度与聊天气泡最大宽度 (75%) 保持一致 */
         .mood-bar {
             margin: 0 auto;
             max-width: 75%;
-            width: fit-content;
+            width: 75%;
             padding: 5px 12px;
             border: 1px solid var(--border-color);
             border-radius: 12px;
@@ -275,6 +275,7 @@
             align-items: center;
             text-align: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-sizing: border-box;
         }
 
         .chat-messages {
@@ -329,7 +330,6 @@
 
         .message-row.outgoing .message-content-wrapper { align-items: flex-end; }
 
-        /* 头像与昵称组合块 */
         .avatar-name-column {
             display: flex;
             flex-direction: column;
@@ -338,7 +338,6 @@
             gap: 2px;
         }
 
-        /* 蜜语双方昵称字号 13px，取消加粗效果 */
         .message-sender-name {
             font-size: 13px;
             font-weight: normal;
