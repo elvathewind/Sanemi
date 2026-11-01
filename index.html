@@ -701,7 +701,6 @@
             partnerBubbleText: ''
         };
 
-        // 良辰双人打卡独立存储
         let annivCheckInData = JSON.parse(localStorage.getItem('annivCheckInData')) || {
             totalDays: 0,
             myLastCheckInDate: '',
@@ -759,18 +758,31 @@
         }
         applySettings();
 
-        // 持续检测常驻蜜语界面的随机来电
+        // 蜜语后台全局定时器：彻底解绑，独立 10% 概率触发主动发消息或打电话
         setInterval(() => {
+            if (Math.random() < 0.10 && currentCallStatus === 'idle') {
+                triggerIncomingCallFromPartner();
+            }
+        }, 30000);
+
+        setInterval(() => {
+            if (Math.random() < 0.10) {
+                triggerBackgroundInitiateChatMessage();
+            }
+        }, 40000);
+
+        function triggerBackgroundInitiateChatMessage() {
+            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
+            sendCardMessage(partnerNameStr);
+            saveData();
             const subPage = document.getElementById('subPage');
             if (subPage && subPage.classList.contains('active')) {
                 const title = document.getElementById('subPageTitle');
-                if (title && title.innerText === '蜜语' && currentCallStatus === 'idle') {
-                    if (Math.random() < 0.05) {
-                        triggerIncomingCallFromPartner();
-                    }
+                if (title && title.innerText === '蜜语') {
+                    updateChatMessages();
                 }
             }
-        }, 15000);
+        }
 
         function renderDesktop() {
             const grid = document.getElementById('desktopGrid');
@@ -812,8 +824,6 @@
 
             if (appId === 'chat') {
                 initChat(contentEl);
-                checkPartnerInitiateCall();
-                checkPartnerRandomPoke();
             }
             else if (appId === 'heartMoments') initHeartMoments(contentEl);
             else if (appId === 'cards') initCards(contentEl);
@@ -953,8 +963,6 @@
                 const c = document.getElementById('chatMessages');
                 if(c) c.scrollTop = c.scrollHeight;
             }, 50);
-
-            checkPartnerRandomPoke();
         }
 
         function handleGlobalChatClick(e) {
@@ -983,10 +991,13 @@
             input.value = '';
             currentReplyingTo = null;
             cancelReplyQuote();
-            saveData();
-            updateChatMessages();
+            
+            // 异步保存与渲染，彻底解决发送卡顿感
+            requestAnimationFrame(() => {
+                saveData();
+                updateChatMessages();
+            });
 
-            // 需求5：回复逻辑优化（输入中与回复总耗时统一包含在设定范围内）
             triggerPartnerReplyUnifiedTiming();
         }
 
@@ -998,27 +1009,18 @@
             const low = Math.min(minSec, maxSec);
             const high = Math.max(minSec, maxSec);
             
-            // 总倒计时（秒转毫秒）
             const totalDelaySec = Math.random() * (high - low) + low;
             const totalDelayMs = Math.floor(totalDelaySec * 1000);
 
-            // 策略：收到消息后，先等待一段时间（例如总时间的大约 30% 或者是固定的前置时间，不超过总时间），然后显示“正在输入中”，持续直到总时间结束并发送回复。
-            // 简单精准的逻辑：在总倒计时的前半部分（或者剩余 2-4 秒时）开始显示“正在输入中”，且“从收到消息到回复完毕”总耗时完美等于 totalDelayMs。
-            // 按照需求：设置里设定是 10-30 秒内回信息，那么从收到消息，到显示输入中，再到完成回复，全部加在一起是 10 到 30 秒。
-            // 我们可以让“输入中”在总时间的后半段（例如剩余 3 到 5 秒时）或者从某一刻开始显示。为了让用户感知最细腻：
-            // 设定输入中持续时间占总时间的 60%（或者至少 2 秒），而开始显示输入中的时间点 = 随机计算。
-            
-            const typingShowTimeMs = Math.max(2000, Math.floor(totalDelayMs * 0.6)); // 输入中展示时长
-            const waitBeforeTypingMs = Math.max(0, totalDelayMs - typingShowTimeMs); // 开始显示输入中之前的安静等待时间
+            const typingShowTimeMs = Math.max(2000, Math.floor(totalDelayMs * 0.6));
+            const waitBeforeTypingMs = Math.max(0, totalDelayMs - typingShowTimeMs);
 
             const indicator = document.getElementById('typingIndicator');
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
-            // 第一阶段：等待直到该显示“正在输入中”的时间点
             setTimeout(() => {
                 if(indicator) indicator.innerText = `${partnerNameStr}正在输入中...`;
 
-                // 第二阶段：保持输入状态直到总时间耗尽，发送回复
                 setTimeout(() => {
                     if(indicator) indicator.innerText = '';
                     
@@ -1070,17 +1072,6 @@
 
             if (targetWho === 'partner') {
                 triggerPartnerReplyUnifiedTiming();
-            }
-        }
-
-        function checkPartnerRandomPoke() {
-            if (Math.random() < 0.10) {
-                const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
-                setTimeout(() => {
-                    chatMessages.push({ id: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 拍了拍我` });
-                    saveData();
-                    updateChatMessages();
-                }, 1000);
             }
         }
 
@@ -1253,12 +1244,6 @@
         }
 
         let callTimeoutTimer = null;
-        function checkPartnerInitiateCall() {
-            if (Math.random() < 0.10) {
-                triggerIncomingCallFromPartner();
-            }
-        }
-
         function triggerIncomingCallFromPartner() {
             const phoneLayer = document.getElementById('phoneVideoLayer');
             if(!phoneLayer) return;
@@ -1725,12 +1710,13 @@
                 
                 let pinTag = moment.isPinned ? `<span style="font-size:10px; background:#007aff; color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
 
+                // 需求6：发布动态人名字号放大一号 (设为 15px 粗体，比正文大)
                 let headerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div class="avatar-box" style="width:28px;height:28px;">
                             ${authorAvatar ? `<img src="${authorAvatar}">` : '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'}
                         </div>
-                        <div style="flex:1; font-weight:bold; font-size:12px; display:flex; align-items:center;">${pinTag}${authorName}</div>
+                        <div style="flex:1; font-weight:bold; font-size:15px; display:flex; align-items:center; color:var(--text-color);">${pinTag}${authorName}</div>
                         <div style="font-size:10px; color:var(--sub-text);">${moment.time}</div>
                     </div>
                 `;
@@ -1738,9 +1724,10 @@
                 let textHTML = moment.content ? `<div style="font-size:var(--font-size); word-break:break-all; padding-left:36px;">${moment.content}</div>` : '';
                 let imgHTML = moment.image ? `<div style="padding-left:36px; margin-top:4px;"><img src="${moment.image}" style="max-width:140px; max-height:140px; border-radius:6px; border:1px solid var(--border-color); object-fit:cover;"></div>` : '';
 
+                // 需求7：夜间模式/默认心迹点赞颜色改成低饱和松绿色 (#4a7c59)
                 let likesHTML = '';
                 if (moment.likes && moment.likes.length > 0) {
-                    likesHTML = `<div style="font-size:11px; color:#007aff; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
+                    likesHTML = `<div style="font-size:11px; color:#4a7c59; padding-left:36px; margin-top:4px;">❤️ ${moment.likes.join(', ')} 觉得很赞</div>`;
                 }
 
                 let commentsHTML = `<div style="display:flex; flex-direction:column; gap:4px; padding-left:36px; margin-top:4px; max-height: 160px; overflow-y: auto;" id="comments-box-${moment.id}">`;
@@ -2330,7 +2317,7 @@
                 myLetter: text,
                 reply: '',
                 time: timeStr,
-                estTime: '不久的将来', // 需求4：统一更改为“不久的将来”
+                estTime: '不久的将来',
                 replyTimestamp: now + randomDelay,
                 isRead: false,
                 replyTime: '',
@@ -2359,7 +2346,7 @@
             letter.myReplyToPartner = text.trim();
             letter.myReplyTime = timeStr;
             letter.partnerReplyTimestamp = now + randomDelay;
-            letter.partnerEstTime = '不久的将来'; // 需求4：统一更改为“不久的将来”
+            letter.partnerEstTime = '不久的将来';
             letter.partnerReplyContent = '';
             saveData();
             updateLettersList();
@@ -2368,7 +2355,7 @@
         function continueReplyLetter(id) {
             const letter = letters.find(l => l.id === id);
             if (!letter) return;
-            const text = prompt('回复：', ''); // 需求4：删掉“继续”二字
+            const text = prompt('回信：', '');
             if (!text || !text.trim()) return;
 
             const now = Date.now();
@@ -2383,7 +2370,7 @@
             letter.continuationReplies.push({
                 text: text.trim(),
                 time: timeStr,
-                estTime: '不久的将来', // 需求4：统一更改为“不久的将来”
+                estTime: '不久的将来',
                 replyTimestamp: now + randomDelay,
                 replyContent: '',
                 replyTime: ''
@@ -2472,12 +2459,13 @@
                 div.id = `letter-item-${item.id}`;
                 div.style.cssText = "padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
                 
-                let dotColor = '';
+                let heartColor = '';
                 let topTimeText = '';
                 let cardContentHTML = '';
 
+                // 锦书信件心形区分：淡绿 (#a8c5b5), 松绿 (#6b9080), 墨绿色 (#324a3f) 保持低饱和度
                 if (item.isPartnerInitiated) {
-                    dotColor = '#3b5c4e';
+                    heartColor = '#6b9080'; // 松绿色
                     topTimeText = `写信时间: ${item.partnerLetterTime || item.time}`;
                     
                     let partnerReplyHTML = '';
@@ -2491,7 +2479,6 @@
                                 </div>
                             `;
                         } else {
-                            // 需求4：统一为“不久的将来”
                             partnerReplyHTML = `
                                 <div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">
                                     <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.myReplyTime} | 预计回信时间: ${item.partnerEstTime || '不久的将来'}</div>
@@ -2513,14 +2500,14 @@
                         ${replySection}
                     `;
                 } else if (!item.reply) {
-                    dotColor = '#829e8d';
+                    heartColor = '#a8c5b5'; // 淡淡的浅绿色
                     topTimeText = `寄出时间: ${item.time} | 预计回信时间: ${item.estTime || '不久的将来'}`;
                     cardContentHTML = `
                         <div><strong>我:</strong> ${item.myLetter}</div>
                         <div style="font-size:12px; color:var(--sub-text); font-style:italic; border-top:1px dashed var(--border-color); padding-top:6px;">真羡慕这封信，可以比我更早见到你</div>
                     `;
                 } else {
-                    dotColor = '#5f7e71';
+                    heartColor = '#324a3f'; // 墨绿色
                     topTimeText = `寄出时间: ${item.time} | 回信时间: ${item.replyTime || '已送达'}`;
                     
                     let continuationHTML = '';
@@ -2570,7 +2557,7 @@
                 div.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="width:8px; height:8px; background-color:${dotColor}; border-radius:50%; display:inline-block; flex-shrink:0;"></span>
+                            <span style="color:${heartColor}; font-size:16px; line-height:1; display:inline-block;">♥</span>
                             <span style="font-size:11px; color:var(--sub-text);">${topTimeText}</span>
                         </div>
                         <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLetter(${item.id})">删除</button>
@@ -2602,14 +2589,9 @@
         // --- 良辰模块 ---
         function checkAndExecutePartnerAnnivCheckIn() {
             const todayStr = new Date().toISOString().slice(0, 10);
-            
-            // 需求3：对方在每个自然日内完全随机独立打卡一次，而不跟随你的动作联动
             if (annivCheckInData.partnerLastCheckInDate !== todayStr) {
-                // 模拟在当天某个随机时刻自动打卡（这里我们通过概率或进入页面时以 60% 概率自然触发，确保独立）
                 if (Math.random() < 0.65) {
                     annivCheckInData.partnerLastCheckInDate = todayStr;
-                    
-                    // 需求2：只有当双方在同一天都打卡了，总天数才 +1
                     if (annivCheckInData.myLastCheckInDate === todayStr) {
                         annivCheckInData.totalDays += 1;
                     }
@@ -2626,8 +2608,6 @@
             }
 
             annivCheckInData.myLastCheckInDate = todayStr;
-            
-            // 需求2：只有当双方在同一天都打卡了，总天数才 +1
             if (annivCheckInData.partnerLastCheckInDate === todayStr) {
                 annivCheckInData.totalDays += 1;
             }
@@ -2645,39 +2625,41 @@
             const myNameStr = (settings.myName && String(settings.myName).trim() !== '') ? String(settings.myName) : '老婆';
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
-            // 需求1：头像放大两倍（从42px变大到84px），并且往中间挪动靠近
             const myAvatarImg = settings.myAvatar ? `<img src="${settings.myAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
+            // 增加容器内边距 Padding 避免贴边
             container.innerHTML = `
-                <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; flex-direction:column; justify-content:space-between; height:150px; margin-bottom:12px;">
-                    <div style="display:flex; align-items:center; justify-content:center; gap:20px;">
-                        <div style="display:flex; align-items:center;">
-                            <div style="width:72px; height:72px; border-radius:50%; border:2px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; z-index:2;">${myAvatarImg}</div>
-                            <div style="width:72px; height:72px; border-radius:50%; border:2px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; left:-24px; z-index:1;">${partnerAvatarImg}</div>
+                <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
+                    <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; flex-direction:column; justify-content:space-between; height:150px; flex-shrink:0;">
+                        <div style="display:flex; align-items:center; justify-content:center; gap:20px;">
+                            <div style="display:flex; align-items:center;">
+                                <div style="width:72px; height:72px; border-radius:50%; border:2px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; z-index:2;">${myAvatarImg}</div>
+                                <div style="width:72px; height:72px; border-radius:50%; border:2px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; left:-24px; z-index:1;">${partnerAvatarImg}</div>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:8px;">
+                                <button class="btn" style="padding:6px 14px; font-size:12px; background:${myChecked ? '#829e8d' : 'var(--text-color)'}; color:#fff; border-radius:16px;" onclick="handleMyCheckIn()">
+                                    ${myChecked ? `${myNameStr}今日已打卡` : `${myNameStr}今日未打卡`}
+                                </button>
+                                <button class="btn" style="padding:6px 14px; font-size:12px; background:${partnerChecked ? '#829e8d' : 'var(--sub-text)'}; color:#fff; border-radius:16px; cursor:default;" disabled>
+                                    ${partnerChecked ? `${partnerNameStr}今日已打卡` : `${partnerNameStr}今日未打卡`}
+                                </button>
+                            </div>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:8px;">
-                            <button class="btn" style="padding:6px 14px; font-size:12px; background:${myChecked ? '#829e8d' : 'var(--text-color)'}; color:#fff; border-radius:16px;" onclick="handleMyCheckIn()">
-                                ${myChecked ? `${myNameStr}今日已打卡` : `${myNameStr}今日未打卡`}
-                            </button>
-                            <button class="btn" style="padding:6px 14px; font-size:12px; background:${partnerChecked ? '#829e8d' : 'var(--sub-text)'}; color:#fff; border-radius:16px; cursor:default;" disabled>
-                                ${partnerChecked ? `${partnerNameStr}今日已打卡` : `${partnerNameStr}今日未打卡`}
-                            </button>
+                        <div style="text-align:center; font-size:12px; color:var(--sub-text);">
+                            已共同打卡 <strong style="color:var(--text-color); font-size:13px;">${annivCheckInData.totalDays}</strong> 天
                         </div>
                     </div>
-                    <div style="text-align:center; font-size:12px; color:var(--sub-text);">
-                        已共同打卡 <strong style="color:var(--text-color); font-size:13px;">${annivCheckInData.totalDays}</strong> 天
-                    </div>
-                </div>
 
-                <div>
-                    <div style="font-weight:bold; margin-bottom:6px;">添加/管理良辰：</div>
-                    <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" style="margin-bottom:6px;">
-                    <input type="date" id="annivDate" style="margin-bottom:6px;">
-                    <button class="btn" style="width:100%;" onclick="addAnniversary()">保存良辰</button>
+                    <div>
+                        <!-- 删除了“添加/管理良辰”这一行字 -->
+                        <input type="text" id="annivName" placeholder="名称（如：相识纪念日 / 生日）" style="margin-bottom:6px;">
+                        <input type="date" id="annivDate" style="margin-bottom:6px;">
+                        <button class="btn" style="width:100%;" onclick="addAnniversary()">保存良辰</button>
+                    </div>
+                    <div style="font-weight:bold; margin-top:4px;">良辰倒计时列表（可自由拖动排序）：</div>
+                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;" id="anniversaryContainer"></div>
                 </div>
-                <div style="font-weight:bold; margin-top:10px;">良辰倒计时列表：</div>
-                <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-top:6px;" id="anniversaryContainer"></div>
             `;
             updateAnniversaryList();
         }
@@ -2720,6 +2702,16 @@
             }
         }
 
+        function moveAnniversary(index, direction) {
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= anniversaries.length) return;
+            const temp = anniversaries[index];
+            anniversaries[index] = anniversaries[targetIndex];
+            anniversaries[targetIndex] = temp;
+            saveData();
+            updateAnniversaryList();
+        }
+
         function updateAnniversaryList() {
             const container = document.getElementById('anniversaryContainer');
             if (!container) return;
@@ -2729,7 +2721,7 @@
             const yyyy = now.getFullYear();
             const todayTime = new Date(yyyy, now.getMonth(), now.getDate()).getTime();
 
-            anniversaries.forEach(item => {
+            anniversaries.forEach((item, index) => {
                 const parts = item.date.split('-').map(Number);
                 const targetTime = new Date(parts[0], parts[1] - 1, parts[2]).getTime();
 
@@ -2759,9 +2751,15 @@
                 const div = document.createElement('div');
                 div.style.cssText = "border:1px solid var(--border-color); padding:12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color);";
                 div.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold;">${item.name}</div>
-                        <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
+                    <div style="display:flex; align-items:center; gap:8px; flex:1;">
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <button class="btn" style="padding:1px 4px; font-size:9px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="moveAnniversary(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.3;"' : ''}>▲</button>
+                            <button class="btn" style="padding:1px 4px; font-size:9px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="moveAnniversary(${index}, 1)" ${index === anniversaries.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>▼</button>
+                        </div>
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+                            <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
+                        </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
@@ -2776,81 +2774,83 @@
         // --- 设置模块 ---
         function initSettings(container) {
             container.innerHTML = `
-                <div class="setting-group">
-                    <div class="setting-label">我的名字</div>
-                    <input type="text" id="set_myName" value="${tempSettings.myName || ''}">
-                </div>
-                <div class="setting-group">
-                    <div class="setting-label">对方名字</div>
-                    <input type="text" id="set_partnerName" value="${tempSettings.partnerName || ''}">
-                </div>
-                <div class="setting-group">
-                    <div class="setting-label">我的头像</div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'myAvatar')" style="flex:1;">
+                <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
+                    <div class="setting-group">
+                        <div class="setting-label">我的名字</div>
+                        <input type="text" id="set_myName" value="${tempSettings.myName || ''}">
                     </div>
-                    <div id="myAvatarPreviewArea" style="margin-top:6px;"></div>
-                </div>
-                <div class="setting-group">
-                    <div class="setting-label">对方头像</div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'partnerAvatar')" style="flex:1;">
+                    <div class="setting-group">
+                        <div class="setting-label">对方名字</div>
+                        <input type="text" id="set_partnerName" value="${tempSettings.partnerName || ''}">
                     </div>
-                    <div id="partnerAvatarPreviewArea" style="margin-top:6px;"></div>
-                </div>
-                <div class="setting-group">
-                    <div class="setting-label">聊天背景图</div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'chatBg')" style="flex:1;">
-                    </div>
-                    <div id="chatBgPreviewArea" style="margin-top:6px;"></div>
-                </div>
-
-                <div class="setting-group">
-                    <div class="setting-label">对方回复时间范围 (秒)</div>
-                    <div style="display:flex; align-items:center; gap:8px; font-size:12px;">
-                        <span>最小秒数：</span>
-                        <input type="number" id="set_replyDelayMin" value="${tempSettings.replyDelayMin || '5'}" min="1" max="600" style="flex:1;">
-                        <span>最大秒数 (最高600秒/10分钟)：</span>
-                        <input type="number" id="set_replyDelayMax" value="${tempSettings.replyDelayMax || '30'}" min="1" max="600" style="flex:1;">
-                    </div>
-                </div>
-
-                <div class="setting-group">
-                    <div class="setting-label">🎨 聊天气泡颜色自定义</div>
-                    <div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span>我的气泡背景色：</span>
-                            <input type="color" id="set_myBubbleBg" value="${tempSettings.myBubbleBg || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                    <div class="setting-group">
+                        <div class="setting-label">我的头像</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'myAvatar')" style="flex:1;">
                         </div>
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span>我的气泡文字色：</span>
-                            <input type="color" id="set_myBubbleText" value="${tempSettings.myBubbleText || '#ffffff'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
-                        </div>
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span>对方气泡背景色：</span>
-                            <input type="color" id="set_partnerBubbleBg" value="${tempSettings.partnerBubbleBg || '#eaeaea'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
-                        </div>
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span>对方气泡文字色：</span>
-                            <input type="color" id="set_partnerBubbleText" value="${tempSettings.partnerBubbleText || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
-                        </div>
-                        <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetBubbleColors()">恢复默认气泡颜色</button>
+                        <div id="myAvatarPreviewArea" style="margin-top:6px;"></div>
                     </div>
-                </div>
-
-                <div class="setting-group">
-                    <div class="setting-label">数据恢复与备份</div>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="exportData()">手动导出备份</button>
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="document.getElementById('importFile').click()">导入备份恢复</button>
-                        <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
+                    <div class="setting-group">
+                        <div class="setting-label">对方头像</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'partnerAvatar')" style="flex:1;">
+                        </div>
+                        <div id="partnerAvatarPreviewArea" style="margin-top:6px;"></div>
                     </div>
-                </div>
+                    <div class="setting-group">
+                        <div class="setting-label">聊天背景图</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'chatBg')" style="flex:1;">
+                        </div>
+                        <div id="chatBgPreviewArea" style="margin-top:6px;"></div>
+                    </div>
 
-                <div style="display:flex; gap:10px; margin-top:10px; margin-bottom:20px;">
-                    <button class="btn" style="flex:1; background-color:#333333; color:#ffffff;" onclick="saveSettingsChanges()">保存修改</button>
-                    <button class="btn" style="flex:1; background-color:transparent; border:1px solid var(--border-color); color:var(--sub-text);" onclick="cancelSettingsChanges()">取消修改</button>
+                    <div class="setting-group">
+                        <div class="setting-label">对方回复时间范围 (秒)</div>
+                        <div style="display:flex; align-items:center; gap:8px; font-size:12px;">
+                            <span>最小秒数：</span>
+                            <input type="number" id="set_replyDelayMin" value="${tempSettings.replyDelayMin || '5'}" min="1" max="600" style="flex:1;">
+                            <span>最大秒数 (最高600秒/10分钟)：</span>
+                            <input type="number" id="set_replyDelayMax" value="${tempSettings.replyDelayMax || '30'}" min="1" max="600" style="flex:1;">
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-label">🎨 聊天气泡颜色自定义</div>
+                        <div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <span>我的气泡背景色：</span>
+                                <input type="color" id="set_myBubbleBg" value="${tempSettings.myBubbleBg || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <span>我的气泡文字色：</span>
+                                <input type="color" id="set_myBubbleText" value="${tempSettings.myBubbleText || '#ffffff'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <span>对方气泡背景色：</span>
+                                <input type="color" id="set_partnerBubbleBg" value="${tempSettings.partnerBubbleBg || '#eaeaea'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <span>对方气泡文字色：</span>
+                                <input type="color" id="set_partnerBubbleText" value="${tempSettings.partnerBubbleText || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
+                            </div>
+                            <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetBubbleColors()">恢复默认气泡颜色</button>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-label">数据恢复与备份</div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="exportData()">手动导出备份</button>
+                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="document.getElementById('importFile').click()">导入备份恢复</button>
+                            <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:10px; margin-bottom:20px;">
+                        <button class="btn" style="flex:1; background-color:#333333; color:#ffffff;" onclick="saveSettingsChanges()">保存修改</button>
+                        <button class="btn" style="flex:1; background-color:transparent; border:1px solid var(--border-color); color:var(--sub-text);" onclick="cancelSettingsChanges()">取消修改</button>
+                    </div>
                 </div>
             `;
             renderAvatarPreviews();
