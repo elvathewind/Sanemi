@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -846,50 +847,82 @@
             animation: fadeInModal 0.3s ease;
         }
 
-        /* 回退到上一版本的呼吸球统计弹窗样式 */
-        .universe-card {
+        /* 大爱心外框容器 */
+        .big-heart-container {
+            position: relative;
             width: 280px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            position: relative;
-        }
-
-        .universe-circle-parent {
-            width: 180px;
-            height: 180px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(74, 124, 89, 0.2) 0%, rgba(74, 124, 89, 0.05) 70%);
-            border: 1px solid var(--border-color);
-            position: relative;
+            height: 280px;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 182, 193, 0.25), rgba(100, 50, 70, 0.75));
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 40px rgba(255, 182, 193, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
+            transform: rotate(-45deg);
         }
+
+        .big-heart-container > * {
+            transform: rotate(45deg);
+        }
+
+        @keyframes heartBreathGlow {
+            0% { transform: scale(1) rotate(45deg); opacity: 0.75; box-shadow: 0 0 10px currentColor; }
+            50% { transform: scale(1.12) rotate(45deg); opacity: 0.95; box-shadow: 0 0 20px currentColor; }
+            100% { transform: scale(1) rotate(45deg); opacity: 0.75; box-shadow: 0 0 10px currentColor; }
+        }
+
+        .macaron-heart-node {
+            position: absolute;
+            width: 54px;
+            height: 54px;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.6);
+            animation: heartBreathGlow 3s infinite ease-in-out;
+        }
+        .macaron-heart-node:hover { z-index: 10; transform: scale(1.2) rotate(45deg); }
 
         .universe-star-node {
             position: absolute;
-            width: 42px;
-            height: 42px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
             cursor: pointer;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px currentColor;
+            font-size: 16px;
             transition: transform 0.2s;
         }
-        .universe-star-node:hover { transform: scale(1.15); z-index: 10; }
+        .universe-star-node:hover { transform: scale(1.3); z-index: 10; }
+
+        .floating-record-bubble {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 12px 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            font-size: 15px;
+            max-width: 280px;
+        }
+        [data-theme="dark"] .floating-record-bubble {
+            background: rgba(40, 40, 40, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -1054,41 +1087,40 @@
         }
         applySettings();
 
-        // 后台对方主动逻辑：独立字卡、动作、拍一拍、视频，无视是否在蜜语界面均会累积发生
+        // 仅在蜜语界面内触发来电与背景互动，完全移除自动拍一拍
         setInterval(() => {
-            triggerBackgroundIndependentEvents();
+            if (currentCallStatus === 'idle' && activeAppId === 'chat') {
+                if (Math.random() < 0.05) {
+                    triggerIncomingCallFromPartner();
+                }
+            }
             checkTodoReminders();
         }, 30000);
 
-        function triggerBackgroundIndependentEvents() {
+        setInterval(() => {
+            triggerBackgroundActiveModel();
+        }, 40000);
+
+        function triggerBackgroundActiveModel() {
             const roll = Math.random();
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
-            if (roll < 0.05) {
-                // 5% 概率：对方主动拍一拍我
-                chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} 拍了拍 我` });
-                saveData();
-                refreshChatIfOpen();
-            } else if (roll < 0.10) {
-                // 5% 概率：对方主动发送动作描述（从动作库随机选择一条）
+            if (roll < 0.08) {
                 if (actionLibrary.length > 0) {
                     const randomAct = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
-                    chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr} ♥ ${randomAct.content} ♥` });
+                    chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥${randomAct.content}♥` });
                     saveData();
                     refreshChatIfOpen();
                 }
-            } else if (roll < 0.15) {
-                // 5% 概率：对方主动发起视频通话（仅限在蜜语界面已接通时可悬浮）
-                if (currentCallStatus === 'idle') {
+            } else if (roll < 0.16) {
+                if (currentCallStatus === 'idle' && activeAppId === 'chat') {
                     triggerIncomingCallFromPartner();
                 }
-            } else if (roll < 0.20) {
-                // 5% 概率：对方主动发送字卡（从字卡库随机选择 1 到 3 条）
-                sendRandomCardsMessage(partnerNameStr, 1, 3);
+            } else if (roll < 0.25) {
+                sendCardMessage(partnerNameStr);
                 saveData();
                 refreshChatIfOpen();
             }
-            // 剩下 80% 什么都不发生
         }
 
         function refreshChatIfOpen() {
@@ -1414,7 +1446,6 @@
                 updateChatMessages();
             });
 
-            // 规则：我给对方发信息时，对方百分百会回复我
             triggerPartnerReplyUnifiedTiming();
         }
 
@@ -1441,8 +1472,18 @@
                 setTimeout(() => {
                     if(indicator) indicator.innerText = '';
                     
-                    // 规则：对方百分百回复，从字卡库中随机选择 1 到 3 条
-                    sendRandomCardsMessage(partnerNameStr, 1, 3);
+                    const roll = Math.random();
+
+                    if (roll < 0.15) {
+                        if (settings.emojis && settings.emojis.length > 0) {
+                            const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
+                            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
+                        } else {
+                            sendCardMessage(partnerNameStr);
+                        }
+                    } else {
+                        sendCardMessage(partnerNameStr);
+                    }
 
                     saveData();
                     updateChatMessages();
@@ -1478,7 +1519,6 @@
             saveData();
             updateChatMessages();
 
-            // 规则：我拍一拍对方时，对方百分百会回复我
             if (targetWho === 'partner') {
                 triggerPartnerReplyUnifiedTiming();
             }
@@ -1654,6 +1694,8 @@
 
         let callTimeoutTimer = null;
         function triggerIncomingCallFromPartner() {
+            if (activeAppId !== 'chat') return; // 严格限制仅在蜜语界面内触发
+
             const phoneLayer = document.getElementById('phoneVideoLayer');
             if(!phoneLayer) return;
             let modal = document.getElementById('videoModal');
@@ -1941,7 +1983,7 @@
             updateChatMessages();
         }
 
-        function sendRandomCardsMessage(partnerNameStr, minCount, maxCount) {
+        function sendCardMessage(partnerNameStr) {
             let hasEmoji = settings.emojis && settings.emojis.length > 0;
             let sendEmoji = hasEmoji && Math.random() < 0.3;
             if (sendEmoji) {
@@ -1950,8 +1992,8 @@
             }
 
             if (cardLibrary.length > 0) {
-                const span = maxCount - minCount + 1;
-                const count = Math.min(cardLibrary.length, Math.floor(Math.random() * span) + minCount);
+                const maxCount = Math.min(cardLibrary.length, 3);
+                const count = Math.floor(Math.random() * maxCount) + 1;
                 let tempLib = [...cardLibrary];
                 let selectedTexts = [];
                 for(let i = 0; i < count; i++) {
@@ -2750,7 +2792,7 @@
             }
         }
 
-        // --- 3. 锦书模块 ---
+        // --- 3. 锦书模块 (预计回信时间显示为“不久的将来”，回信输入框 3 倍高度) ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
@@ -2888,8 +2930,8 @@
             if (!text) return;
 
             const now = Date.now();
-            const minMs = 8 * 60 * 60 * 1000;
-            const maxMs = 12 * 60 * 60 * 1000;
+            const minMs = 8 * 60 * 60 * 1000;   // 8小时
+            const maxMs = 12 * 60 * 60 * 1000;  // 12小时
             const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 
             const d = new Date();
@@ -3239,7 +3281,7 @@
             }
         }
 
-        // --- 4. 良辰模块 ---
+        // --- 4. 良辰模块 (恢复上下拖动功能) ---
         let annivTouchStartY = 0;
 
         function checkAndExecutePartnerAnnivCheckIn() {
@@ -3402,7 +3444,7 @@
             });
         }
 
-        // --- 5. 厮守模块与回退到上一版本的呼吸球统计星图 ---
+        // --- 5. 厮守模块与大爱心莫兰迪星球统计星图 ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
@@ -3418,6 +3460,7 @@
                         <div class="avatar-box" style="width:84px; height:84px; border-radius:50%;" id="sishouMyAvatarBox" onclick="handleMyAvatarClick()" title="点击拍一拍自己"></div>
                     </div>
 
+                    <!-- 保持每行两个，一共三行 (已将放松改为娱乐) -->
                     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;">
                         <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('学习')">学习</button>
                         <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('工作')">工作</button>
@@ -3429,8 +3472,8 @@
 
                     <div id="sishouActiveArea" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--border-color); border-radius:12px; background:var(--bg-color); padding:10px; margin-top:4px;"></div>
 
-                    <!-- 纯净呼吸球 (无白色小线条) -->
-                    <div class="floating-planet-btn" onclick="openUniverseModal()" title="伴统计星图">
+                    <!-- 纯净呼吸灯悬浮球 (无小白线条) -->
+                    <div class="floating-planet-btn" onclick="openBigHeartCategoriesModal()" title="夜夜流光相皎洁">
                         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
                     </div>
                 </div>
@@ -3440,12 +3483,26 @@
             if(sishouData.active) startSiShouTicker();
         }
 
-        // 回退至上一版本的呼吸球弹出星图逻辑
-        function openUniverseModal() {
+        let universeAnimationId = null;
+        let physicsNodes = [];
+
+        function openBigHeartCategoriesModal() {
             let overlay = document.getElementById('universeModalOverlay');
-            if(overlay) overlay.remove();
+            if(overlay) {
+                if(universeAnimationId) cancelAnimationFrame(universeAnimationId);
+                overlay.remove();
+            }
 
             const categories = ['学习', '工作', '运动', '娱乐', '共眠', '缱绻'];
+            const morandiColors = [
+                'rgba(224, 122, 95, 0.85)',   // 红
+                'rgba(244, 162, 97, 0.85)',   // 黄
+                'rgba(129, 178, 154, 0.85)',  // 绿
+                'rgba(159, 179, 200, 0.85)',  // 青
+                'rgba(181, 201, 154, 0.85)',  // 蓝
+                'rgba(212, 163, 115, 0.85)'   // 紫
+            ];
+
             const categoryTotals = {};
             categories.forEach(cat => categoryTotals[cat] = 0);
 
@@ -3457,38 +3514,87 @@
                 });
             });
 
-            overlay = document.createElement('div');
-            overlay.id = 'universeModalOverlay';
-            overlay.className = 'universe-modal-overlay';
-            overlay.onclick = (e) => {
-                if(e.target === overlayModal || e.target === overlay) overlay.remove();
+            let overlayModal = document.createElement('div');
+            overlayModal.id = 'universeModalOverlay';
+            overlayModal.className = 'universe-modal-overlay';
+            overlayModal.onclick = (e) => {
+                if(e.target === overlayModal) {
+                    if(universeAnimationId) cancelAnimationFrame(universeAnimationId);
+                    overlayModal.remove();
+                }
             };
 
-            let nodesHTML = '';
-            const radius = 65;
-            categories.forEach((cat, idx) => {
-                const angle = (idx / categories.length) * 2 * Math.PI - Math.PI / 2;
-                const x = 90 + radius * Math.cos(angle) - 21;
-                const y = 90 + radius * Math.sin(angle) - 21;
-                
-                nodesHTML += `
-                    <div class="universe-star-node" style="left:${x}px; top:${y}px;" onclick="showCategoryTotalTime('${cat}', ${categoryTotals[cat]})">
-                        <span>❤️</span>
-                        <span>${cat}</span>
-                    </div>
-                `;
+            physicsNodes = categories.map((cat, idx) => {
+                const angle = (idx / categories.length) * 2 * Math.PI;
+                const distR = 75;
+                return {
+                    category: cat,
+                    totalSecs: categoryTotals[cat],
+                    color: morandiColors[idx],
+                    x: 140 + distR * Math.cos(angle),
+                    y: 140 + distR * Math.sin(angle),
+                    vx: (Math.random() - 0.5) * 0.6,
+                    vy: (Math.random() - 0.5) * 0.6,
+                    radius: 27
+                };
             });
 
-            overlay.innerHTML = `
-                <div class="universe-card" onclick="event.stopPropagation()">
-                    <div style="font-size:15px; font-weight:bold;">夜夜流光相皎洁</div>
-                    <div class="universe-circle-parent">
+            let nodesHTML = physicsNodes.map((n, i) => `
+                <div class="macaron-heart-node" id="macNode_${i}" style="background:${n.color};" onclick="showCategoryTotalTime('${n.category}', ${n.totalSecs})">
+                    <span>❤️</span>
+                    <span style="font-size:10px;">${n.category}</span>
+                </div>
+            `).join('');
+
+            overlayModal.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:20px;">
+                    <div style="color:#fff; font-size:16px; font-weight:bold; letter-spacing:1px; text-shadow:0 2px 8px rgba(0,0,0,0.5);">夜夜流光相皎洁</div>
+                    <div class="big-heart-container" id="bigHeartContainerBox">
                         ${nodesHTML}
                     </div>
-                    <button class="btn" style="width:100%; border-radius:10px; background:var(--pine-green); color:#fff;" onclick="document.getElementById('universeModalOverlay').remove()">关闭</button>
                 </div>
             `;
-            document.body.appendChild(overlay);
+            document.body.appendChild(overlayModal);
+
+            if(physicsNodes.length > 0) {
+                runBigHeartPhysicsLoop();
+            }
+        }
+
+        function runBigHeartPhysicsLoop() {
+            const containerRadius = 115; 
+            const centerX = 140;
+            const centerY = 140;
+
+            physicsNodes.forEach((node) => {
+                node.x += node.vx;
+                node.y += node.vy;
+
+                const dx = node.x - centerX;
+                const dy = node.y - centerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist + node.radius > containerRadius) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const dot = node.vx * nx + node.vy * ny;
+                    node.vx = (node.vx - 2 * dot * nx) * 0.98;
+                    node.vy = (node.vy - 2 * dot * ny) * 0.98;
+
+                    node.x = centerX + nx * (containerRadius - node.radius);
+                    node.y = centerY + ny * (containerRadius - node.radius);
+                }
+            });
+
+            physicsNodes.forEach((node, i) => {
+                const el = document.getElementById(`macNode_${i}`);
+                if (el) {
+                    el.style.left = (node.x - node.radius) + 'px';
+                    el.style.top = (node.y - node.radius) + 'px';
+                }
+            });
+
+            universeAnimationId = requestAnimationFrame(runBigHeartPhysicsLoop);
         }
 
         function showCategoryTotalTime(categoryName, totalSecs) {
@@ -3879,6 +3985,7 @@
             else timeFormattedStr += `${mCount}分钟${sCount}秒`;
 
             const partnerNameStr = settings.partnerName || '老公';
+            let wifeTitle = settings.myName || '老婆'; 
             let msg = '';
 
             const now = new Date();
@@ -3933,7 +4040,7 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 6. 流年模块 ---
+        // --- 6. 流年模块 (无波浪号、带编辑按钮) ---
         let currentTodoTab = 'todolist';
 
         const encouragementQuotes = [
