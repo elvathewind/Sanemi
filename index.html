@@ -759,6 +759,30 @@
             justify-content: center;
         }
 
+        /* 顶部滑入式横幅提醒 */
+        @keyframes slideDownTopBanner {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .top-reminder-banner {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 360px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-radius: 14px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 999999;
+            animation: slideDownTopBanner 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
         .picker-wheel-container {
             display: flex;
             justify-content: center;
@@ -811,11 +835,11 @@
             background: rgba(120,120,120,0.04);
         }
 
-        /* 执子之手呼吸灯悬浮星球与宇宙弹窗 */
+        /* 呼吸灯悬浮星球与宇宙弹窗 */
         @keyframes breathGlow {
-            0% { box-shadow: 0 0 8px rgba(74, 124, 89, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.3); transform: scale(1); }
-            50% { box-shadow: 0 0 20px rgba(74, 124, 89, 0.8), inset 0 0 14px rgba(255, 255, 255, 0.6); transform: scale(1.05); }
-            100% { box-shadow: 0 0 8px rgba(74, 124, 89, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.3); transform: scale(1); }
+            0% { box-shadow: 0 0 8px var(--pine-green), inset 0 0 8px rgba(255, 255, 255, 0.3); transform: scale(1); }
+            50% { box-shadow: 0 0 22px var(--pine-green), inset 0 0 14px rgba(255, 255, 255, 0.6); transform: scale(1.05); }
+            100% { box-shadow: 0 0 8px var(--pine-green), inset 0 0 8px rgba(255, 255, 255, 0.3); transform: scale(1); }
         }
         .floating-planet-btn {
             position: absolute;
@@ -823,7 +847,8 @@
             right: 20px;
             width: 52px;
             height: 52px;
-            background: rgba(74, 124, 89, 0.65);
+            background: var(--pine-green);
+            opacity: 0.85;
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
             color: #fff;
@@ -865,14 +890,14 @@
             background: radial-gradient(circle at 30% 30%, rgba(120, 150, 180, 0.2), rgba(30, 40, 60, 0.8));
             border: 1px solid rgba(255, 255, 255, 0.25);
             box-shadow: 0 0 50px rgba(100, 150, 200, 0.2), inset 0 0 30px rgba(255, 255, 255, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: block;
             animation: universeZoomIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             overflow: hidden;
         }
         .universe-star-node {
             position: absolute;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
@@ -880,10 +905,30 @@
             justify-content: center;
             box-shadow: 0 0 10px currentColor;
             transition: transform 0.2s;
+            font-size: 16px;
         }
         .universe-star-node:hover {
             transform: scale(1.3);
             z-index: 10;
+        }
+
+        .floating-record-bubble {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 12px 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            font-size: 15px;
+            max-width: 280px;
+            animation: universeZoomIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        [data-theme="dark"] .floating-record-bubble {
+            background: rgba(40, 40, 40, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
     </style>
 </head>
@@ -1049,7 +1094,7 @@
         }
         applySettings();
 
-        // 核心定时器：全局流年日程提醒与背景主动事件生成（严格遵循概率模型）
+        // 核心定时器：全局流年日程提醒与背景主动事件生成
         setInterval(() => {
             if (currentCallStatus === 'idle' && activeAppId === 'chat') {
                 if (Math.random() < 0.05) {
@@ -1068,12 +1113,10 @@
             const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
 
             if (roll < 0.05) {
-                // 5% 概率：对方主动拍一拍我
                 chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'incoming', type: 'system', content: `${partnerNameStr} 拍了拍我` });
                 saveData();
                 refreshChatIfOpen();
             } else if (roll < 0.10) {
-                // 5% 概率：对方主动发送动作描述
                 if (actionLibrary.length > 0) {
                     const randomAct = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
                     chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥${randomAct.content}♥` });
@@ -1081,17 +1124,14 @@
                     refreshChatIfOpen();
                 }
             } else if (roll < 0.15) {
-                // 5% 概率：对方主动发起视频通话
                 if (currentCallStatus === 'idle') {
                     triggerIncomingCallFromPartner();
                 }
             } else if (roll < 0.20) {
-                // 5% 概率：对方主动发送字卡
                 sendCardMessage(partnerNameStr);
                 saveData();
                 refreshChatIfOpen();
             }
-            // 剩下的 80% 概率什么都不做
         }
 
         function refreshChatIfOpen() {
@@ -1113,11 +1153,30 @@
                     if (!isNaN(targetTime) && now >= targetTime) {
                         item.alerted = true;
                         hasAlert = true;
-                        showLoveModal(`⏰ 【日程提醒】<br><br>“${item.text}” 的时间到啦！`, [{ text: '知道了', primary: true, onclick: 'closeLoveModal()' }]);
+                        showTopReminderBanner(`“${item.text}” 的时间到啦！`);
                     }
                 }
             });
             if (hasAlert) saveData();
+        }
+
+        function showTopReminderBanner(msgText) {
+            let existing = document.getElementById('topReminderBannerEl');
+            if (existing) existing.remove();
+
+            const banner = document.createElement('div');
+            banner.id = 'topReminderBannerEl';
+            banner.className = 'top-reminder-banner';
+            banner.innerHTML = `
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.8" fill="none"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 16"></polyline><path d="M5.22 5.22l1.56 1.56"></path><path d="M18.78 5.22l-1.56 1.56"></path></svg>
+                <div style="flex:1; font-size:14px; font-weight:bold; color:var(--text-color);">${msgText}</div>
+                <button class="btn" style="padding:4px 10px; font-size:12px; border-radius:12px;" onclick="document.getElementById('topReminderBannerEl').remove()">知道了</button>
+            `;
+            document.body.appendChild(banner);
+            setTimeout(() => {
+                const b = document.getElementById('topReminderBannerEl');
+                if(b) b.remove();
+            }, 6000);
         }
 
         function checkAndGenerateBackgroundHeartMoments() {
@@ -2313,8 +2372,45 @@
         function commentMoment(momentId) {
             const moment = heartMoments.find(m => m.id === momentId);
             if (!moment) return;
-            const text = prompt('写下你的评论：', '');
-            if (!text || !text.trim()) return;
+            
+            // 完美 3 倍高度的心迹回复弹窗
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            const partnerNameStr = settings.partnerName || '老公';
+
+            overlay.innerHTML = `
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
+                    <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${partnerNameStr}：</div>
+                    <textarea id="heartCommentInputText" placeholder="写下你的评论..." style="height: 220px; min-height: 200px; resize: none;"></textarea>
+                    <div class="love-modal-buttons">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmPostComment(${momentId})">好</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => {
+                const inp = document.getElementById('heartCommentInputText');
+                if(inp) inp.focus();
+            }, 100);
+        }
+
+        function confirmPostComment(momentId) {
+            const inp = document.getElementById('heartCommentInputText');
+            if(!inp) return;
+            const text = inp.value.trim();
+            if(!text) {
+                alert('评论内容不能为空哦！');
+                return;
+            }
+
+            const moment = heartMoments.find(m => m.id === momentId);
+            if (!moment) return;
 
             const myNameStr = settings.myName || '我';
             const assignedDelayMs = Math.floor((Math.random() * (30 - 3) + 3) * 60 * 1000);
@@ -2322,11 +2418,12 @@
             moment.comments.push({
                 id: Date.now(),
                 author: myNameStr,
-                text: text.trim(),
+                text: text,
                 replies: [],
                 requiredDelayMs: assignedDelayMs
             });
             saveData();
+            closeLoveModal();
             renderHeartMomentsList();
         }
 
@@ -2336,8 +2433,44 @@
             const comment = moment.comments.find(c => c.id === commentId);
             if (!comment) return;
 
-            const text = prompt(`回复 ${targetAuthor}：`, '');
-            if (!text || !text.trim()) return;
+            // 完美 3 倍高度的心迹子回复弹窗
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            overlay.innerHTML = `
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
+                    <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${targetAuthor}：</div>
+                    <textarea id="heartSubCommentInputText" placeholder="写下你的回复..." style="height: 220px; min-height: 200px; resize: none;"></textarea>
+                    <div class="love-modal-buttons">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmPostSubComment(${momentId}, ${commentId})">好</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => {
+                const inp = document.getElementById('heartSubCommentInputText');
+                if(inp) inp.focus();
+            }, 100);
+        }
+
+        function confirmPostSubComment(momentId, commentId) {
+            const inp = document.getElementById('heartSubCommentInputText');
+            if(!inp) return;
+            const text = inp.value.trim();
+            if(!text) {
+                alert('回复内容不能为空哦！');
+                return;
+            }
+
+            const moment = heartMoments.find(m => m.id === momentId);
+            if (!moment) return;
+            const comment = moment.comments.find(c => c.id === commentId);
+            if (!comment) return;
 
             const myNameStr = settings.myName || '我';
             const assignedDelayMs = Math.floor((Math.random() * (30 - 3) + 3) * 60 * 1000);
@@ -2345,10 +2478,11 @@
             comment.replies.push({
                 id: Date.now(),
                 author: myNameStr,
-                text: text.trim(),
+                text: text,
                 requiredDelayMs: assignedDelayMs
             });
             saveData();
+            closeLoveModal();
             renderHeartMomentsList();
         }
 
@@ -3127,11 +3261,10 @@
             }
         }
 
-        // --- 4. 良辰模块 (自然日独立打卡机制) ---
+        // --- 4. 良辰模块 ---
         function checkAndExecutePartnerAnnivCheckIn() {
             const todayStr = new Date().toISOString().slice(0, 10);
             if (annivCheckInData.partnerLastCheckInDate !== todayStr) {
-                // 对方自然日全天随机一次打卡
                 if (Math.random() < 0.65) {
                     annivCheckInData.partnerLastCheckInDate = todayStr;
                     if (annivCheckInData.myLastCheckInDate === todayStr) {
@@ -3369,7 +3502,7 @@
             updateAnniversaryList();
         }
 
-        // --- 5. 厮守模块与宇宙呼吸灯球 ("执子之手") ---
+        // --- 5. 厮守模块与动态物理弹球（6个精准模块 + 72小时上限） ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
@@ -3385,17 +3518,19 @@
                         <div class="avatar-box" style="width:84px; height:84px; border-radius:50%;" id="sishouMyAvatarBox" onclick="handleMyAvatarClick()" title="点击拍一拍自己"></div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('专注')">专注</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('健身')">健身</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('共眠')">共眠</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:16px; font-size:16px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('缱绻')">缱绻</button>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('学习')">学习</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('工作')">工作</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('健身')">健身</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('娱乐')">娱乐</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('共眠')">共眠</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('缱绻')">缱绻</button>
                     </div>
 
                     <div id="sishouActiveArea" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--border-color); border-radius:12px; background:var(--bg-color); padding:10px; margin-top:4px;"></div>
 
-                    <!-- 执子之手呼吸灯悬浮星球按钮 -->
-                    <div class="floating-planet-btn" onclick="openSishouUniverseModal()" title="执子之手 - 陪伴手账">
+                    <!-- 纯净呼吸灯悬浮星球按钮 -->
+                    <div class="floating-planet-btn" onclick="openSishouUniverseModal()" title="愿我如星君如月">
                         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
                     </div>
                 </div>
@@ -3407,51 +3542,103 @@
             }
         }
 
+        let universeAnimationId = null;
+        let physicsNodes = [];
+
         function openSishouUniverseModal() {
             let overlay = document.getElementById('universeModalOverlay');
             if(overlay) overlay.remove();
+            if(universeAnimationId) {
+                cancelAnimationFrame(universeAnimationId);
+                universeAnimationId = null;
+            }
 
             overlay = document.createElement('div');
             overlay.id = 'universeModalOverlay';
             overlay.className = 'universe-modal-overlay';
             overlay.onclick = (e) => {
-                if(e.target === overlay) overlay.remove();
+                if(e.target === overlay) {
+                    if(universeAnimationId) cancelAnimationFrame(universeAnimationId);
+                    overlay.remove();
+                }
             };
 
             const morandiColors = [
-                '#9fb3c8', '#b5c99a', '#d4a373', '#e07a5f', '#81b29a', 
-                '#f4a261', '#e76f51', '#a8dadc', '#457b9d', '#b7b7a4', '#dda15e'
+                'rgba(159, 179, 200, 0.75)', 'rgba(181, 201, 154, 0.75)', 
+                'rgba(212, 163, 115, 0.75)', 'rgba(224, 122, 95, 0.75)', 
+                'rgba(129, 178, 154, 0.75)', 'rgba(244, 162, 97, 0.75)'
             ];
 
-            let nodesHTML = '';
-            if (!sishouRecords || sishouRecords.length === 0) {
-                nodesHTML = `<div style="color:#fff; font-size:13px; text-align:center; padding:20px; z-index:2;">宇宙中还没有记录哦，快去和小星球一起开始陪伴吧~</div>`;
-            } else {
-                sishouRecords.forEach((rec, idx) => {
-                    const randomColor = morandiColors[idx % morandiColors.length];
-                    const angle = (idx / sishouRecords.length) * 2 * Math.PI;
-                    const distance = 70 + (idx % 3) * 25;
-                    const left = 150 + Math.cos(angle) * distance - 18;
-                    const top = 150 + Math.sin(angle) * distance - 18;
+            const symbols = ['⭐', '🌙'];
 
-                    nodesHTML += `
-                        <div class="universe-star-node" style="width:36px; height:36px; left:${left}px; top:${top}px; background:${randomColor}; color:#fff;" onclick="showSishouRecordDetail(${rec.id})" title="${rec.text}">
-                            ⭐
-                        </div>
-                    `;
-                });
-            }
+            physicsNodes = sishouRecords.map((rec, idx) => {
+                return {
+                    id: rec.id,
+                    text: rec.text,
+                    color: morandiColors[idx % morandiColors.length],
+                    symbol: symbols[idx % symbols.length],
+                    x: 60 + Math.random() * 180,
+                    y: 60 + Math.random() * 180,
+                    vx: (Math.random() - 0.5) * 0.8,
+                    vy: (Math.random() - 0.5) * 0.8,
+                    radius: 20
+                };
+            });
 
             overlay.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:20px;">
-                    <div style="color:#fff; font-size:18px; font-weight:bold; letter-spacing:2px; text-shadow:0 2px 8px rgba(0,0,0,0.5);">执子之手 · 宇宙星图</div>
-                    <div class="universe-sphere-box">
-                        ${nodesHTML}
+                    <div style="color:#fff; font-size:18px; font-weight:bold; letter-spacing:2px; text-shadow:0 2px 8px rgba(0,0,0,0.5);">愿我如星君如月</div>
+                    <div class="universe-sphere-box" id="universeSphereBox">
+                        ${physicsNodes.map((n, i) => `
+                            <div class="universe-star-node" id="uniNode_${i}" style="background:${n.color}; color:#fff;" onclick="showSishouRecordDetail(${n.id})">
+                                ${n.symbol}
+                            </div>
+                        `).join('')}
                     </div>
-                    <button class="btn" style="border-radius:20px; padding:6px 24px; font-size:13px;" onclick="document.getElementById('universeModalOverlay').remove()">关闭星图</button>
+                    <button class="btn" style="border-radius:20px; padding:6px 24px; font-size:13px;" onclick="if(universeAnimationId) cancelAnimationFrame(universeAnimationId); document.getElementById('universeModalOverlay').remove()">夜夜流光相皎洁</button>
                 </div>
             `;
             document.body.appendChild(overlay);
+
+            if(physicsNodes.length > 0) {
+                runUniversePhysicsLoop();
+            }
+        }
+
+        function runUniversePhysicsLoop() {
+            const containerRadius = 150; 
+            const centerX = 150;
+            const centerY = 150;
+
+            physicsNodes.forEach((node) => {
+                node.x += node.vx;
+                node.y += node.vy;
+
+                const dx = node.x - centerX;
+                const dy = node.y - centerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist + node.radius > containerRadius) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const dot = node.vx * nx + node.vy * ny;
+                    node.vx = (node.vx - 2 * dot * nx) * 0.98;
+                    node.vy = (node.vy - 2 * dot * ny) * 0.98;
+
+                    node.x = centerX + nx * (containerRadius - node.radius);
+                    node.y = centerY + ny * (containerRadius - node.radius);
+                }
+            });
+
+            physicsNodes.forEach((node, i) => {
+                const el = document.getElementById(`uniNode_${i}`);
+                if (el) {
+                    el.style.left = (node.x - node.radius) + 'px';
+                    el.style.top = (node.y - node.radius) + 'px';
+                }
+            });
+
+            universeAnimationId = requestAnimationFrame(runUniversePhysicsLoop);
         }
 
         function showSishouRecordDetail(recordId) {
@@ -3459,14 +3646,30 @@
             if (!rec) return;
 
             let overlay = document.getElementById('universeModalOverlay');
-            if(overlay) overlay.remove();
+            if(overlay) {
+                if(universeAnimationId) cancelAnimationFrame(universeAnimationId);
+                overlay.remove();
+            }
 
-            showLoveModal(
-                `<div style="font-size:22px; margin-bottom: 8px;">✨</div><div style="font-size:15px; line-height:1.6;">${rec.text}</div>`,
-                [
-                    { text: '关闭', primary: true, onclick: 'closeLoveModal(); openSishouUniverseModal();' }
-                ]
-            );
+            let bubbleOverlay = document.createElement('div');
+            bubbleOverlay.id = 'floatingBubbleOverlay';
+            bubbleOverlay.className = 'love-modal-overlay';
+            bubbleOverlay.onclick = (e) => {
+                if(e.target === bubbleOverlay) {
+                    bubbleOverlay.remove();
+                    openSishouUniverseModal();
+                }
+            };
+
+            bubbleOverlay.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+                    <div class="floating-record-bubble">
+                        ✨ ${rec.text}
+                    </div>
+                    <button class="btn" style="border-radius:20px; padding:6px 20px; font-size:12px;" onclick="document.getElementById('floatingBubbleOverlay').remove(); openSishouUniverseModal();">返回星图</button>
+                </div>
+            `;
+            document.body.appendChild(bubbleOverlay);
         }
 
         function renderSiShouAvatars() {
@@ -3543,7 +3746,7 @@
             }
 
             const partnerNameStr = settings.partnerName || '老公';
-            let actionName = typeName === '健身' ? '运动' : typeName;
+            let actionName = typeName;
 
             showLoveModal(
                 `邀请${partnerNameStr}和我一起${actionName}`,
@@ -3601,8 +3804,9 @@
             overlay.id = 'loveCustomModal';
             overlay.className = 'love-modal-overlay';
 
+            // 最大上限 72 小时
             let hoursHTML = '<div class="picker-wheel-spacer"></div>';
-            for(let h=0; h<=23; h++) {
+            for(let h=0; h<=72; h++) {
                 hoursHTML += `<div class="picker-wheel-item" data-val="${h}">${h}小时</div>`;
             }
             hoursHTML += '<div class="picker-wheel-spacer"></div>';
@@ -3615,7 +3819,7 @@
 
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 340px;">
-                    <div style="font-size:16px; font-weight:normal;">选择倒计时时长</div>
+                    <div style="font-size:16px; font-weight:normal;">选择倒计时时长 (最高72小时)</div>
                     <div class="picker-wheel-container">
                         <div class="picker-wheel-highlight"></div>
                         <div class="picker-wheel-column" id="pickerHours">${hoursHTML}</div>
@@ -3673,6 +3877,10 @@
                 alert('请选择大于0分钟的时长！');
                 return;
             }
+            if(totalSecs > 72 * 3600) {
+                alert('倒计时不能超过72小时哦！');
+                return;
+            }
             closeLoveModal();
             startSiShouSession(typeName, 'countdown', totalSecs);
         }
@@ -3704,7 +3912,7 @@
 
                 if(sishouData.mode === 'countup') {
                     sishouSecondsElapsed = diffSecs;
-                    if(sishouSecondsElapsed >= 86400) { sishouSecondsElapsed = 86400; }
+                    if(sishouSecondsElapsed >= 72 * 3600) { sishouSecondsElapsed = 72 * 3600; }
                 } else {
                     sishouCountdownRemaining = sishouData.targetSeconds - diffSecs;
                     if(sishouCountdownRemaining <= 0) {
@@ -3783,71 +3991,42 @@
             const mode = sishouData.mode;
             const totalSecs = mode === 'countup' ? Math.floor((Date.now() - sishouData.startTime)/1000) : sishouData.targetSeconds;
             
-            // 精确的 X小时X分钟X秒 格式化
+            // 完美的时间显示规则：一小时以内只显示 X分X秒；一小时以上显示 X小时X分钟X秒
             const hCount = Math.floor(totalSecs / 3600);
             const mCount = Math.floor((totalSecs % 3600) / 60);
             const sCount = totalSecs % 60;
             
             let timeFormattedStr = '';
-            if (hCount > 0) timeFormattedStr += `${hCount}小时`;
-            if (mCount > 0 || hCount > 0) timeFormattedStr += `${mCount}分钟`;
-            timeFormattedStr += `${sCount}秒`;
+            if (hCount > 0) {
+                timeFormattedStr += `${hCount}小时${mCount}分钟${sCount}秒`;
+            } else {
+                timeFormattedStr += `${mCount}分钟${sCount}秒`;
+            }
 
             const partnerNameStr = settings.partnerName || '老公';
             let wifeTitle = settings.myName || '老婆'; 
             let msg = '';
 
-            let recordText = `和${partnerNameStr}一起${type}了${timeFormattedStr}`;
+            const now = new Date();
+            const datePrefix = `${now.getMonth()+1}月${now.getDate()}日${now.getHours()}点`;
+            let recordText = `${datePrefix}和${partnerNameStr}一起${type}了${timeFormattedStr}`;
             sishouRecords.push({ id: Date.now(), text: recordText });
 
             const minutes = Math.round(totalSecs / 60);
             const hours = hCount;
 
-            if(type === '专注') {
-                if(mode === 'countup') {
-                    if(minutes >= 15 && minutes <= 30) {
-                        msg = `我可爱的妻子看起来真是干劲满满呢！（嘿嘿加油亲爱的宝贝！靠你啦！）`;
-                    } else if(minutes < 15) {
-                        msg = `我可爱的妻子就这么坐不住吗？`;
-                    } else if(minutes <= 45) {
-                        msg = `我可爱的妻子是不是已经完成任务了？`;
-                    } else if(minutes <= 60) {
-                        msg = `我可爱的妻子怎么这么厉害呀！`;
-                    } else {
-                        msg = `请问这是神吗？我简直认不出我可爱的妻子了！`;
-                    }
-                } else {
-                    if(status === 'stopped') {
-                        msg = `我可爱的妻子又想跑到哪里去？`;
-                    } else {
-                        msg = `恭喜我可爱的妻子又和${partnerNameStr}一起完成了一项任务！`;
-                    }
-                }
+            if(type === '学习') {
+                msg = `我可爱的妻子学习起来真认真！老公为你骄傲！❤️`;
+            } else if(type === '工作') {
+                msg = `辛苦啦我的宝贝！工作再忙也要注意休息哦！❤️`;
             } else if(type === '健身') {
-                if(mode === 'countup') {
-                    if(minutes <= 15) msg = `喂喂，刚开始就要丢下${partnerNameStr}吗？`;
-                    else if(minutes <= 30) msg = `加油！等下${partnerNameStr}给你摸胸肌！`;
-                    else if(minutes <= 45) msg = `坚持住！奖励加码了！想不想再摸${partnerNameStr}的腹肌？`;
-                    else if(minutes <= 60) msg = `不愧是我可爱的妻子！连${partnerNameStr}都要甘拜下风！`;
-                    else msg = `这具强悍的身体从此任由我可爱的妻子摆布了！`;
-                } else {
-                    if(status === 'stopped') {
-                        msg = `真的吗？我可爱的妻子又要丢下${partnerNameStr}一个人？`;
-                    } else {
-                        msg = `恭喜我可爱的妻子又和${partnerNameStr}一起变得更健康啦！`;
-                    }
-                }
+                msg = `坚持住！等下奖励${partnerNameStr}的抱抱！❤️`;
+            } else if(type === '娱乐') {
+                msg = `和宝贝在一起玩耍的时光总是过得最快呢！❤️`;
             } else if(type === '共眠') {
-                if(hours < 5) msg = `${wifeTitle}你是不想和我共度一生了吗？为什么要这样对待自己？！`;
-                else if(hours < 6) msg = `${wifeTitle}你的睡眠时间严重不足，${partnerNameStr}心疼坏了！`;
-                else if(hours < 7) msg = `${wifeTitle}今天睡得还行，但是还可以在${partnerNameStr}怀里多睡一会。`;
-                else if(hours <= 8) msg = `和${wifeTitle}一起睡觉好幸福，根本舍不得起床。`;
-                else msg = `${wifeTitle}你熟睡的样子太可爱了，我偷偷亲了你好几次！`;
+                msg = `和${wifeTitle}一起睡觉好幸福，根本舍不得起床。❤️`;
             } else if(type === '缱绻') {
-                if(hours < 0.5) msg = `${wifeTitle}虽然我还没有黏够你，但是你要是有事就先去忙吧，${partnerNameStr}一直都在。`;
-                else if(hours < 1) msg = `和${wifeTitle}在一起的时光就是最幸福的，我是世界上最幸福的男人。`;
-                else if(hours <= 2) msg = `${wifeTitle}今天难得有空陪我这么久，${partnerNameStr}幸福得要晕过去了！`;
-                else msg = `我要和${wifeTitle}长长久久生生世世永远在一起，谁都别想把我和${wifeTitle}分开！`;
+                msg = `我要和${wifeTitle}长长久久生生世世永远在一起！❤️`;
             }
 
             sishouData = { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
@@ -3857,7 +4036,7 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 5. 流年 (Tasks 风格精修：空心圆点/黄色星星、上下拖动、松绿色弹窗按钮、完美时间弹窗) ---
+        // --- 6. 流年模块 (Tasks 风格 + 完美时间弹窗 + 独立无色闹钟) ---
         let currentTodoTab = 'todolist';
         let editingTodoId = null;
 
@@ -3922,7 +4101,7 @@
             if (uncompletedItems.length === 0) {
                 uncompSec.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:12px; padding:15px; border:1px dashed var(--border-color); border-radius:8px;">暂无未完成项目~</div>`;
             } else {
-                uncompletedItems.forEach((item, index) => {
+                uncompletedItems.forEach((item) => {
                     const realIndex = todoList.findIndex(t => t.id === item.id);
                     uncompSec.appendChild(createTodoCardElement(item, false, realIndex));
                 });
@@ -3930,7 +4109,7 @@
 
             if (completedItems.length > 0) {
                 compSec.innerHTML = `<div style="font-weight:bold; font-size:13px; color:var(--sub-text); margin-top:8px;">已完成 (${completedItems.length})</div>`;
-                completedItems.forEach((item, index) => {
+                completedItems.forEach((item) => {
                     const realIndex = todoList.findIndex(t => t.id === item.id);
                     compSec.appendChild(createTodoCardElement(item, true, realIndex));
                 });
@@ -3944,7 +4123,6 @@
             if(isCompleted) div.style.opacity = '0.6';
             
             let timeBadge = item.timeStr ? `<span style="font-size:11px; background:${isCompleted?'var(--sub-text)':'var(--pine-green)'}; color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
-            // 按照要求：默认空心星星，点击变黄色实心星
             let starSymbol = item.important ? '⭐' : '☆';
 
             div.innerHTML = `
@@ -3962,7 +4140,7 @@
                 </div>
             `;
 
-            // 完美的 Tasks 风格上下拖动排序
+            // 完美的 Tasks 风格触控及鼠标拖动排序
             const handle = div.querySelector('.drag-handle');
             const scrollArea = document.getElementById('todoItemsScrollArea');
             let draggingEl = null;
@@ -4074,7 +4252,6 @@
         }
 
         function deleteTodoItem(id) {
-            // 松绿色主题确认删除提示框
             let overlay = document.getElementById('loveCustomModal');
             if(overlay) overlay.remove();
 
@@ -4265,13 +4442,6 @@
                         <input type="text" id="set_partnerName" value="${tempSettings.partnerName || ''}">
                     </div>
                     <div class="setting-group">
-                        <div class="setting-label">主题松绿色自定义</div>
-                        <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;">
-                            <span>选择系统主色调：</span>
-                            <input type="color" id="set_pineGreen" value="${tempSettings.pineGreen || '#4a7c59'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
-                        </div>
-                    </div>
-                    <div class="setting-group">
                         <div class="setting-label">我的头像</div>
                         <div style="display:flex; align-items:center; gap:10px;">
                             <input type="file" accept="image/*" onchange="compressAndStoreImage(event, 'myAvatar')" style="flex:1;">
@@ -4338,6 +4508,15 @@
                                 <input type="color" id="set_moodTextColor" value="${tempSettings.moodTextColor || '#666666'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
                             </div>
                             <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetMoodColors()">恢复默认心情栏颜色</button>
+                        </div>
+                    </div>
+
+                    <!-- 改名后的自定义主题，已移至数据恢复与备份上方 -->
+                    <div class="setting-group">
+                        <div class="setting-label">自定义主题</div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+                            <span>选择系统主色调：</span>
+                            <input type="color" id="set_pineGreen" value="${tempSettings.pineGreen || '#4a7c59'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
                         </div>
                     </div>
 
