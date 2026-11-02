@@ -1013,6 +1013,9 @@
 
         let sishouData = JSON.parse(localStorage.getItem('sishouData')) || { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
         let sishouRecords = JSON.parse(localStorage.getItem('sishouRecordsData')) || [];
+        let sishouCategoryTotals = JSON.parse(localStorage.getItem('sishouCategoryTotalsData')) || {
+            '学习': 0, '工作': 0, '运动': 0, '放松': 0, '共眠': 0, '缱绻': 0
+        };
 
         let settings = JSON.parse(localStorage.getItem('siteSettings')) || {
             fontSize: '15px',
@@ -1059,6 +1062,7 @@
                 localStorage.setItem('todoListData', JSON.stringify(todoList));
                 localStorage.setItem('sishouData', JSON.stringify(sishouData));
                 localStorage.setItem('sishouRecordsData', JSON.stringify(sishouRecords));
+                localStorage.setItem('sishouCategoryTotalsData', JSON.stringify(sishouCategoryTotals));
                 localStorage.setItem('siteSettings', JSON.stringify(settings));
                 localStorage.setItem('annivCheckInData', JSON.stringify(annivCheckInData));
             } catch (e) {
@@ -2383,8 +2387,8 @@
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${partnerNameStr}：</div>
                     <textarea id="heartCommentInputText" placeholder="写下你的评论..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmPostComment(${momentId})">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmPostComment(${momentId})">好</button>
                     </div>
                 </div>
             `;
@@ -2437,8 +2441,8 @@
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${targetAuthor}：</div>
                     <textarea id="heartSubCommentInputText" placeholder="写下你的回复..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmPostSubComment(${momentId}, ${commentId})">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmPostSubComment(${momentId}, ${commentId})">好</button>
                     </div>
                 </div>
             `;
@@ -2987,8 +2991,8 @@
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">给他的信写回信：</div>
                     <textarea id="modalLetterReplyInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmReplyToPartnerLetter(${id})">确定</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmReplyToPartnerLetter(${id})">好</button>
                     </div>
                 </div>
             `;
@@ -3042,8 +3046,8 @@
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回信：</div>
                     <textarea id="modalLetterContinueInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmContinueReplyLetter(${id})">确定</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmContinueReplyLetter(${id})">好</button>
                     </div>
                 </div>
             `;
@@ -3383,8 +3387,8 @@
                         <input type="date" id="modalAnnivDate" value="${todayStr}" style="width:100%; box-sizing:border-box;">
                     </div>
                     <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmAddAnniversary()">确定</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmAddAnniversary()">好</button>
                     </div>
                 </div>
             `;
@@ -3676,7 +3680,16 @@
             }
 
             const categories = ['学习', '工作', '运动', '放松', '共眠', '缱绻'];
-            const symbols = ['⭐', '🌙', '⭐', '🌙', '⭐', '🌙'];
+            // 设定六个分类的星星与月亮交替符号
+            const categorySymbols = {
+                '学习': '⭐',
+                '工作': '🌙',
+                '运动': '⭐',
+                '放松': '🌙',
+                '共眠': '⭐',
+                '缱绻': '🌙'
+            };
+
             const macaronColors = [
                 'rgba(235, 150, 160, 0.4)', // 低饱和红
                 'rgba(240, 200, 140, 0.4)', // 低饱和黄
@@ -3685,17 +3698,6 @@
                 'rgba(190, 165, 220, 0.4)', // 低饱和靛
                 'rgba(220, 165, 205, 0.4)'  // 低饱和紫
             ];
-
-            const categoryTotals = {};
-            categories.forEach(cat => categoryTotals[cat] = 0);
-
-            sishouRecords.forEach(rec => {
-                categories.forEach(cat => {
-                    if (rec.text.includes(cat)) {
-                        categoryTotals[cat] += (rec.durationSeconds || 0);
-                    }
-                });
-            });
 
             let overlayModal = document.createElement('div');
             overlayModal.id = 'universeModalOverlay';
@@ -3713,10 +3715,11 @@
                 const x = 150 + radius * Math.cos(angle) - 30;
                 const y = 150 + radius * Math.sin(angle) - 30;
                 const bgCol = macaronColors[idx];
-                const sym = symbols[idx];
+                const sym = categorySymbols[cat];
+                const totalSecs = sishouCategoryTotals[cat] || 0;
 
                 nodesHTML += `
-                    <div class="macaron-heart-node" style="left:${x}px; top:${y}px; background:${bgCol};" onclick="showCategoryTotalTime('${cat}', ${categoryTotals[cat]})">
+                    <div class="macaron-heart-node" style="left:${x}px; top:${y}px; background:${bgCol};" onclick="showCategoryTotalTime('${cat}', ${totalSecs}, '${sym}')">
                         <span style="font-size:14px; line-height:1; margin-bottom:2px;">${sym}</span>
                         <span style="font-size:11px; font-weight:normal;">${cat}</span>
                     </div>
@@ -3734,7 +3737,7 @@
             document.body.appendChild(overlayModal);
         }
 
-        function showCategoryTotalTime(categoryName, totalSecs) {
+        function showCategoryTotalTime(categoryName, totalSecs, symbol) {
             const partnerNameStr = settings.partnerName || '老公';
             const h = Math.floor(totalSecs / 3600);
             const m = Math.floor((totalSecs % 3600) / 60);
@@ -3746,8 +3749,7 @@
             timeStr += `${s}秒`;
             if (totalSecs === 0) timeStr = '0秒';
 
-            const starSymbol = Math.random() < 0.5 ? '⭐' : '🌙';
-            let msgText = `${starSymbol} 和${partnerNameStr}一起${categoryName}的时间总计${timeStr}`;
+            let msgText = `${symbol} 和${partnerNameStr}一起${categoryName}的时间总计${timeStr}`;
 
             let overlay = document.createElement('div');
             overlay.className = 'universe-modal-overlay';
@@ -3857,7 +3859,6 @@
             overlay.id = 'loveCustomModal';
             overlay.className = 'love-modal-overlay';
             
-            // 点击背景空白处关闭弹窗并返回“夜夜流光相皎洁”界面
             overlay.onclick = (e) => {
                 if (e.target === overlay) {
                     closeLoveModal();
@@ -3869,7 +3870,7 @@
             if (buttonsArray && buttonsArray.length > 0) {
                 buttonsArray.forEach(btn => {
                     let btnBg = btn.primary ? 'var(--pine-green)' : 'var(--bg-color)';
-                    let btnColor = btn.primary ? '#ffffff' : 'var(--text-color)';
+                    let btnColor = btn.primary ? '#ffffff' : 'var(--pine-green)';
                     buttonsHTML += `<button class="btn" style="flex:1; background:${btnBg}; color:${btnColor}; border:1px solid var(--border-color); padding:10px; border-radius:10px; font-weight:bold;" onclick="${btn.onclick}">${btn.text}</button>`;
                 });
             }
@@ -3956,9 +3957,6 @@
                 if (e.target === overlay) closeLoveModal();
             };
 
-            const now = new Date();
-            const defaultDateStr = now.toISOString().slice(0, 10);
-
             let hoursHTML = '<div class="picker-wheel-spacer"></div>';
             for(let h=0; h<=72; h++) {
                 hoursHTML += `<div class="picker-wheel-item" data-val="${h}">${h}小时</div>`;
@@ -3980,7 +3978,7 @@
                         <div class="picker-wheel-column" id="pickerMins">${minsHTML}</div>
                     </div>
                     <div class="love-modal-buttons" style="width:100%; box-sizing:border-box;">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:10px; border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); padding:10px; border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmTimePicker('${typeName}')">确定</button>
                     </div>
                 </div>
@@ -4141,7 +4139,6 @@
             const totalSecs = mode === 'countup' ? Math.floor((Date.now() - sishouData.startTime)/1000) : (sishouData.targetSeconds - sishouCountdownRemaining);
             const totalSecsFinal = mode === 'countup' ? totalSecs : sishouData.targetSeconds;
 
-            // 放松模块倒计时未结束就按停止的特殊文案
             if (status === 'stopped' && mode === 'countdown' && type === '放松') {
                 sishouData = { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
                 saveData();
@@ -4173,20 +4170,32 @@
             if (totalSecsFinal === 0) timeFormattedStr = '0秒';
 
             const partnerNameStr = settings.partnerName || '老公';
-            const starSymbol = Math.random() < 0.5 ? '⭐' : '🌙';
             
-            let msg = `${starSymbol} 和${partnerNameStr}一起${type}的时间总计${timeFormattedStr}`;
-            let recordText = `${starSymbol} 和${partnerNameStr}一起${type}的时间总计${timeFormattedStr}`;
+            // 六个模块星星与月亮交替固定符号
+            const categorySymbols = {
+                '学习': '⭐',
+                '工作': '🌙',
+                '运动': '⭐',
+                '放松': '🌙',
+                '共眠': '⭐',
+                '缱绻': '🌙'
+            };
+            const symbol = categorySymbols[type] || '⭐';
             
-            // 记录到陪伴统计星图中（正计时与倒计时均统一计入）
+            let recordText = `${symbol} 和${partnerNameStr}一起${type}的时间总计${timeFormattedStr}`;
+            
+            // 存入分类独立总计时，不依赖记录小球是否存在
+            if (!sishouCategoryTotals[type]) sishouCategoryTotals[type] = 0;
+            sishouCategoryTotals[type] += totalSecsFinal;
+
             sishouRecords.push({ id: Date.now(), text: recordText, durationSeconds: totalSecsFinal });
 
             const totalMins = totalSecsFinal / 60;
             const totalHours = totalSecsFinal / 3600;
 
-            if (type === '学习' || type === '工作' || type === '运动') {
-                // 使用标准统计文案
-            } else if (type === '放松') {
+            let msg = recordText;
+
+            if (type === '放松') {
                 if (mode === 'countdown' && status === 'completed') {
                     msg = '幸福的时光总是那么短暂，但我们以后还会有很多很多幸福。';
                 } else {
@@ -4204,7 +4213,7 @@
                 else msg = '老婆你熟睡的样子太可爱了，我偷偷亲了你好几次！';
             } else if (type === '缱绻') {
                 if (totalMins <= 30) msg = '老婆虽然我还没有黏够你，但是你要是有事就先去忙吧，老公一直都在。';
-                else if (totalMins <= 60) msg = '和老婆在一起的时光就是最幸福的，我是世界上最幸福的男人。';
+                else if (totalMins <= 60) msg = '和老公在一起的时光就是最幸福的，我是世界上最幸福的男人。';
                 else if (totalMins <= 120) msg = '老婆今天难得有空陪我这么久，老公幸福得要晕过去了！';
                 else msg = '我要和老婆生生世世永远在一起，谁都别想把我和老婆分开！';
             }
@@ -4235,6 +4244,12 @@
 
         function renderTodoMainPage(container) {
             if(!Array.isArray(todoList)) todoList = [];
+            
+            // 修正旧数据中 category 缺失的问题
+            todoList.forEach(t => {
+                if (!t.category) t.category = 'todolist';
+            });
+
             const uncompletedTodo = todoList.filter(t => !t.completed && t.category !== 'wish');
             const completedTodo = todoList.filter(t => t.completed && t.category !== 'wish');
             const uncompletedWish = todoList.filter(t => !t.completed && t.category === 'wish');
@@ -4426,7 +4441,7 @@
                         <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     </div>
                     <div class="love-modal-buttons" style="margin-top:4px; width:100%; box-sizing:border-box;">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmAddTodoItem()">确定</button>
                     </div>
                 </div>
@@ -4548,7 +4563,7 @@
                         </div>
                     </div>
                     <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmTaskDateTimePicker(${id})">确定</button>
                     </div>
                 </div>
@@ -4809,7 +4824,7 @@
         }
 
         function exportData() {
-            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, todoList, sishouData, sishouRecords, settings, annivCheckInData };
+            const backupData = { cardLibrary, actionLibrary, chatMessages, letters, anniversaries, heartMoments, todoList, sishouData, sishouRecords, sishouCategoryTotals, settings, annivCheckInData };
             const jsonString = JSON.stringify(backupData, null, 2);
             
             const blob = new Blob([jsonString], { type: 'application/json' });
@@ -4841,6 +4856,7 @@
                     if (imported.todoList) todoList = imported.todoList;
                     if (imported.sishouData) sishouData = imported.sishouData;
                     if (imported.sishouRecords) sishouRecords = imported.sishouRecords;
+                    if (imported.sishouCategoryTotals) sishouCategoryTotals = imported.sishouCategoryTotals;
                     if (imported.settings) settings = imported.settings;
                     if (imported.annivCheckInData) annivCheckInData = imported.annivCheckInData;
                     saveData();
