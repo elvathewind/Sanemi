@@ -215,6 +215,7 @@
             text-align: center;
             font-weight: bold;
             margin-right: 24px;
+            color: var(--text-color);
         }
 
         .sub-page-content {
@@ -227,15 +228,17 @@
             width: 100%;
             max-width: 100%;
             overflow-x: hidden;
+            color: var(--text-color);
         }
 
+        /* 修复输入框样式，确保文本不丢失且不溢出 */
         input, textarea, select {
             width: 100% !important;
             max-width: 100% !important;
-            padding: 10px 12px;
-            background: none;
+            padding: 8px 10px;
+            background: var(--card-bg);
             border: 1px solid var(--border-color);
-            color: var(--text-color);
+            color: var(--text-color) !important;
             border-radius: 8px;
             outline: none;
             box-sizing: border-box !important;
@@ -250,12 +253,13 @@
         .btn {
             padding: 10px 16px;
             background-color: var(--pine-green);
-            color: #ffffff;
+            color: #ffffff !important;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             text-align: center;
             box-sizing: border-box;
+            font-size: var(--font-size);
         }
 
         .chat-container {
@@ -659,6 +663,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: var(--text-color);
         }
 
         @keyframes bubbleSlowRise {
@@ -714,6 +719,7 @@
             max-width: 100%;
             box-sizing: border-box;
             overflow: hidden;
+            color: var(--text-color);
         }
 
         @keyframes clockShake {
@@ -760,12 +766,15 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             margin: auto;
             overflow: hidden;
+            color: var(--text-color);
         }
         .love-modal-card input, .love-modal-card textarea, .love-modal-card select {
             width: 100% !important;
             max-width: 100% !important;
             box-sizing: border-box !important;
             margin: 0 !important;
+            color: var(--text-color) !important;
+            background: var(--card-bg) !important;
         }
         .love-modal-text {
             font-size: 16px;
@@ -781,7 +790,12 @@
             width: 100%;
             box-sizing: border-box;
         }
-        .love-modal-buttons .btn:not([style*="background: var(--pine-green)"]) {
+        /* 修复弹窗按钮文字颜色，防止丢失 */
+        .love-modal-buttons .btn {
+            color: #ffffff !important;
+        }
+        .love-modal-buttons .btn[style*="background:var(--bg-color)"], 
+        .love-modal-buttons .btn[style*="background: var(--bg-color)"] {
             color: var(--pine-green) !important;
         }
 
@@ -1445,7 +1459,7 @@
                     ${callPlaceholderHTML}
                     <div style="display:flex; gap:12px; margin-top:10px; position:relative; z-index:2; justify-content:center; align-items:center; width:100%;">
                         <button class="btn" style="padding:5px 14px; font-size:12px; border-radius:16px;" onclick="acceptCall()">接受</button>
-                        <button class="btn" style="background:#b88887; color:#fff; padding:5px 14px; font-size:12px; border-radius:16px;" onclick="closeVideoModal()">拒绝</button>
+                        <button class="btn" style="background:#b88887; color:#fff !important; padding:5px 14px; font-size:12px; border-radius:16px;" onclick="closeVideoModal()">拒绝</button>
                     </div>
                 `;
             } else if (currentCallStatus === 'connected') {
@@ -2319,7 +2333,7 @@
                 const authorAvatar = moment.author === 'user' ? settings.myAvatar : settings.partnerAvatar;
 
                 const card = document.createElement('div');
-                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; width:100%; box-sizing:border-box; ${moment.isPinned ? 'border-color: var(--pine-green);' : ''}`;
+                card.style.cssText = `border:1px solid var(--border-color); padding:10px; border-radius:8px; background:var(--bg-color); display:flex; flex-direction:column; gap:6px; width:100%; box-sizing:border-box; color:var(--text-color); ${moment.isPinned ? 'border-color: var(--pine-green);' : ''}`;
                 
                 let pinTag = moment.isPinned ? `<span style="font-size:10px; background:var(--pine-green); color:#fff; padding:1px 4px; border-radius:4px; margin-right:4px;">置顶</span>` : '';
 
@@ -2333,7 +2347,7 @@
                     </div>
                 `;
 
-                let textHTML = moment.content ? `<div style="font-size:var(--font-size); word-break:break-all; padding-left:36px;">${moment.content}</div>` : '';
+                let textHTML = moment.content ? `<div style="font-size:var(--font-size); word-break:break-all; padding-left:36px; color:var(--text-color);">${moment.content}</div>` : '';
                 let imgHTML = moment.image ? `<div style="padding-left:36px; margin-top:4px;"><img src="${moment.image}" style="max-width:140px; max-height:140px; border-radius:6px; border:1px solid var(--border-color); object-fit:cover;"></div>` : '';
 
                 let likesHTML = '';
@@ -2351,9 +2365,9 @@
                             });
                         }
                         commentsHTML += `
-                            <div style="font-size:var(--font-size); line-height:1.4; background:rgba(120,120,120,0.06); padding:6px; border-radius:6px;">
+                            <div style="font-size:var(--font-size); line-height:1.4; background:rgba(120,120,120,0.06); padding:6px; border-radius:6px; color:var(--text-color);">
                                 <div style="cursor:pointer;" onclick="replyToComment(${moment.id}, ${com.id}, '${com.author}')">
-                                    <strong style="font-weight:bold;">${com.author}:</strong> ${com.text}
+                                    <strong style="font-weight:bold; color:var(--text-color);">${com.author}:</strong> ${com.text}
                                 </div>
                                 ${repliesListHTML}
                             </div>
@@ -2581,7 +2595,7 @@
                 updateMoodList();
             } else if (currentLibTab === 'emojis') {
                 area.innerHTML = `
-                    <div style="font-weight:bold; font-size:13px;">表情包库管理：</div>
+                    <div style="font-weight:bold; font-size:13px; color:var(--text-color);">表情包库管理：</div>
                     <input type="file" id="emojiFileInput" accept="image/*" multiple onchange="uploadEmojisFromLib(event)">
                     <div style="font-size:11px; color:var(--sub-text);" id="emojiCountIndicator">已添加 ${settings.emojis ? settings.emojis.length : 0} 个表情：</div>
                     <div id="itemContainer" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:8px; padding-bottom:20px; width:100%;"></div>
@@ -2599,9 +2613,9 @@
             
             filteredList.forEach(card => {
                 const item = document.createElement('div');
-                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); width:100%; box-sizing:border-box;";
+                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); width:100%; box-sizing:border-box; color:var(--text-color);";
                 item.innerHTML = `
-                    <div style="flex:1; padding-right:8px; word-break:break-all;">${card.content}</div>
+                    <div style="flex:1; padding-right:8px; word-break:break-all; color:var(--text-color);">${card.content}</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editCard(${card.id})">修改</button>
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteCard(${card.id})">删除</button>
@@ -2664,9 +2678,9 @@
             
             filteredList.forEach(act => {
                 const item = document.createElement('div');
-                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); width:100%; box-sizing:border-box;";
+                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); width:100%; box-sizing:border-box; color:var(--text-color);";
                 item.innerHTML = `
-                    <div style="flex:1; padding-right:8px; word-break:break-all;">♥${act.content}♥</div>
+                    <div style="flex:1; padding-right:8px; word-break:break-all; color:var(--text-color);">♥${act.content}♥</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAction(${act.id})">修改</button>
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteAction(${act.id})">删除</button>
@@ -2741,9 +2755,9 @@
             
             arr.forEach((moodText, index) => {
                 const item = document.createElement('div');
-                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); width:100%; box-sizing:border-box;";
+                item.style.cssText = "border:1px solid var(--border-color); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); width:100%; box-sizing:border-box; color:var(--text-color);";
                 item.innerHTML = `
-                    <div style="flex:1; padding-right:8px; word-break:break-all;">${moodText}</div>
+                    <div style="flex:1; padding-right:8px; word-break:break-all; color:var(--text-color);">${moodText}</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editMood(${index})">修改</button>
                         <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteMood(${index})">删除</button>
@@ -2817,7 +2831,7 @@
 
             emojis.forEach((imgBase64, index) => {
                 const item = document.createElement('div');
-                item.style.cssText = "border:1px solid var(--border-color); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); width:100%; box-sizing:border-box;";
+                item.style.cssText = "border:1px solid var(--border-color); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-color); width:100%; box-sizing:border-box; color:var(--text-color);";
                 item.innerHTML = `
                     <div style="display:flex; align-items:center; gap:10px;">
                         <img src="${imgBase64}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
@@ -2881,7 +2895,7 @@
                 </div>
                 <div style="padding:10px; display:flex; flex-direction:column; gap:10px; width:100%; box-sizing:border-box;">
                     <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 180px; max-height: 250px; width:100%; box-sizing:border-box;"></textarea>
-                    <button class="btn" style="width:100%;" onclick="sendLetter()">寄出信件</button>
+                    <button class="btn" style="width:100%;">寄出信件</button>
                 </div>
                 <div style="font-size:12px; color:var(--sub-text); padding:0 10px; margin-top:4px;">我寄出的所有信件：</div>
                 <div id="letterTabContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:10px; overflow-y:auto; position:relative; width:100%; box-sizing:border-box;"></div>
@@ -3210,7 +3224,7 @@
             sortedLetters.forEach(item => {
                 const div = document.createElement('div');
                 div.id = `letter-item-${item.id}`;
-                div.style.cssText = "margin: 0; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s; width:100%; box-sizing:border-box;";
+                div.style.cssText = "margin: 0; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s; width:100%; box-sizing:border-box; color:var(--text-color);";
                 
                 let heartColor = '';
                 let topTimeText = '';
@@ -3227,14 +3241,14 @@
                                 <div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">
                                     <div style="font-size:11px; color:var(--sub-text); margin-bottom:2px;">回信时间: ${item.partnerReplyActualTime || item.partnerEstTime}</div>
                                     <strong>他的回信：</strong>
-                                    <div style="max-height: 240px; overflow-y: auto; margin-top: 4px; white-space: pre-wrap;">${item.partnerReplyContent}</div>
+                                    <div style="max-height: 240px; overflow-y: auto; margin-top: 4px; white-space: pre-wrap; color:var(--text-color);">${item.partnerReplyContent}</div>
                                 </div>
                             `;
                         } else {
                             partnerReplyHTML = `
                                 <div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">
                                     <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.myReplyTime} | 预计回信时间: ${item.partnerEstTime || '8到12小时之内'}</div>
-                                    <div style="margin-top:4px;"><strong>我的回信:</strong> ${item.myReplyToPartner}</div>
+                                    <div style="margin-top:4px; color:var(--text-color);"><strong>我的回信:</strong> ${item.myReplyToPartner}</div>
                                 </div>
                             `;
                         }
@@ -3255,7 +3269,7 @@
                     heartColor = '#ff8787';
                     topTimeText = `寄出时间: ${item.time} | 预计回信时间: ${item.estTime || '8到12小时之内'}`;
                     cardContentHTML = `
-                        <div><strong>我:</strong> ${item.myLetter}</div>
+                        <div style="color:var(--text-color);"><strong>我:</strong> ${item.myLetter}</div>
                         <div style="font-size:12px; color:var(--sub-text); font-style:italic; border-top:1px dashed var(--border-color); padding-top:6px;">真羡慕这封信，可以比我更早见到你</div>
                     `;
                 } else {
@@ -3271,18 +3285,18 @@
                                     <div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">
                                         <div style="font-size:11px; color:var(--sub-text); margin-bottom:2px;">回信时间: ${cr.replyTime || cr.estTime}</div>
                                         <strong>他的回信：</strong>
-                                        <div style="white-space:pre-wrap; margin-top:2px;">${cr.replyContent}</div>
+                                        <div style="white-space:pre-wrap; margin-top:2px; color:var(--text-color);">${cr.replyContent}</div>
                                     </div>
                                 `;
                             } else {
                                 crReplyBlock = `
                                     <div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">
                                         <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${cr.time} | 预计回信时间: ${cr.estTime || '8到12小时之内'}</div>
-                                        <div style="margin-top:2px;"><strong>回信:</strong> ${cr.text}</div>
+                                        <div style="margin-top:2px; color:var(--text-color);"><strong>回信:</strong> ${cr.text}</div>
                                     </div>
                                 `;
                             }
-                            continuationHTML += `<div style="margin-top:4px; background:rgba(120,120,120,0.04); padding:6px; border-radius:6px;">${crReplyBlock}</div>`;
+                            continuationHTML += `<div style="margin-top:4px; background:rgba(120,120,120,0.04); padding:6px; border-radius:6px; color:var(--text-color);">${crReplyBlock}</div>`;
                         });
                     }
 
@@ -3296,10 +3310,10 @@
                     ` : '';
 
                     cardContentHTML = `
-                        <div><strong>我:</strong> ${item.myLetter}</div>
+                        <div style="color:var(--text-color);"><strong>我:</strong> ${item.myLetter}</div>
                         <div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
                             <strong>回信：</strong>
-                            <div style="max-height: 240px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap;">${item.reply}</div>
+                            <div style="max-height: 240px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap; color:var(--text-color);">${item.reply}</div>
                         </div>
                         ${continuationHTML}
                         ${continueBtnHTML}
@@ -3389,10 +3403,10 @@
                                 <div style="width:72px; height:72px; border-radius:50%; border:2px solid var(--border-color); overflow:hidden; background:var(--app-icon-bg); display:flex; align-items:center; justify-content:center; position:relative; left:-24px; z-index:1;">${partnerAvatarImg}</div>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:8px;">
-                                <button class="btn" style="padding:6px 14px; font-size:12px; background:${myChecked ? '#829e8d' : 'var(--pine-green)'}; color:#fff; border-radius:16px;" onclick="handleMyCheckIn()">
+                                <button class="btn" style="padding:6px 14px; font-size:12px; background:${myChecked ? '#829e8d' : 'var(--pine-green)'}; color:#fff !important; border-radius:16px;" onclick="handleMyCheckIn()">
                                     ${myChecked ? `${myNameStr}今日已打卡` : `${myNameStr}今日未打卡`}
                                 </button>
-                                <button class="btn" style="padding:6px 14px; font-size:12px; background:${partnerChecked ? '#829e8d' : 'var(--sub-text)'}; color:#fff; border-radius:16px; cursor:default;" disabled>
+                                <button class="btn" style="padding:6px 14px; font-size:12px; background:${partnerChecked ? '#829e8d' : 'var(--sub-text)'}; color:#fff !important; border-radius:16px; cursor:default;" disabled>
                                     ${partnerChecked ? `${partnerNameStr}今日已打卡` : `${partnerNameStr}今日未打卡`}
                                 </button>
                             </div>
@@ -3403,7 +3417,7 @@
                     </div>
 
                     <div style="display:flex; flex-direction:column; gap:6px;">
-                        <button class="btn" style="background:var(--pine-green); color:#ffffff; width:100%; text-align:center; padding:12px; border-radius:8px; cursor:pointer; font-weight:normal;" onclick="openAddAnniversaryModal()">花前月下，好景良辰</button>
+                        <button class="btn" style="background:var(--pine-green); color:#ffffff !important; width:100%; text-align:center; padding:12px; border-radius:8px; cursor:pointer; font-weight:normal;" onclick="openAddAnniversaryModal()">花前月下，好景良辰</button>
                     </div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:20px; width:100%;" id="anniversaryContainer"></div>
                 </div>
@@ -3423,14 +3437,14 @@
 
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align:left; margin:auto; box-sizing:border-box;">
-                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">添加纪念日</div>
+                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px; color:var(--text-color);">添加纪念日</div>
                     <div style="display:flex; flex-direction:column; gap:8px; width:100%; box-sizing:border-box;">
                         <input type="text" id="modalAnnivName" placeholder="纪念日名称 (例如: 第一次约会)" style="width:100%; box-sizing:border-box;">
                         <input type="date" id="modalAnnivDate" value="${todayStr}" style="width:100%; box-sizing:border-box;">
                     </div>
                     <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmAddAnniversary()">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmAddAnniversary()">好</button>
                     </div>
                 </div>
             `;
@@ -3478,8 +3492,8 @@
                 <div class="love-modal-card">
                     <div class="love-modal-text">确定要删除这个良辰纪念日吗？</div>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmDeleteAnniversary(${id})">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmDeleteAnniversary(${id})">好</button>
                     </div>
                 </div>
             `;
@@ -3554,12 +3568,12 @@
                     <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden;">
                         <span style="color:#888888; font-size:16px; cursor:grab; line-height:1; user-select:none;" title="长按拖动排序">≡</span>
                         <div style="flex:1; overflow:hidden; padding-right:8px;">
-                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-color);">${item.name}</div>
                             <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
+                        <div style="font-size:14px; text-align:right; color:var(--text-color);">${label}<br><strong style="font-size:16px; color:var(--text-color);">${diffDays}</strong> 天</div>
                         <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color); cursor:pointer;" onclick="editAnniversary(${item.id})">修改</button>
                         <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color); cursor:pointer;" onclick="deleteAnniversary(${item.id})">删除</button>
                     </div>
@@ -3585,12 +3599,12 @@
                     </div>
 
                     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;">
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('学习')">学习</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('工作')">工作</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('运动')">运动</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('放松')">放松</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('共眠')">共眠</button>
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('缱绻')">缱绻</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color) !important; border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('学习')">学习</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color) !important; border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('工作')">工作</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color) !important; border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('运动')">运动</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color) !important; border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('放松')">放松</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color) !important; border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('共眠')">共眠</button>
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color) !important; border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('缱绻')">缱绻</button>
                     </div>
 
                     <div id="sishouActiveArea" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--border-color); border-radius:12px; background:var(--bg-color); padding:10px; margin-top:4px; width:100%;"></div>
@@ -3912,7 +3926,7 @@
                 buttonsArray.forEach(btn => {
                     let btnBg = btn.primary ? 'var(--pine-green)' : 'var(--bg-color)';
                     let btnColor = btn.primary ? '#ffffff' : 'var(--pine-green)';
-                    buttonsHTML += `<button class="btn" style="flex:1; background:${btnBg}; color:${btnColor}; border:1px solid var(--border-color); padding:10px; border-radius:10px; font-weight:bold;" onclick="${btn.onclick}">${btn.text}</button>`;
+                    buttonsHTML += `<button class="btn" style="flex:1; background:${btnBg}; color:${btnColor} !important; border:1px solid var(--border-color); padding:10px; border-radius:10px; font-weight:bold;" onclick="${btn.onclick}">${btn.text}</button>`;
                 });
             }
 
@@ -4019,7 +4033,7 @@
                         <div class="picker-wheel-column" id="pickerMins">${minsHTML}</div>
                     </div>
                     <div class="love-modal-buttons" style="width:100%; box-sizing:border-box;">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); padding:10px; border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); padding:10px; border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmTimePicker('${typeName}')">确定</button>
                     </div>
                 </div>
@@ -4146,8 +4160,8 @@
             }
 
             area.innerHTML = `
-                <div style="font-size:14px; font-weight:bold;">正在${sishouData.type}中</div>
-                <div id="sishouTimerClockBox" style="font-size:38px; font-weight:bold; font-family:monospace; margin:4px 0;">${hrs}:${mins}:${secs}</div>
+                <div style="font-size:14px; font-weight:bold; color:var(--text-color);">正在${sishouData.type}中</div>
+                <div id="sishouTimerClockBox" style="font-size:38px; font-weight:bold; font-family:monospace; margin:4px 0; color:var(--text-color);">${hrs}:${mins}:${secs}</div>
                 ${controlsHTML}
             `;
         }
@@ -4251,7 +4265,7 @@
                 else if (totalHours < 8) msg = '和老婆一起睡觉好幸福，根本舍不得起床。';
                 else msg = '老婆你熟睡的样子太可爱了，我偷偷亲了你好几次！';
             } else if (type === '缱绻') {
-                if (totalMins <= 30) msg = '老婆虽然我还没有黏够你，但是你要是有事就先去忙吧，老公一直都在。';
+                if (totalMins <= 30) msg = '老婆虽然我还没有黏够你，但是你要是有事就先去忙吧k，老公一直都在。';
                 else if (totalMins <= 60) msg = '和老公在一起的时光就是最幸福的，我是世界上最幸福的男人。';
                 else if (totalMins <= 120) msg = '老婆今天难得有空陪我这么久，老公幸福得要晕过去了！';
                 else msg = '我要和老婆生生世世永远在一起，谁都别想把我和老婆分开！';
@@ -4443,8 +4457,8 @@
                 <div class="love-modal-card">
                     <div class="love-modal-text">确定要删除这条${itemTypeLabel}吗？</div>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmDeleteTodo(${id})">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmDeleteTodo(${id})">好</button>
                     </div>
                 </div>
             `;
@@ -4474,13 +4488,13 @@
 
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align:left; margin:auto; box-sizing:border-box;">
-                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:4px;">${tabName}</div>
+                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:4px; color:var(--text-color);">${tabName}</div>
                     <div style="width:100%; box-sizing:border-box;">
-                        <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none; width:100%; box-sizing:border-box;"></textarea>
+                        <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none; width:100%; box-sizing:border-box; color:var(--text-color);"></textarea>
                     </div>
                     <div class="love-modal-buttons" style="margin-top:4px; width:100%; box-sizing:border-box;">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmAddTodoItem()">确定</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmAddTodoItem()">确定</button>
                     </div>
                 </div>
             `;
@@ -4521,8 +4535,8 @@
             let timeDisplayHTML = item.timeStr ? `
                 <div style="display:flex; align-items:center; gap:8px; background:rgba(120,120,120,0.08); padding:6px 12px; border-radius:16px; border:1px solid var(--border-color); display:inline-flex;">
                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    <span style="font-size:12px;">${item.timeStr}</span>
-                    <span style="cursor:pointer; font-weight:bold; margin-left:4px;" onclick="clearTodoTime(${item.id})">✕</span>
+                    <span style="font-size:12px; color:var(--text-color);">${item.timeStr}</span>
+                    <span style="cursor:pointer; font-weight:bold; margin-left:4px; color:var(--text-color);" onclick="clearTodoTime(${item.id})">✕</span>
                 </div>
             ` : '';
 
@@ -4530,7 +4544,7 @@
                 <div style="padding:16px; display:flex; flex-direction:column; gap:16px; height:100%; position:relative; width:100%; box-sizing:border-box;">
                     <div style="display:flex; flex-direction:column; gap:6px;">
                         <label style="font-size:12px; color:var(--sub-text);">编辑内容：</label>
-                        <textarea id="editTodoTextarea" style="height:120px; width:100%; box-sizing:border-box;">${item.text}</textarea>
+                        <textarea id="editTodoTextarea" style="height:120px; width:100%; box-sizing:border-box; color:var(--text-color);">${item.text}</textarea>
                     </div>
                     
                     <div style="display:flex; flex-direction:column; gap:12px;">
@@ -4589,20 +4603,20 @@
 
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align:left; margin:auto; box-sizing:border-box;">
-                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">选择日期和时间</div>
+                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px; color:var(--text-color);">选择日期和时间</div>
                     <div style="display:flex; flex-direction:column; gap:10px; width:100%; box-sizing:border-box;">
                         <div style="width:100%; box-sizing:border-box;">
                             <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择日期：</label>
-                            <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="width:100%; max-width:100%; box-sizing:border-box;">
+                            <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="width:100%; max-width:100%; box-sizing:border-box; color:var(--text-color);">
                         </div>
                         <div style="width:100%; box-sizing:border-box;">
                             <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择时间 (可选)：</label>
-                            <input type="time" id="pickerTimeInput" value="09:00" style="width:100%; max-width:100%; box-sizing:border-box;">
+                            <input type="time" id="pickerTimeInput" value="09:00" style="width:100%; max-width:100%; box-sizing:border-box; color:var(--text-color);">
                         </div>
                     </div>
                     <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmTaskDateTimePicker(${id})">确定</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmTaskDateTimePicker(${id})">确定</button>
                     </div>
                 </div>
             `;
@@ -4670,7 +4684,7 @@
 
                     <div class="setting-group">
                         <div class="setting-label">🎨 聊天气泡颜色自定义</div>
-                        <div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">
+                        <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-color);">
                             <div style="display:flex; align-items:center; justify-content:space-between;">
                                 <span>我的气泡背景色：</span>
                                 <input type="color" id="set_myBubbleBg" value="${tempSettings.myBubbleBg || '#4a7c59'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
@@ -4693,7 +4707,7 @@
 
                     <div class="setting-group">
                         <div class="setting-label">✨ 心情栏颜色自定义</div>
-                        <div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">
+                        <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-color);">
                             <div style="display:flex; align-items:center; justify-content:space-between;">
                                 <span>心情栏背景色 (支持半透明)：</span>
                                 <input type="text" id="set_moodBgColor" value="${tempSettings.moodBgColor || 'rgba(255, 255, 255, 0.65)'}" style="flex:1; margin-left:10px;">
@@ -4708,7 +4722,7 @@
 
                     <div class="setting-group">
                         <div class="setting-label">自定义主题</div>
-                        <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--text-color);">
                             <span>选择系统主色调：</span>
                             <input type="color" id="set_pineGreen" value="${tempSettings.pineGreen || '#4a7c59'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
                         </div>
@@ -4885,6 +4899,7 @@
             reader.onload = function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
+                    if (imported.cardLibrary) cardLibrary = imported.cardLibrary;
                     if (imported.cardLibrary) cardLibrary = imported.cardLibrary;
                     if (imported.actionLibrary) actionLibrary = imported.actionLibrary;
                     if (imported.chatMessages) chatMessages = imported.chatMessages;
