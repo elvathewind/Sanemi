@@ -3914,7 +3914,6 @@
             overlay.id = 'loveCustomModal';
             overlay.className = 'love-modal-overlay';
             
-            // 点击遮罩层任意地方关闭弹窗
             overlay.onclick = (e) => {
                 closeLoveModal();
             };
@@ -3938,7 +3937,6 @@
             `;
             document.body.appendChild(overlay);
 
-            // 如果是流年完成待办弹出的鼓励语，自动 2.2 秒后淡出关闭，或者点击卡片也能直接关闭
             if (isEncouragement) {
                 overlay.querySelector('.love-modal-card').onclick = (e) => {
                     e.stopPropagation();
@@ -4418,7 +4416,7 @@
                     <input type="checkbox" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green);" onclick="toggleTodoComplete(${item.id})">
                     <div style="display:flex; align-items:center; flex:1; overflow:hidden;">
                         ${timeBadge}
-                        <span style="word-break:break-all; font-size:var(--font-size); color:var(--text-color);">${item.text}</span>
+                        <span style="word-break:break-all; font-size:var(--font-size); color:var(--text-color); display:inline-block; flex:1;">${item.text}</span>
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
