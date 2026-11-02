@@ -219,6 +219,7 @@
 
         input, textarea, select {
             width: 100%;
+            max-width: 100%;
             padding: 10px 12px;
             background: none;
             border: 1px solid var(--border-color);
@@ -745,8 +746,9 @@
             transform: translateX(-50%);
             width: 90%;
             max-width: 360px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
+            background: var(--pine-green);
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.3);
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             border-radius: 14px;
             padding: 12px 16px;
@@ -760,6 +762,15 @@
         @keyframes slideDownTopBanner {
             from { transform: translateY(-100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pineGreenFlash {
+            0% { border-color: var(--border-color); box-shadow: none; }
+            50% { border-color: var(--pine-green); box-shadow: 0 0 12px var(--pine-green); }
+            100% { border-color: var(--border-color); box-shadow: none; }
+        }
+        .highlight-flash {
+            animation: pineGreenFlash 1.5s ease 2;
         }
 
         .picker-wheel-container {
@@ -1015,7 +1026,6 @@
         let tempSettings = JSON.parse(JSON.stringify(settings));
         let currentReplyingTo = null;
         let selectedHeartImg = '';
-        let currentLetterTab = 'sent'; 
         let activeAppId = null;
         let chatDisplayLimit = 100;
 
@@ -1049,7 +1059,7 @@
             if (settings.chatBg) {
                 document.documentElement.style.setProperty('--chat-bg', `url(${settings.chatBg})`);
             } else {
-                document.documentElement.style.setProperty('--chat-bg', 'none');
+                document.documentElement.style.removeProperty('--chat-bg', 'none');
             }
             if (settings.myBubbleBg) {
                 document.documentElement.style.setProperty('--my-bubble-bg', settings.myBubbleBg);
@@ -1084,7 +1094,6 @@
         }
         applySettings();
 
-        // 核心定时器
         setInterval(() => {
             if (currentCallStatus === 'idle' && activeAppId === 'chat') {
                 if (Math.random() < 0.05) {
@@ -1143,14 +1152,14 @@
                     if (!isNaN(targetTime) && now >= targetTime) {
                         item.alerted = true;
                         hasAlert = true;
-                        showTopReminderBanner(`“${item.text}” 的时间到啦！`, item.id);
+                        showTopReminderBanner(`“${item.text}” 的时间到啦！`, item.id, item.category || 'todolist');
                     }
                 }
             });
             if (hasAlert) saveData();
         }
 
-        function showTopReminderBanner(msgText, itemId) {
+        function showTopReminderBanner(msgText, itemId, category) {
             let existing = document.getElementById('topReminderBannerEl');
             if (existing) existing.remove();
 
@@ -1159,15 +1168,21 @@
             banner.className = 'top-reminder-banner';
             banner.innerHTML = `
                 <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.8" fill="none"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 16"></polyline><path d="M5.22 5.22l1.56 1.56"></path><path d="M18.78 5.22l-1.56 1.56"></path></svg>
-                <div style="flex:1; font-size:14px; font-weight:bold; color:var(--text-color);">${msgText}</div>
-                <button class="btn" style="padding:4px 10px; font-size:12px; border-radius:12px;" onclick="event.stopPropagation(); document.getElementById('topReminderBannerEl').remove()">知道了</button>
+                <div style="flex:1; font-size:14px; font-weight:bold; color:#fff;">${msgText}</div>
+                <button class="btn" style="padding:4px 10px; font-size:12px; border-radius:12px; background:rgba(0,0,0,0.25); color:#fff;" onclick="event.stopPropagation(); document.getElementById('topReminderBannerEl').remove()">知道了</button>
             `;
             banner.onclick = () => {
                 banner.remove();
+                currentTodoTab = (category === 'wish' ? 'wish' : 'todolist');
                 openApp('todo', '流年');
                 setTimeout(() => {
-                    openTodoDetailPage(itemId);
-                }, 50);
+                    const targetCard = document.getElementById(`todo-card-${itemId}`);
+                    if (targetCard) {
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetCard.classList.add('highlight-flash');
+                        setTimeout(() => targetCard.classList.remove('highlight-flash'), 3000);
+                    }
+                }, 100);
             };
             document.body.appendChild(banner);
             setTimeout(() => {
@@ -2790,47 +2805,29 @@
             }
         }
 
-        // --- 3. 锦书模块 (重构为独立界面，完美遵守两边逻辑) ---
+        // --- 3. 锦书模块 (已精简，上方居中美化展示“云中谁寄锦书来”) ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
             checkAndGeneratePartnerInitiatedLetter();
             container.innerHTML = `
-                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; padding:10px 10px 0 10px; background:var(--card-bg);">
-                    <div style="padding:10px; border:1px solid var(--border-color); border-radius:10px; background:${currentLetterTab==='sent'?'var(--pine-green)':'var(--bg-color)'}; color:${currentLetterTab==='sent'?'#ffffff':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold; font-size:13px;" onclick="switchLetterTab('sent')">寄出的信</div>
-                    <div style="padding:10px; border:1px solid var(--border-color); border-radius:10px; background:${currentLetterTab==='received'?'var(--pine-green)':'var(--bg-color)'}; color:${currentLetterTab==='received'?'#ffffff':'var(--text-color)'}; cursor:pointer; text-align:center; font-weight:bold; font-size:13px;" onclick="switchLetterTab('received')">收到的信</div>
+                <div style="padding:12px 20px; background:var(--pine-green); color:#ffffff; text-align:center; font-size:14px; letter-spacing:2px; border-bottom:1px solid var(--border-color);">
+                    云中谁寄锦书来
                 </div>
+                <div style="padding:10px; display:flex; flex-direction:column; gap:10px;">
+                    <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 180px; max-height: 250px;"></textarea>
+                    <button class="btn" style="width:100%;" onclick="sendLetter()">寄出信件</button>
+                </div>
+                <div style="font-size:12px; color:var(--sub-text); padding:0 10px; margin-top:4px;">我寄出的所有信件：</div>
                 <div id="letterTabContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:10px; overflow-y:auto; position:relative;"></div>
             `;
             renderLetterTabContent(container);
-        }
-
-        function switchLetterTab(tab) {
-            currentLetterTab = tab;
-            initLetters(document.getElementById('subPageContent'));
         }
 
         function renderLetterTabContent(container) {
             const area = document.getElementById('letterTabContentArea');
             if(!area) return;
             area.innerHTML = '';
-
-            if (currentLetterTab === 'sent') {
-                area.innerHTML = `
-                    <div style="padding-bottom:4px;">
-                        <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 200px; max-height: 350px;"></textarea>
-                        <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
-                    </div>
-                    <div style="font-size:12px; color:var(--sub-text); margin-top:4px;">我寄出的所有信件：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
-                `;
-            } else {
-                area.innerHTML = `
-                    <div style="font-size:12px; color:var(--sub-text); margin-top:4px;">收到的所有回信及主动来信：</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
-                `;
-            }
-
             checkAndSpawnFlyingEnvelope(container);
             updateLettersList();
         }
@@ -3006,7 +3003,7 @@
         }
 
         function updateLettersList() {
-            const container = document.getElementById('letterListContainer');
+            const container = document.getElementById('letterListContainer') || document.getElementById('letterTabContentArea');
             if (!container) return;
             container.innerHTML = '';
 
@@ -3074,15 +3071,10 @@
                 }
             });
 
-            const filteredLetters = letters.filter(item => {
-                if (currentLetterTab === 'sent') return !item.isPartnerInitiated;
-                else return item.isPartnerInitiated;
-            });
-
-            const sortedLetters = [...filteredLetters].sort((a, b) => b.id - a.id);
+            const sortedLetters = [...letters].sort((a, b) => b.id - a.id);
 
             if (sortedLetters.length === 0) {
-                container.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:13px; padding:20px;">暂无${currentLetterTab==='sent'?'寄出':'收到'}的信件记录</div>`;
+                container.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:13px; padding:20px;">暂无信件记录</div>`;
                 return;
             }
 
@@ -3217,7 +3209,7 @@
             }
         }
 
-        // --- 4. 良辰模块 (含拖动排序与文本输入框) ---
+        // --- 4. 良辰模块 (花前月下，好景良辰) ---
         function checkAndExecutePartnerAnnivCheckIn() {
             const todayStr = new Date().toISOString().slice(0, 10);
             if (annivCheckInData.partnerLastCheckInDate !== todayStr) {
@@ -3282,7 +3274,7 @@
                     </div>
 
                     <div style="display:flex; flex-direction:column; gap:6px;">
-                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); width:100%; text-align:left; padding:10px 12px; border-radius:8px; cursor:pointer;" onclick="openAddAnniversaryModal()">记录我们相爱的每时每刻</button>
+                        <button class="btn" style="background:var(--pine-green); color:#ffffff; width:100%; text-align:center; padding:12px; border-radius:8px; cursor:pointer; font-weight:normal;" onclick="openAddAnniversaryModal()">花前月下，好景良辰</button>
                     </div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;" id="anniversaryContainer"></div>
                 </div>
@@ -3301,13 +3293,13 @@
             const todayStr = new Date().toISOString().slice(0, 10);
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">添加纪念日</div>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <input type="text" id="modalAnnivName" placeholder="纪念日名称 (例如: 第一次约会)">
-                        <input type="date" id="modalAnnivDate" value="${todayStr}">
+                    <div style="display:flex; flex-direction:column; gap:8px; width:100%; box-sizing:border-box;">
+                        <input type="text" id="modalAnnivName" placeholder="纪念日名称 (例如: 第一次约会)" style="width:100%; box-sizing:border-box;">
+                        <input type="date" id="modalAnnivDate" value="${todayStr}" style="width:100%; box-sizing:border-box;">
                     </div>
-                    <div class="love-modal-buttons" style="margin-top:12px;">
+                    <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmAddAnniversary()">确定</button>
                     </div>
@@ -3833,14 +3825,14 @@
             minsHTML += '<div class="picker-wheel-spacer"></div>';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; box-sizing:border-box;">
                     <div style="font-size:16px;">选择倒计时时长 (最高72小时)</div>
                     <div class="picker-wheel-container">
                         <div class="picker-wheel-highlight"></div>
                         <div class="picker-wheel-column" id="pickerHours">${hoursHTML}</div>
                         <div class="picker-wheel-column" id="pickerMins">${minsHTML}</div>
                     </div>
-                    <div class="love-modal-buttons">
+                    <div class="love-modal-buttons" style="width:100%; box-sizing:border-box;">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:10px; border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmTimePicker('${typeName}')">确定</button>
                     </div>
@@ -4071,9 +4063,7 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 6. 流年模块 (修正弹窗宽度、按钮颜色及文字) ---
-        let currentTodoTab = 'todolist';
-
+        // --- 6. 流年模块 (含日程内容编辑、拖动排序、松绿色提醒及宽度修正) ---
         const encouragementQuotes = [
             "老婆太厉害啦！又完成一项！❤️",
             "这是谁家宝贝怎么这么厉害呀！❤️",
@@ -4136,29 +4126,56 @@
                 const emptyText = currentTodoTab === 'wish' ? '暂无未完成心愿' : '暂无未完成项目';
                 uncompSec.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:12px; padding:15px; border:1px dashed var(--border-color); border-radius:8px;">${emptyText}</div>`;
             } else {
-                uncompletedItems.forEach((item) => {
-                    uncompSec.appendChild(createTodoCardElement(item, false));
+                uncompletedItems.forEach((item, index) => {
+                    uncompSec.appendChild(createTodoCardElement(item, false, index));
                 });
             }
 
             if (completedItems.length > 0) {
                 compSec.innerHTML = `<div style="font-weight:bold; font-size:13px; color:var(--sub-text); margin-top:8px;">已完成 (${completedItems.length})</div>`;
-                completedItems.forEach((item) => {
-                    compSec.appendChild(createTodoCardElement(item, true));
+                completedItems.forEach((item, index) => {
+                    compSec.appendChild(createTodoCardElement(item, true, index));
                 });
             }
         }
 
-        function createTodoCardElement(item, isCompleted) {
+        function createTodoCardElement(item, isCompleted, index) {
             const div = document.createElement('div');
+            div.id = `todo-card-${item.id}`;
             div.className = 'anniv-item-card';
             if(isCompleted) div.style.opacity = '0.6';
+
+            div.draggable = true;
+            div.dataset.id = item.id;
+
+            div.ondragstart = (e) => {
+                e.dataTransfer.setData('text/plain', item.id);
+            };
+            div.ondragover = (e) => {
+                e.preventDefault();
+            };
+            div.ondrop = (e) => {
+                e.preventDefault();
+                const draggedId = Number(e.dataTransfer.getData('text/plain'));
+                if (draggedId !== item.id) {
+                    const fromIdx = todoList.findIndex(t => t.id === draggedId);
+                    const toIdx = todoList.findIndex(t => t.id === item.id);
+                    if (fromIdx !== -1 && toIdx !== -1) {
+                        const movedItem = todoList.splice(fromIdx, 1)[0];
+                        todoList.splice(toIdx, 0, movedItem);
+                        saveData();
+                        const subContent = document.getElementById('subPageContent');
+                        if(subContent) renderTodoMainPage(subContent);
+                    }
+                }
+            };
             
             let timeBadge = item.timeStr ? `<span style="font-size:11px; background:${isCompleted?'var(--sub-text)':'var(--pine-green)'}; color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
             let starSymbol = item.important ? '⭐' : '☆';
 
             div.innerHTML = `
                 <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden;">
+                    <span style="color:#888888; font-size:16px; cursor:grab; line-height:1; user-select:none;" title="长按拖动排序">≡</span>
                     <input type="checkbox" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green);" onclick="toggleTodoComplete(${item.id})">
                     <div style="display:flex; align-items:center; flex:1; overflow:hidden;">
                         ${timeBadge}
@@ -4242,12 +4259,12 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:4px;">${tabName}</div>
-                    <div>
-                        <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none;"></textarea>
+                    <div style="width:100%; box-sizing:border-box;">
+                        <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     </div>
-                    <div class="love-modal-buttons" style="margin-top:4px;">
+                    <div class="love-modal-buttons" style="margin-top:4px; width:100%; box-sizing:border-box;">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmAddTodoItem()">确定</button>
                     </div>
@@ -4297,21 +4314,37 @@
 
             container.innerHTML = `
                 <div style="padding:16px; display:flex; flex-direction:column; gap:16px; height:100%; position:relative;">
-                    <div style="font-size:18px; font-weight:bold; word-break:break-all;">${item.text}</div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label style="font-size:12px; color:var(--sub-text);">编辑内容：</label>
+                        <textarea id="editTodoTextarea" style="height:120px; width:100%; box-sizing:border-box;">${item.text}</textarea>
+                    </div>
                     
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <div style="display:flex; align-items:center; gap:12px; cursor:pointer; color:var(--sub-text);" onclick="openTaskDateTimePicker(${item.id})">
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                            <span style="font-size:14px; color:var(--text-color);">添加日期/时间</span>
+                            <span style="font-size:14px; color:var(--text-color);">添加/修改日期与时间</span>
                         </div>
                         <div id="taskTimeTagArea">${timeDisplayHTML}</div>
                     </div>
 
                     <div style="margin-top:auto; padding-bottom:20px; display:flex; justify-content:center;">
-                        <button class="btn" style="width:100%;" onclick="renderTodoMainPage(document.getElementById('subPageContent'))">完成并返回</button>
+                        <button class="btn" style="width:100%;" onclick="saveTodoDetailChanges(${item.id})">保存并返回</button>
                     </div>
                 </div>
             `;
+        }
+
+        function saveTodoDetailChanges(id) {
+            const item = todoList.find(t => t.id === id);
+            const textarea = document.getElementById('editTodoTextarea');
+            if(!item || !textarea) return;
+
+            const newText = textarea.value.trim();
+            if(!newText) { alert('内容不能为空哦！'); return; }
+
+            item.text = newText;
+            saveData();
+            renderTodoMainPage(document.getElementById('subPageContent'));
         }
 
         function clearTodoTime(id) {
@@ -4343,11 +4376,11 @@
                     <div style="display:flex; flex-direction:column; gap:10px; width:100%; box-sizing:border-box;">
                         <div style="width:100%; box-sizing:border-box;">
                             <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择日期：</label>
-                            <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="width:100%; box-sizing:border-box;">
+                            <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="width:100%; max-width:100%; box-sizing:border-box;">
                         </div>
                         <div style="width:100%; box-sizing:border-box;">
                             <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择时间 (可选)：</label>
-                            <input type="time" id="pickerTimeInput" value="09:00" style="width:100%; box-sizing:border-box;">
+                            <input type="time" id="pickerTimeInput" value="09:00" style="width:100%; max-width:100%; box-sizing:border-box;">
                         </div>
                     </div>
                     <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
