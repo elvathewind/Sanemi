@@ -249,7 +249,6 @@
             min-height: 80px;
         }
 
-        /* 统一加固所有按钮的文字可见性，防止字色丢失 */
         .btn {
             padding: 10px 16px;
             background-color: var(--pine-green);
@@ -792,10 +791,6 @@
         }
         .love-modal-buttons .btn {
             color: #ffffff !important;
-        }
-        .love-modal-buttons .btn[style*="background:var(--bg-color)"], 
-        .love-modal-buttons .btn[style*="background: var(--bg-color)"] {
-            color: var(--pine-green) !important;
         }
 
         .top-reminder-banner {
@@ -3905,7 +3900,7 @@
             saveData();
         }
 
-        function showLoveModal(messageHTML, buttonsArray) {
+        function showLoveModal(messageHTML, buttonsArray, isEncouragement = false) {
             let overlay = document.getElementById('loveCustomModal');
             if(overlay) overlay.remove();
 
@@ -3913,12 +3908,18 @@
             overlay.id = 'loveCustomModal';
             overlay.className = 'love-modal-overlay';
             
-            overlay.onclick = (e) => {
-                if (e.target === overlay) {
-                    closeLoveModal();
-                    openSishouUniverseModal();
-                }
-            };
+            // 如果是鼓励语弹窗，阻止点击背景关闭或触发其他事件，完全独立
+            if (!isEncouragement) {
+                overlay.onclick = (e) => {
+                    if (e.target === overlay) {
+                        closeLoveModal();
+                    }
+                };
+            } else {
+                overlay.onclick = (e) => {
+                    e.stopPropagation();
+                };
+            }
 
             let buttonsHTML = '';
             if (buttonsArray && buttonsArray.length > 0) {
@@ -3932,7 +3933,7 @@
             let buttonsContainerHTML = buttonsHTML ? `<div class="love-modal-buttons">${buttonsHTML}</div>` : '';
 
             overlay.innerHTML = `
-                <div class="love-modal-card">
+                <div class="love-modal-card" onclick="event.stopPropagation()">
                     <div class="love-modal-text">${messageHTML}</div>
                     ${buttonsContainerHTML}
                 </div>
@@ -4193,7 +4194,6 @@
             const totalSecs = mode === 'countup' ? Math.floor((Date.now() - sishouData.startTime)/1000) : (sishouData.targetSeconds - sishouCountdownRemaining);
             const totalSecsFinal = mode === 'countup' ? totalSecs : sishouData.targetSeconds;
 
-            // 1. 倒计时未结束就按暂停 -> 仅暂停，不弹窗
             if (mode === 'countdown' && status === 'paused') {
                 sishouData.isPaused = true;
                 saveData();
@@ -4201,7 +4201,6 @@
                 return;
             }
 
-            // 2. 倒计时未结束就按停止
             if (mode === 'countdown' && status === 'stopped' && totalSecs < sishouData.targetSeconds) {
                 let stopMsg = '';
                 if (type === '学习' || type === '工作') stopMsg = '乖宝又想跑到哪里去？';
@@ -4215,7 +4214,6 @@
                 return;
             }
 
-            // 3. 正计时暂停 -> 无特殊语句
             if (mode === 'countup' && status === 'paused') {
                 sishouData.isPaused = true;
                 saveData();
@@ -4223,7 +4221,6 @@
                 return;
             }
 
-            // 4. 正计时停止（或倒计时完全结束）的台词逻辑
             const totalMins = totalSecsFinal / 60;
             let msg = '';
 
@@ -4430,7 +4427,7 @@
                 
                 if(item.completed) {
                     const randomQuote = encouragementQuotes[Math.floor(Math.random() * encouragementQuotes.length)];
-                    showLoveModal(randomQuote, []);
+                    showLoveModal(randomQuote, [], true);
                 }
             }
         }
@@ -4497,7 +4494,7 @@
                 <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:4px; color:var(--text-color);">${tabName}</div>
                     <div style="width:100%; box-sizing:border-box;">
-                        <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none; width:100%; box-sizing:border-box; color:var(--text-color);"></textarea>
+                        <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none; width:100%; box-sizing:border-box; color:var(--text-color); background:var(--card-bg);"></textarea>
                     </div>
                     <div class="love-modal-buttons" style="margin-top:4px; width:100%; box-sizing:border-box;">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
@@ -4551,7 +4548,7 @@
                 <div style="padding:16px; display:flex; flex-direction:column; gap:16px; height:100%; position:relative; width:100%; box-sizing:border-box;">
                     <div style="display:flex; flex-direction:column; gap:6px;">
                         <label style="font-size:12px; color:var(--sub-text);">编辑内容：</label>
-                        <textarea id="editTodoTextarea" style="height:120px; width:100%; box-sizing:border-box; color:var(--text-color);">${item.text}</textarea>
+                        <textarea id="editTodoTextarea" style="height:120px; width:100%; box-sizing:border-box; color:var(--text-color); background:var(--card-bg);">${item.text}</textarea>
                     </div>
                     
                     <div style="display:flex; flex-direction:column; gap:12px;">
@@ -4614,11 +4611,11 @@
                     <div style="display:flex; flex-direction:column; gap:10px; width:100%; box-sizing:border-box;">
                         <div style="width:100%; box-sizing:border-box;">
                             <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择日期：</label>
-                            <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="width:100%; max-width:100%; box-sizing:border-box; color:var(--text-color);">
+                            <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="width:100%; max-width:100%; box-sizing:border-box; color:var(--text-color); background:var(--card-bg);">
                         </div>
                         <div style="width:100%; box-sizing:border-box;">
                             <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择时间 (可选)：</label>
-                            <input type="time" id="pickerTimeInput" value="09:00" style="width:100%; max-width:100%; box-sizing:border-box; color:var(--text-color);">
+                            <input type="time" id="pickerTimeInput" value="09:00" style="width:100%; max-width:100%; box-sizing:border-box; color:var(--text-color); background:var(--card-bg);">
                         </div>
                     </div>
                     <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
