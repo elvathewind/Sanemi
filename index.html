@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -220,15 +218,16 @@
         }
 
         input, textarea, select {
-            width: 100%;
-            max-width: 100%;
+            width: 100% !important;
+            max-width: 100% !important;
             padding: 10px 12px;
             background: none;
             border: 1px solid var(--border-color);
             color: var(--text-color);
             border-radius: 8px;
             outline: none;
-            box-sizing: border-box;
+            box-sizing: border-box !important;
+            margin: 0 !important;
         }
 
         textarea {
@@ -722,8 +721,8 @@
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 24px 20px;
-            width: 86%;
-            max-width: 320px;
+            width: 90%;
+            max-width: 350px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -737,6 +736,7 @@
             width: 100% !important;
             max-width: 100% !important;
             box-sizing: border-box !important;
+            margin: 0 !important;
         }
         .love-modal-text {
             font-size: 16px;
@@ -877,9 +877,9 @@
             width: 300px;
             height: 300px;
             border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, rgba(120, 150, 180, 0.2), rgba(30, 40, 60, 0.8));
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            box-shadow: 0 0 50px rgba(100, 150, 200, 0.2), inset 0 0 30px rgba(255, 255, 255, 0.15);
+            background: radial-gradient(circle at 30% 30%, rgba(50, 60, 80, 0.4), rgba(15, 20, 30, 0.85));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 40px rgba(100, 150, 200, 0.15), inset 0 0 25px rgba(255, 255, 255, 0.1);
             display: block;
             overflow: hidden;
         }
@@ -918,12 +918,12 @@
 
         .big-heart-container {
             position: relative;
-            width: 280px;
-            height: 280px;
-            background: radial-gradient(circle at 30% 30%, rgba(255, 182, 193, 0.25), rgba(100, 50, 70, 0.75));
+            width: 300px;
+            height: 300px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 0 40px rgba(255, 182, 193, 0.3);
+            background: radial-gradient(circle at 30% 30%, rgba(50, 60, 80, 0.4), rgba(15, 20, 30, 0.85));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 40px rgba(100, 150, 200, 0.15), inset 0 0 25px rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -938,13 +938,17 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
             transition: transform 0.2s;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
-            color: #333;
+            color: #ffffff;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.6);
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
         .macaron-heart-node:hover { transform: scale(1.15); z-index: 10; }
     </style>
@@ -2376,7 +2380,7 @@
             const partnerNameStr = settings.partnerName || '老公';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
+                <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${partnerNameStr}：</div>
                     <textarea id="heartCommentInputText" placeholder="写下你的评论..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
@@ -2430,7 +2434,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
+                <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${targetAuthor}：</div>
                     <textarea id="heartSubCommentInputText" placeholder="写下你的回复..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
@@ -2980,7 +2984,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
+                <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">给他的信写回信：</div>
                     <textarea id="modalLetterReplyInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
@@ -3035,7 +3039,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
+                <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回信：</div>
                     <textarea id="modalLetterContinueInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
@@ -3373,7 +3377,7 @@
             const todayStr = new Date().toISOString().slice(0, 10);
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
+                <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">添加纪念日</div>
                     <div style="display:flex; flex-direction:column; gap:8px; width:100%; box-sizing:border-box;">
                         <input type="text" id="modalAnnivName" placeholder="纪念日名称 (例如: 第一次约会)" style="width:100%; box-sizing:border-box;">
@@ -3577,24 +3581,26 @@
                 }
             };
 
-            const morandiColors = [
-                'rgba(159, 179, 200, 0.75)', 'rgba(181, 201, 154, 0.75)', 
-                'rgba(212, 163, 115, 0.75)', 'rgba(224, 122, 95, 0.75)', 
-                'rgba(129, 178, 154, 0.75)', 'rgba(244, 162, 97, 0.75)'
-            ];
+            const now = Date.now();
+            const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+            const recentRecords = sishouRecords.filter(rec => {
+                return rec.id >= sevenDaysAgo;
+            });
+
             const symbols = ['⭐', '🌙'];
 
-            physicsNodes = sishouRecords.map((rec, idx) => {
+            physicsNodes = recentRecords.map((rec, idx) => {
+                const scaleFactor = 1 - (idx * 0.03);
                 return {
                     id: rec.id,
                     text: rec.text,
-                    color: morandiColors[idx % morandiColors.length],
                     symbol: symbols[idx % symbols.length],
                     x: 60 + Math.random() * 180,
                     y: 60 + Math.random() * 180,
                     vx: (Math.random() - 0.5) * 0.8,
                     vy: (Math.random() - 0.5) * 0.8,
-                    radius: 20
+                    radius: 20,
+                    opacity: Math.max(0.4, Math.min(1.0, scaleFactor))
                 };
             });
 
@@ -3603,7 +3609,7 @@
                     <div style="color:#fff; font-size:16px; font-weight:bold; letter-spacing:1px; cursor:pointer; text-shadow:0 2px 8px rgba(0,0,0,0.5);" onclick="openBigHeartCategoriesModal()">愿我如星君如月</div>
                     <div class="universe-sphere-box" id="universeSphereBox">
                         ${physicsNodes.map((n, i) => `
-                            <div class="universe-star-node" id="uniNode_${i}" style="background:${n.color}; color:#fff;" onclick="showSishouRecordDetail(${n.id})">
+                            <div class="universe-star-node" id="uniNode_${i}" style="background:rgba(180,200,220,0.3); color:#fff; opacity:${n.opacity};" onclick="showSishouRecordDetail(${n.id})">
                                 ${n.symbol}
                             </div>
                         `).join('')}
@@ -3662,7 +3668,6 @@
             }
 
             const categories = ['学习', '工作', '运动', '放松', '共眠', '缱绻'];
-            const macaronColors = ['#ffb5a7', '#fcd5ce', '#f8edeb', '#f9dcc4', '#fec89a', '#b5e2fa'];
 
             const categoryTotals = {};
             categories.forEach(cat => categoryTotals[cat] = 0);
@@ -3688,12 +3693,11 @@
 
             categories.forEach((cat, idx) => {
                 const angle = idx * angleStep - Math.PI / 2;
-                const x = 140 + radius * Math.cos(angle) - 30;
-                const y = 140 + radius * Math.sin(angle) - 30;
-                const bg = macaronColors[idx];
+                const x = 150 + radius * Math.cos(angle) - 30;
+                const y = 150 + radius * Math.sin(angle) - 30;
 
                 nodesHTML += `
-                    <div class="macaron-heart-node" style="left:${x}px; top:${y}px; background:${bg};" onclick="showCategoryTotalTime('${cat}', ${categoryTotals[cat]})">
+                    <div class="macaron-heart-node" style="left:${x}px; top:${y}px;" onclick="showCategoryTotalTime('${cat}', ${categoryTotals[cat]})">
                         <span>❤️</span>
                         <span style="font-size:11px;">${cat}</span>
                     </div>
@@ -3702,11 +3706,11 @@
 
             overlayModal.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:20px;">
-                    <div style="color:#fff; font-size:16px; font-weight:bold;">陪伴时间统计星图</div>
+                    <div style="color:#ffffff; font-size:16px; font-weight:bold; letter-spacing:1px; text-shadow:0 2px 8px rgba(0,0,0,0.5);">陪伴时间统计星图</div>
                     <div class="big-heart-container">
                         ${nodesHTML}
                     </div>
-                    <button class="btn" style="border-radius:20px; padding:6px 24px; font-size:13px;" onclick="document.getElementById('universeModalOverlay').remove()">关闭</button>
+                    <button class="btn" style="border-radius:20px; padding:8px 28px; font-size:13px; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.3); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);" onclick="document.getElementById('universeModalOverlay').remove()">关闭</button>
                 </div>
             `;
             document.body.appendChild(overlayModal);
@@ -3924,7 +3928,7 @@
             minsHTML += '<div class="picker-wheel-spacer"></div>';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; box-sizing:border-box;">
+                <div class="love-modal-card" style="width: 90%; max-width: 350px; box-sizing:border-box;">
                     <div style="font-size:16px;">选择倒计时时长 (最高72小时)</div>
                     <div class="picker-wheel-container">
                         <div class="picker-wheel-highlight"></div>
@@ -4360,7 +4364,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
+                <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:4px;">${tabName}</div>
                     <div style="width:100%; box-sizing:border-box;">
                         <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none; width:100%; box-sizing:border-box;"></textarea>
@@ -4472,7 +4476,7 @@
             const defaultDateStr = now.toISOString().slice(0, 10);
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
+                <div class="love-modal-card" style="width: 90%; max-width: 350px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">选择日期和时间</div>
                     <div style="display:flex; flex-direction:column; gap:10px; width:100%; box-sizing:border-box;">
                         <div style="width:100%; box-sizing:border-box;">
