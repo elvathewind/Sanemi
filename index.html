@@ -811,26 +811,79 @@
             background: rgba(120,120,120,0.04);
         }
 
-        /* 悬浮小星球样式 */
+        /* 执子之手呼吸灯悬浮星球与宇宙弹窗 */
+        @keyframes breathGlow {
+            0% { box-shadow: 0 0 8px rgba(74, 124, 89, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.3); transform: scale(1); }
+            50% { box-shadow: 0 0 20px rgba(74, 124, 89, 0.8), inset 0 0 14px rgba(255, 255, 255, 0.6); transform: scale(1.05); }
+            100% { box-shadow: 0 0 8px rgba(74, 124, 89, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.3); transform: scale(1); }
+        }
         .floating-planet-btn {
             position: absolute;
             bottom: 20px;
             right: 20px;
             width: 52px;
             height: 52px;
-            background: var(--pine-green);
+            background: rgba(74, 124, 89, 0.65);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
             color: #fff;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
             cursor: pointer;
             z-index: 99;
+            animation: breathGlow 3s infinite ease-in-out;
+            border: 1px solid rgba(255, 255, 255, 0.4);
             transition: transform 0.2s;
         }
         .floating-planet-btn:active {
             transform: scale(0.92);
+        }
+
+        @keyframes universeZoomIn {
+            from { transform: scale(0.2); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .universe-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(10, 15, 20, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            animation: fadeInModal 0.3s ease;
+        }
+        .universe-sphere-box {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(120, 150, 180, 0.2), rgba(30, 40, 60, 0.8));
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 50px rgba(100, 150, 200, 0.2), inset 0 0 30px rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: universeZoomIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+        .universe-star-node {
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px currentColor;
+            transition: transform 0.2s;
+        }
+        .universe-star-node:hover {
+            transform: scale(1.3);
+            z-index: 10;
         }
     </style>
 </head>
@@ -996,7 +1049,7 @@
         }
         applySettings();
 
-        // 核心定时器：全局流年日程提醒与背景事件生成
+        // 核心定时器：全局流年日程提醒与背景主动事件生成（严格遵循概率模型）
         setInterval(() => {
             if (currentCallStatus === 'idle' && activeAppId === 'chat') {
                 if (Math.random() < 0.05) {
@@ -1007,10 +1060,49 @@
         }, 30000);
 
         setInterval(() => {
-            if (Math.random() < 0.10) {
-                triggerBackgroundInitiateChatMessage();
-            }
+            triggerBackgroundActiveModel();
         }, 40000);
+
+        function triggerBackgroundActiveModel() {
+            const roll = Math.random();
+            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
+
+            if (roll < 0.05) {
+                // 5% 概率：对方主动拍一拍我
+                chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'incoming', type: 'system', content: `${partnerNameStr} 拍了拍我` });
+                saveData();
+                refreshChatIfOpen();
+            } else if (roll < 0.10) {
+                // 5% 概率：对方主动发送动作描述
+                if (actionLibrary.length > 0) {
+                    const randomAct = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
+                    chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥${randomAct.content}♥` });
+                    saveData();
+                    refreshChatIfOpen();
+                }
+            } else if (roll < 0.15) {
+                // 5% 概率：对方主动发起视频通话
+                if (currentCallStatus === 'idle') {
+                    triggerIncomingCallFromPartner();
+                }
+            } else if (roll < 0.20) {
+                // 5% 概率：对方主动发送字卡
+                sendCardMessage(partnerNameStr);
+                saveData();
+                refreshChatIfOpen();
+            }
+            // 剩下的 80% 概率什么都不做
+        }
+
+        function refreshChatIfOpen() {
+            const subPage = document.getElementById('subPage');
+            if (subPage && subPage.classList.contains('active')) {
+                const title = document.getElementById('subPageTitle');
+                if (title && title.innerText === '蜜语') {
+                    updateChatMessages();
+                }
+            }
+        }
 
         function checkTodoReminders() {
             const now = Date.now();
@@ -1089,19 +1181,6 @@
         setInterval(() => {
             checkAndGenerateBackgroundHeartMoments();
         }, 30000);
-
-        function triggerBackgroundInitiateChatMessage() {
-            const partnerNameStr = (settings.partnerName && String(settings.partnerName).trim() !== '') ? String(settings.partnerName) : '老公';
-            sendCardMessage(partnerNameStr);
-            saveData();
-            const subPage = document.getElementById('subPage');
-            if (subPage && subPage.classList.contains('active')) {
-                const title = document.getElementById('subPageTitle');
-                if (title && title.innerText === '蜜语') {
-                    updateChatMessages();
-                }
-            }
-        }
 
         function renderDesktop() {
             const grid = document.getElementById('desktopGrid');
@@ -1348,29 +1427,14 @@
                     
                     const roll = Math.random();
 
-                    if (roll < 0.05) {
-                        chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'incoming', type: 'system', content: `${partnerNameStr} 拍了拍我` });
-                    } 
-                    else if (roll < 0.10) {
-                        chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'incoming', type: 'system', content: `${partnerNameStr} 拍了拍自己` });
-                    } 
-                    else if (roll < 0.18) {
+                    if (roll < 0.15) {
                         if (settings.emojis && settings.emojis.length > 0) {
                             const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
                             chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'incoming', type: 'image', content: randomEmoji });
                         } else {
                             sendCardMessage(partnerNameStr);
                         }
-                    } 
-                    else if (roll < 0.28) {
-                        if (actionLibrary.length > 0) {
-                            const randomAct = actionLibrary[Math.floor(Math.random() * actionLibrary.length)];
-                            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥${randomAct.content}♥` });
-                        } else {
-                            chatMessages.push({ id: Date.now(), timestamp: Date.now(), sender: 'system-center', type: 'system', content: `${partnerNameStr}♥轻轻靠在了你的肩上♥` });
-                        }
-                    } 
-                    else {
+                    } else {
                         sendCardMessage(partnerNameStr);
                     }
 
@@ -1767,7 +1831,6 @@
                     return;
                 }
 
-                // 支持来自对方的拍一拍通知气泡
                 if (msg.sender === 'incoming' && msg.type === 'system') {
                     row.className = `message-row system-center`;
                     row.innerHTML = `<div class="system-action-bubble">${msg.content}</div>`;
@@ -2667,7 +2730,7 @@
             if (currentLetterTab === 'sent') {
                 area.innerHTML = `
                     <div style="padding-bottom:4px;">
-                        <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 160px; max-height: 300px;"></textarea>
+                        <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 240px; max-height: 450px;"></textarea>
                         <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
                     </div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
@@ -2953,7 +3016,7 @@
                                 <div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">
                                     <div style="font-size:11px; color:var(--sub-text); margin-bottom:2px;">回信时间: ${item.partnerReplyActualTime || item.partnerEstTime}</div>
                                     <strong>他的回信：</strong>
-                                    <div style="max-height: 180px; overflow-y: auto; margin-top: 4px; white-space: pre-wrap;">${item.partnerReplyContent}</div>
+                                    <div style="max-height: 240px; overflow-y: auto; margin-top: 4px; white-space: pre-wrap;">${item.partnerReplyContent}</div>
                                 </div>
                             `;
                         } else {
@@ -2974,7 +3037,7 @@
 
                     cardContentHTML = `
                         <div style="font-weight:bold; color:var(--text-color);">对方主动写给你的信</div>
-                        <div style="border-top:1px dashed var(--border-color); padding-top:6px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; color:var(--text-color);">${item.reply}</div>
+                        <div style="border-top:1px dashed var(--border-color); padding-top:6px; max-height: 240px; overflow-y: auto; white-space: pre-wrap; color:var(--text-color);">${item.reply}</div>
                         ${replySection}
                     `;
                 } else if (!item.reply) {
@@ -3025,7 +3088,7 @@
                         <div><strong>我:</strong> ${item.myLetter}</div>
                         <div style="border-top:1px dashed var(--border-color); padding-top:6px; color:var(--text-color);">
                             <strong>回信：</strong>
-                            <div style="max-height: 180px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap;">${item.reply}</div>
+                            <div style="max-height: 240px; overflow-y: auto; margin-top: 4px; padding-right: 4px; white-space: pre-wrap;">${item.reply}</div>
                         </div>
                         ${continuationHTML}
                         ${continueBtnHTML}
@@ -3064,10 +3127,11 @@
             }
         }
 
-        // --- 4. 良辰模块 (自然日打卡机制) ---
+        // --- 4. 良辰模块 (自然日独立打卡机制) ---
         function checkAndExecutePartnerAnnivCheckIn() {
             const todayStr = new Date().toISOString().slice(0, 10);
             if (annivCheckInData.partnerLastCheckInDate !== todayStr) {
+                // 对方自然日全天随机一次打卡
                 if (Math.random() < 0.65) {
                     annivCheckInData.partnerLastCheckInDate = todayStr;
                     if (annivCheckInData.myLastCheckInDate === todayStr) {
@@ -3305,7 +3369,7 @@
             updateAnniversaryList();
         }
 
-        // --- 5. 厮守模块与悬浮小星球 ---
+        // --- 5. 厮守模块与宇宙呼吸灯球 ("执子之手") ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
@@ -3330,8 +3394,8 @@
 
                     <div id="sishouActiveArea" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--border-color); border-radius:12px; background:var(--bg-color); padding:10px; margin-top:4px;"></div>
 
-                    <!-- 悬浮小星球图标 -->
-                    <div class="floating-planet-btn" onclick="openSishouRecordsModal()" title="查看已完成的星星手账">
+                    <!-- 执子之手呼吸灯悬浮星球按钮 -->
+                    <div class="floating-planet-btn" onclick="openSishouUniverseModal()" title="执子之手 - 陪伴手账">
                         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
                     </div>
                 </div>
@@ -3343,37 +3407,48 @@
             }
         }
 
-        function openSishouRecordsModal() {
-            let overlay = document.getElementById('loveCustomModal');
+        function openSishouUniverseModal() {
+            let overlay = document.getElementById('universeModalOverlay');
             if(overlay) overlay.remove();
 
             overlay = document.createElement('div');
-            overlay.id = 'loveCustomModal';
-            overlay.className = 'love-modal-overlay';
+            overlay.id = 'universeModalOverlay';
+            overlay.className = 'universe-modal-overlay';
+            overlay.onclick = (e) => {
+                if(e.target === overlay) overlay.remove();
+            };
 
-            let recordsHTML = '';
+            const morandiColors = [
+                '#9fb3c8', '#b5c99a', '#d4a373', '#e07a5f', '#81b29a', 
+                '#f4a261', '#e76f51', '#a8dadc', '#457b9d', '#b7b7a4', '#dda15e'
+            ];
+
+            let nodesHTML = '';
             if (!sishouRecords || sishouRecords.length === 0) {
-                recordsHTML = `<div style="text-align:center; color:var(--sub-text); font-size:13px; padding:20px;">还没有完成的陪伴记录哦，快去和小星球一起开始吧~</div>`;
+                nodesHTML = `<div style="color:#fff; font-size:13px; text-align:center; padding:20px; z-index:2;">宇宙中还没有记录哦，快去和小星球一起开始陪伴吧~</div>`;
             } else {
-                sishouRecords.slice().reverse().forEach((rec, idx) => {
-                    recordsHTML += `
-                        <div style="background:var(--bg-color); border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="showSishouRecordDetail(${rec.id})">
-                            <span style="font-size:16px;">⭐</span>
-                            <span style="flex:1; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${rec.text}</span>
+                sishouRecords.forEach((rec, idx) => {
+                    const randomColor = morandiColors[idx % morandiColors.length];
+                    const angle = (idx / sishouRecords.length) * 2 * Math.PI;
+                    const distance = 70 + (idx % 3) * 25;
+                    const left = 150 + Math.cos(angle) * distance - 18;
+                    const top = 150 + Math.sin(angle) * distance - 18;
+
+                    nodesHTML += `
+                        <div class="universe-star-node" style="width:36px; height:36px; left:${left}px; top:${top}px; background:${randomColor}; color:#fff;" onclick="showSishouRecordDetail(${rec.id})" title="${rec.text}">
+                            ⭐
                         </div>
                     `;
                 });
             }
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 340px; max-height: 80vh;">
-                    <div style="font-size:16px; font-weight:bold; text-align:center;">🌟 我们的陪伴手账</div>
-                    <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; max-height:260px; text-align:left;">
-                        ${recordsHTML}
+                <div style="display:flex; flex-direction:column; align-items:center; gap:20px;">
+                    <div style="color:#fff; font-size:18px; font-weight:bold; letter-spacing:2px; text-shadow:0 2px 8px rgba(0,0,0,0.5);">执子之手 · 宇宙星图</div>
+                    <div class="universe-sphere-box">
+                        ${nodesHTML}
                     </div>
-                    <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; border-radius:10px; font-weight:normal;" onclick="closeLoveModal()">关闭</button>
-                    </div>
+                    <button class="btn" style="border-radius:20px; padding:6px 24px; font-size:13px;" onclick="document.getElementById('universeModalOverlay').remove()">关闭星图</button>
                 </div>
             `;
             document.body.appendChild(overlay);
@@ -3383,10 +3458,13 @@
             const rec = sishouRecords.find(r => r.id === recordId);
             if (!rec) return;
 
+            let overlay = document.getElementById('universeModalOverlay');
+            if(overlay) overlay.remove();
+
             showLoveModal(
-                `<div style="font-size:18px; transform: scale(1.2); transition: transform 0.3s; margin-bottom: 8px;">🌟</div><div style="font-size:15px; line-height:1.6;">${rec.text}</div>`,
+                `<div style="font-size:22px; margin-bottom: 8px;">✨</div><div style="font-size:15px; line-height:1.6;">${rec.text}</div>`,
                 [
-                    { text: '关闭', primary: true, onclick: 'openSishouRecordsModal()' }
+                    { text: '关闭', primary: true, onclick: 'closeLoveModal(); openSishouUniverseModal();' }
                 ]
             );
         }
@@ -3704,20 +3782,26 @@
             const type = sishouData.type;
             const mode = sishouData.mode;
             const totalSecs = mode === 'countup' ? Math.floor((Date.now() - sishouData.startTime)/1000) : sishouData.targetSeconds;
-            const minutes = Math.round(totalSecs / 60);
-            const hours = (totalSecs / 3600).toFixed(1);
+            
+            // 精确的 X小时X分钟X秒 格式化
+            const hCount = Math.floor(totalSecs / 3600);
+            const mCount = Math.floor((totalSecs % 3600) / 60);
+            const sCount = totalSecs % 60;
+            
+            let timeFormattedStr = '';
+            if (hCount > 0) timeFormattedStr += `${hCount}小时`;
+            if (mCount > 0 || hCount > 0) timeFormattedStr += `${mCount}分钟`;
+            timeFormattedStr += `${sCount}秒`;
 
             const partnerNameStr = settings.partnerName || '老公';
             let wifeTitle = settings.myName || '老婆'; 
             let msg = '';
 
-            // 生成小星球手账文本
-            const now = new Date();
-            const month = now.getMonth() + 1;
-            const day = now.getDate();
-            const hour = now.getHours();
-            let recordText = `${month}月${day}日${hour}点和${partnerNameStr}一起${type}了${hours > 0 ? hours + '小时' : minutes + '分钟'}哦`;
+            let recordText = `和${partnerNameStr}一起${type}了${timeFormattedStr}`;
             sishouRecords.push({ id: Date.now(), text: recordText });
+
+            const minutes = Math.round(totalSecs / 60);
+            const hours = hCount;
 
             if(type === '专注') {
                 if(mode === 'countup') {
@@ -3773,7 +3857,7 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 5. 流年 (Tasks 风格大改版优化) ---
+        // --- 5. 流年 (Tasks 风格精修：空心圆点/黄色星星、上下拖动、松绿色弹窗按钮、完美时间弹窗) ---
         let currentTodoTab = 'todolist';
         let editingTodoId = null;
 
@@ -3860,7 +3944,8 @@
             if(isCompleted) div.style.opacity = '0.6';
             
             let timeBadge = item.timeStr ? `<span style="font-size:11px; background:${isCompleted?'var(--sub-text)':'var(--pine-green)'}; color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
-            let starSymbol = item.important ? '⭐' : '⭐️';
+            // 按照要求：默认空心星星，点击变黄色实心星
+            let starSymbol = item.important ? '⭐' : '☆';
 
             div.innerHTML = `
                 <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden; cursor:pointer;" onclick="openTodoDetailPage(${item.id})">
@@ -3871,13 +3956,13 @@
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                    <span style="cursor:pointer; display:flex; align-items:center; font-size:16px;" onclick="toggleTodoImportant(${item.id}, event)" title="标记重要">${starSymbol}</span>
+                    <span style="cursor:pointer; display:flex; align-items:center; font-size:18px;" onclick="toggleTodoImportant(${item.id}, event)" title="标记重要">${starSymbol}</span>
                     <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text);" onclick="deleteTodoItem(${item.id})">删除</button>
                     <div class="drag-handle" title="按住拖动排序">☰</div>
                 </div>
             `;
 
-            // 完美绑定长按拖拽排序功能
+            // 完美的 Tasks 风格上下拖动排序
             const handle = div.querySelector('.drag-handle');
             const scrollArea = document.getElementById('todoItemsScrollArea');
             let draggingEl = null;
@@ -3989,12 +4074,32 @@
         }
 
         function deleteTodoItem(id) {
-            if(confirm("确定要删除这条日程吗？")) {
-                todoList = todoList.filter(t => t.id !== id);
-                saveData();
-                const subContent = document.getElementById('subPageContent');
-                if(subContent) renderTodoMainPage(subContent);
-            }
+            // 松绿色主题确认删除提示框
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            overlay.innerHTML = `
+                <div class="love-modal-card">
+                    <div class="love-modal-text">确定要删除这条日程吗？</div>
+                    <div class="love-modal-buttons">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmDeleteTodo(${id})">好</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function confirmDeleteTodo(id) {
+            todoList = todoList.filter(t => t.id !== id);
+            saveData();
+            closeLoveModal();
+            const subContent = document.getElementById('subPageContent');
+            if(subContent) renderTodoMainPage(subContent);
         }
 
         function openAddTodoModal() {
@@ -4107,20 +4212,21 @@
             const now = new Date();
             const defaultDateStr = now.toISOString().slice(0, 10);
 
+            // 完美修复溢出，采用标准响应式居中卡片
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">选择日期和时间</div>
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <div>
-                            <label style="font-size:12px; color:var(--sub-text);">选择日期：</label>
-                            <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="margin-top:4px;">
+                    <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+                        <div style="width:100%;">
+                            <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择日期：</label>
+                            <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="width:100%; box-sizing:border-box;">
                         </div>
-                        <div>
-                            <label style="font-size:12px; color:var(--sub-text);">选择时间 (可选)：</label>
-                            <input type="time" id="pickerTimeInput" value="09:00" style="margin-top:4px;">
+                        <div style="width:100%;">
+                            <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择时间 (可选)：</label>
+                            <input type="time" id="pickerTimeInput" value="09:00" style="width:100%; box-sizing:border-box;">
                         </div>
                     </div>
-                    <div class="love-modal-buttons" style="margin-top:12px;">
+                    <div class="love-modal-buttons" style="margin-top:12px; width:100%;">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmTaskDateTimePicker(${id})">确定</button>
                     </div>
