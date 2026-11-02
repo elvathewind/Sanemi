@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -720,8 +722,8 @@
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 24px 20px;
-            width: 90%;
-            max-width: 380px; /* 已将外部框最大宽度从 320px 调宽至 380px，彻底解决内部撑满和贴边问题 */
+            width: 86%;
+            max-width: 320px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -2374,7 +2376,7 @@
             const partnerNameStr = settings.partnerName || '老公';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px; text-align: left;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${partnerNameStr}：</div>
                     <textarea id="heartCommentInputText" placeholder="写下你的评论..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
@@ -2428,7 +2430,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px; text-align: left;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${targetAuthor}：</div>
                     <textarea id="heartSubCommentInputText" placeholder="写下你的回复..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
@@ -2978,7 +2980,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px; text-align: left;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">给他的信写回信：</div>
                     <textarea id="modalLetterReplyInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
@@ -3033,7 +3035,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px; text-align: left;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回信：</div>
                     <textarea id="modalLetterContinueInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
@@ -3371,7 +3373,7 @@
             const todayStr = new Date().toISOString().slice(0, 10);
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px; text-align:left; margin:auto; box-sizing:border-box;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">添加纪念日</div>
                     <div style="display:flex; flex-direction:column; gap:8px; width:100%; box-sizing:border-box;">
                         <input type="text" id="modalAnnivName" placeholder="纪念日名称 (例如: 第一次约会)" style="width:100%; box-sizing:border-box;">
@@ -3424,7 +3426,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px;">
+                <div class="love-modal-card">
                     <div class="love-modal-text">确定要删除这个良辰纪念日吗？</div>
                     <div class="love-modal-buttons">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
@@ -3725,7 +3727,7 @@
             let overlay = document.createElement('div');
             overlay.className = 'love-modal-overlay';
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px;">
+                <div class="love-modal-card">
                     <div class="love-modal-text">一共和${partnerNameStr}一起${categoryName}了${timeStr}</div>
                     <div class="love-modal-buttons">
                         <button class="btn" style="border-radius:10px; width:100%;" onclick="this.closest('.love-modal-overlay').remove()">好</button>
@@ -3833,7 +3835,7 @@
             });
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px;">
+                <div class="love-modal-card">
                     <div class="love-modal-text">${messageHTML}</div>
                     <div class="love-modal-buttons">${buttonsHTML}</div>
                 </div>
@@ -3922,7 +3924,7 @@
             minsHTML += '<div class="picker-wheel-spacer"></div>';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px; box-sizing:border-box;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; box-sizing:border-box;">
                     <div style="font-size:16px;">选择倒计时时长 (最高72小时)</div>
                     <div class="picker-wheel-container">
                         <div class="picker-wheel-highlight"></div>
@@ -4150,7 +4152,7 @@
             if (mode === 'countdown' && status === 'completed') {
                 if (type === '学习' || type === '工作') msg = '恭喜我可爱的妻子又和丈夫一起完成了一项任务！';
                 else if (type === '运动') msg = '恭喜我可爱的妻子又和丈夫一起变得更健康啦！';
-                else if (type === '放松') msg = '幸福的时光总是那么短暂, 但我们还会有很多很多幸福。';
+                else if (type === '放松') msg = '幸福的时光总是那么短暂，但我们还会有很多很多幸福。';
             }
 
             sishouData = { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
@@ -4328,7 +4330,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px;">
+                <div class="love-modal-card">
                     <div class="love-modal-text">确定要删除这条${itemTypeLabel}吗？</div>
                     <div class="love-modal-buttons">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
@@ -4358,7 +4360,7 @@
             overlay.className = 'love-modal-overlay';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px; text-align:left; margin:auto; box-sizing:border-box;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:4px;">${tabName}</div>
                     <div style="width:100%; box-sizing:border-box;">
                         <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none; width:100%; box-sizing:border-box;"></textarea>
@@ -4470,7 +4472,7 @@
             const defaultDateStr = now.toISOString().slice(0, 10);
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 380px; text-align:left; margin:auto; box-sizing:border-box;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">选择日期和时间</div>
                     <div style="display:flex; flex-direction:column; gap:10px; width:100%; box-sizing:border-box;">
                         <div style="width:100%; box-sizing:border-box;">
@@ -4767,7 +4769,7 @@
             reader.onload = function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    if (imported.cardLibrary) cardLibrary = imported.cardLibrary,
+                    if (imported.cardLibrary) cardLibrary = imported.cardLibrary;
                     if (imported.actionLibrary) actionLibrary = imported.actionLibrary;
                     if (imported.chatMessages) chatMessages = imported.chatMessages;
                     if (imported.letters) letters = imported.letters;
