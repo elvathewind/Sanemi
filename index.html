@@ -941,10 +941,9 @@
             box-shadow: 0 4px 16px rgba(0,0,0,0.25);
             transition: transform 0.2s;
             font-size: 11px;
-            font-weight: bold;
+            font-weight: normal;
             color: #ffffff;
             text-align: center;
-            background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.25);
@@ -3588,33 +3587,42 @@
             });
 
             const symbols = ['⭐', '🌙'];
+            const macaronBgColors = [
+                'rgba(242, 165, 175, 0.45)', // 低饱和淡粉
+                'rgba(165, 201, 242, 0.45)', // 低饱和淡蓝
+                'rgba(242, 218, 165, 0.45)', // 低饱和淡黄
+                'rgba(186, 224, 192, 0.45)', // 低饱和淡绿
+                'rgba(204, 186, 224, 0.45)', // 低饱和淡紫
+                'rgba(224, 204, 186, 0.45)'  // 低饱和暖咖
+            ];
 
             physicsNodes = recentRecords.map((rec, idx) => {
                 const scaleFactor = 1 - (idx * 0.03);
+                const randomBg = macaronBgColors[Math.floor(Math.random() * macaronBgColors.length)];
                 return {
                     id: rec.id,
                     text: rec.text,
                     symbol: symbols[idx % symbols.length],
+                    bgColor: randomBg,
                     x: 60 + Math.random() * 180,
                     y: 60 + Math.random() * 180,
                     vx: (Math.random() - 0.5) * 0.8,
                     vy: (Math.random() - 0.5) * 0.8,
                     radius: 20,
-                    opacity: Math.max(0.4, Math.min(1.0, scaleFactor))
+                    opacity: Math.max(0.5, Math.min(1.0, scaleFactor))
                 };
             });
 
             overlay.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
-                    <div style="color:#fff; font-size:16px; font-weight:bold; letter-spacing:1px; cursor:pointer; text-shadow:0 2px 8px rgba(0,0,0,0.5);" onclick="openBigHeartCategoriesModal()">愿我如星君如月</div>
+                    <div style="color:#fff; font-size:16px; font-weight:normal; letter-spacing:1px; cursor:pointer; text-shadow:0 2px 8px rgba(0,0,0,0.5);" onclick="openBigHeartCategoriesModal()">✨ 愿我如星君如月 🌙</div>
                     <div class="universe-sphere-box" id="universeSphereBox">
                         ${physicsNodes.map((n, i) => `
-                            <div class="universe-star-node" id="uniNode_${i}" style="background:rgba(180,200,220,0.3); color:#fff; opacity:${n.opacity};" onclick="showSishouRecordDetail(${n.id})">
+                            <div class="universe-star-node" id="uniNode_${i}" style="background:${n.bgColor}; color:#fff; opacity:${n.opacity}; border:1px solid rgba(255,255,255,0.3);" onclick="showSishouRecordDetail(${n.id})">
                                 ${n.symbol}
                             </div>
                         `).join('')}
                     </div>
-                    <div style="color:#fff; font-size:15px; font-weight:bold; letter-spacing:1px; cursor:pointer; text-shadow:0 2px 8px rgba(0,0,0,0.5);" onclick="if(universeAnimationId) cancelAnimationFrame(universeAnimationId); document.getElementById('universeModalOverlay').remove()">夜夜流光相皎洁</div>
                 </div>
             `;
             document.body.appendChild(overlay);
@@ -3668,6 +3676,15 @@
             }
 
             const categories = ['学习', '工作', '运动', '放松', '共眠', '缱绻'];
+            const symbols = ['⭐', '🌙', '⭐', '🌙', '⭐', '🌙'];
+            const macaronColors = [
+                'rgba(235, 150, 160, 0.4)', // 低饱和红
+                'rgba(240, 200, 140, 0.4)', // 低饱和黄
+                'rgba(160, 210, 180, 0.4)', // 低饱和绿
+                'rgba(150, 190, 235, 0.4)', // 低饱和蓝
+                'rgba(190, 165, 220, 0.4)', // 低饱和靛
+                'rgba(220, 165, 205, 0.4)'  // 低饱和紫
+            ];
 
             const categoryTotals = {};
             categories.forEach(cat => categoryTotals[cat] = 0);
@@ -3695,22 +3712,23 @@
                 const angle = idx * angleStep - Math.PI / 2;
                 const x = 150 + radius * Math.cos(angle) - 30;
                 const y = 150 + radius * Math.sin(angle) - 30;
+                const bgCol = macaronColors[idx];
+                const sym = symbols[idx];
 
                 nodesHTML += `
-                    <div class="macaron-heart-node" style="left:${x}px; top:${y}px;" onclick="showCategoryTotalTime('${cat}', ${categoryTotals[cat]})">
-                        <span>❤️</span>
-                        <span style="font-size:11px;">${cat}</span>
+                    <div class="macaron-heart-node" style="left:${x}px; top:${y}px; background:${bgCol};" onclick="showCategoryTotalTime('${cat}', ${categoryTotals[cat]})">
+                        <span style="font-size:14px; line-height:1; margin-bottom:2px;">${sym}</span>
+                        <span style="font-size:11px; font-weight:normal;">${cat}</span>
                     </div>
                 `;
             });
 
             overlayModal.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:20px;">
-                    <div style="color:#ffffff; font-size:16px; font-weight:bold; letter-spacing:1px; text-shadow:0 2px 8px rgba(0,0,0,0.5);">陪伴时间统计星图</div>
+                    <div style="color:#ffffff; font-size:16px; font-weight:normal; letter-spacing:1px; text-shadow:0 2px 8px rgba(0,0,0,0.5); cursor:pointer;" onclick="openSishouUniverseModal()">✨ 夜夜流光相皎洁 🌙</div>
                     <div class="big-heart-container">
                         ${nodesHTML}
                     </div>
-                    <button class="btn" style="border-radius:20px; padding:8px 28px; font-size:13px; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.3); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);" onclick="document.getElementById('universeModalOverlay').remove()">关闭</button>
                 </div>
             `;
             document.body.appendChild(overlayModal);
