@@ -475,7 +475,6 @@
             padding-left: 4px;
         }
 
-        /* 视频通话悬浮窗全局层级 */
         .video-modal {
             position: fixed;
             top: 60px;
@@ -683,6 +682,10 @@
             justify-content: space-between;
             align-items: center;
             background: var(--bg-color);
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
         }
 
         @keyframes clockShake {
@@ -726,17 +729,26 @@
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             margin: auto;
+            overflow: hidden;
+        }
+        .love-modal-card input, .love-modal-card textarea, .love-modal-card select {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
         }
         .love-modal-text {
             font-size: 16px;
             line-height: 1.5;
             color: var(--text-color);
             text-align: center;
+            word-break: break-all;
         }
         .love-modal-buttons {
             display: flex;
             gap: 10px;
             justify-content: center;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .top-reminder-banner {
@@ -992,6 +1004,8 @@
 
         let heartMoments = JSON.parse(localStorage.getItem('heartMomentsData')) || [];
         let todoList = JSON.parse(localStorage.getItem('todoListData')) || [];
+        let currentTodoTab = 'todolist';
+
         let sishouData = JSON.parse(localStorage.getItem('sishouData')) || { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
         let sishouRecords = JSON.parse(localStorage.getItem('sishouRecordsData')) || [];
 
@@ -2362,7 +2376,7 @@
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${partnerNameStr}：</div>
-                    <textarea id="heartCommentInputText" placeholder="写下你的评论..." style="height: 220px; min-height: 200px; resize: none;"></textarea>
+                    <textarea id="heartCommentInputText" placeholder="写下你的评论..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmPostComment(${momentId})">好</button>
@@ -2416,7 +2430,7 @@
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${targetAuthor}：</div>
-                    <textarea id="heartSubCommentInputText" placeholder="写下你的回复..." style="height: 220px; min-height: 200px; resize: none;"></textarea>
+                    <textarea id="heartSubCommentInputText" placeholder="写下你的回复..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmPostSubComment(${momentId}, ${commentId})">好</button>
@@ -2805,7 +2819,7 @@
             }
         }
 
-        // --- 3. 锦书模块 (已精简，上方居中美化展示“云中谁寄锦书来”) ---
+        // --- 3. 锦书模块 ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
@@ -2955,8 +2969,39 @@
         function replyToPartnerLetter(id) {
             const letter = letters.find(l => l.id === id);
             if (!letter) return;
-            const text = prompt('给他的信写回信：', '');
-            if (!text || !text.trim()) return;
+            
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            overlay.innerHTML = `
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
+                    <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">给他的信写回信：</div>
+                    <textarea id="modalLetterReplyInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
+                    <div class="love-modal-buttons">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmReplyToPartnerLetter(${id})">确定</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => {
+                const inp = document.getElementById('modalLetterReplyInput');
+                if(inp) inp.focus();
+            }, 100);
+        }
+
+        function confirmReplyToPartnerLetter(id) {
+            const inp = document.getElementById('modalLetterReplyInput');
+            if(!inp) return;
+            const text = inp.value.trim();
+            if(!text) { alert('回信内容不能为空哦！'); return; }
+
+            const letter = letters.find(l => l.id === id);
+            if (!letter) return;
 
             const now = Date.now();
             const minMs = 8 * 60 * 60 * 1000;
@@ -2966,20 +3011,52 @@
             const d = new Date();
             const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
 
-            letter.myReplyToPartner = text.trim();
+            letter.myReplyToPartner = text;
             letter.myReplyTime = timeStr;
             letter.partnerReplyTimestamp = now + randomDelay;
             letter.partnerEstTime = '8到12小时之内';
             letter.partnerReplyContent = '';
             saveData();
+            closeLoveModal();
             updateLettersList();
         }
 
         function continueReplyLetter(id) {
             const letter = letters.find(l => l.id === id);
             if (!letter) return;
-            const text = prompt('回信：', '');
-            if (!text || !text.trim()) return;
+
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            overlay.innerHTML = `
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align: left;">
+                    <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回信：</div>
+                    <textarea id="modalLetterContinueInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
+                    <div class="love-modal-buttons">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmContinueReplyLetter(${id})">确定</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => {
+                const inp = document.getElementById('modalLetterContinueInput');
+                if(inp) inp.focus();
+            }, 100);
+        }
+
+        function confirmContinueReplyLetter(id) {
+            const inp = document.getElementById('modalLetterContinueInput');
+            if(!inp) return;
+            const text = inp.value.trim();
+            if(!text) { alert('回信内容不能为空哦！'); return; }
+
+            const letter = letters.find(l => l.id === id);
+            if (!letter) return;
 
             const now = Date.now();
             const minMs = 8 * 60 * 60 * 1000;
@@ -2991,7 +3068,7 @@
 
             if (!letter.continuationReplies) letter.continuationReplies = [];
             letter.continuationReplies.push({
-                text: text.trim(),
+                text: text,
                 time: timeStr,
                 estTime: '8到12小时之内',
                 replyTimestamp: now + randomDelay,
@@ -2999,6 +3076,7 @@
                 replyTime: ''
             });
             saveData();
+            closeLoveModal();
             updateLettersList();
         }
 
@@ -3081,7 +3159,7 @@
             sortedLetters.forEach(item => {
                 const div = document.createElement('div');
                 div.id = `letter-item-${item.id}`;
-                div.style.cssText = "margin: 0 4px; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
+                div.style.cssText = "margin: 0 4px; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s; width:100%; box-sizing:border-box;";
                 
                 let heartColor = '';
                 let topTimeText = '';
@@ -4063,7 +4141,7 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 6. 流年模块 (含日程内容编辑、拖动排序、松绿色提醒及宽度修正) ---
+        // --- 6. 流年模块 ---
         const encouragementQuotes = [
             "老婆太厉害啦！又完成一项！❤️",
             "这是谁家宝贝怎么这么厉害呀！❤️",
@@ -4076,10 +4154,12 @@
         ];
 
         function initTodo(container) {
+            if(!Array.isArray(todoList)) todoList = [];
             renderTodoMainPage(container);
         }
 
         function renderTodoMainPage(container) {
+            if(!Array.isArray(todoList)) todoList = [];
             const uncompletedTodo = todoList.filter(t => !t.completed && t.category !== 'wish');
             const completedTodo = todoList.filter(t => t.completed && t.category !== 'wish');
             const uncompletedWish = todoList.filter(t => !t.completed && t.category === 'wish');
