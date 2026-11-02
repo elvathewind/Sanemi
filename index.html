@@ -3900,26 +3900,24 @@
             saveData();
         }
 
+        let encouragementTimer = null;
+
         function showLoveModal(messageHTML, buttonsArray, isEncouragement = false) {
             let overlay = document.getElementById('loveCustomModal');
             if(overlay) overlay.remove();
+            if(encouragementTimer) {
+                clearTimeout(encouragementTimer);
+                encouragementTimer = null;
+            }
 
             overlay = document.createElement('div');
             overlay.id = 'loveCustomModal';
             overlay.className = 'love-modal-overlay';
             
-            // 如果是鼓励语弹窗，阻止点击背景关闭或触发其他事件，完全独立
-            if (!isEncouragement) {
-                overlay.onclick = (e) => {
-                    if (e.target === overlay) {
-                        closeLoveModal();
-                    }
-                };
-            } else {
-                overlay.onclick = (e) => {
-                    e.stopPropagation();
-                };
-            }
+            // 点击遮罩层任意地方关闭弹窗
+            overlay.onclick = (e) => {
+                closeLoveModal();
+            };
 
             let buttonsHTML = '';
             if (buttonsArray && buttonsArray.length > 0) {
@@ -3939,9 +3937,24 @@
                 </div>
             `;
             document.body.appendChild(overlay);
+
+            // 如果是流年完成待办弹出的鼓励语，自动 2.2 秒后淡出关闭，或者点击卡片也能直接关闭
+            if (isEncouragement) {
+                overlay.querySelector('.love-modal-card').onclick = (e) => {
+                    e.stopPropagation();
+                    closeLoveModal();
+                };
+                encouragementTimer = setTimeout(() => {
+                    closeLoveModal();
+                }, 2200);
+            }
         }
 
         function closeLoveModal() {
+            if(encouragementTimer) {
+                clearTimeout(encouragementTimer);
+                encouragementTimer = null;
+            }
             let overlay = document.getElementById('loveCustomModal');
             if(overlay) overlay.remove();
         }
@@ -4409,9 +4422,9 @@
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                    <span style="cursor:pointer; display:flex; align-items:center; font-size:18px;" onclick="toggleTodoImportant(${item.id}, event)" title="标记重要">${starSymbol}</span>
+                    <span style="cursor:pointer; display:flex; align-items:center; font-size:18px; color:var(--text-color);" onclick="toggleTodoImportant(${item.id}, event)" title="标记重要">${starSymbol}</span>
                     <button class="btn" style="padding:2px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="openTodoDetailPage(${item.id})">编辑</button>
-                    <button class="btn" style="padding:2px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text) !important;" onclick="deleteTodoItem(${item.id})">删除</button>
+                    <button class="btn" style="padding:2px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="deleteTodoItem(${item.id})">删除</button>
                 </div>
             `;
             return div;
