@@ -231,7 +231,6 @@
             color: var(--text-color);
         }
 
-        /* 修复输入框样式，确保文本不丢失且不溢出 */
         input, textarea, select {
             width: 100% !important;
             max-width: 100% !important;
@@ -250,6 +249,7 @@
             min-height: 80px;
         }
 
+        /* 统一加固所有按钮的文字可见性，防止字色丢失 */
         .btn {
             padding: 10px 16px;
             background-color: var(--pine-green);
@@ -790,7 +790,6 @@
             width: 100%;
             box-sizing: border-box;
         }
-        /* 修复弹窗按钮文字颜色，防止丢失 */
         .love-modal-buttons .btn {
             color: #ffffff !important;
         }
@@ -2379,10 +2378,10 @@
                 let pinBtnText = moment.isPinned ? '取消置顶' : '置顶';
                 let actionHTML = `
                     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
-                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="togglePinMoment(${moment.id})">${pinBtnText}</button>
-                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="likeMoment(${moment.id})">点赞</button>
-                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="commentMoment(${moment.id})">评论</button>
-                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteMoment(${moment.id})">删除</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="togglePinMoment(${moment.id})">${pinBtnText}</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="likeMoment(${moment.id})">点赞</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="commentMoment(${moment.id})">评论</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="deleteMoment(${moment.id})">删除</button>
                     </div>
                 `;
 
@@ -2443,8 +2442,8 @@
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${partnerNameStr}：</div>
                     <textarea id="heartCommentInputText" placeholder="写下你的评论..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmPostComment(${momentId})">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmPostComment(${momentId})">好</button>
                     </div>
                 </div>
             `;
@@ -2497,8 +2496,8 @@
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回复 ${targetAuthor}：</div>
                     <textarea id="heartSubCommentInputText" placeholder="写下你的回复..." style="height: 220px; min-height: 200px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmPostSubComment(${momentId}, ${commentId})">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmPostSubComment(${momentId}, ${commentId})">好</button>
                     </div>
                 </div>
             `;
@@ -2617,8 +2616,8 @@
                 item.innerHTML = `
                     <div style="flex:1; padding-right:8px; word-break:break-all; color:var(--text-color);">${card.content}</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editCard(${card.id})">修改</button>
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteCard(${card.id})">删除</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="editCard(${card.id})">修改</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="confirmDeleteCard(${card.id})">删除</button>
                     </div>
                 `;
                 listContainer.appendChild(item);
@@ -2682,8 +2681,8 @@
                 item.innerHTML = `
                     <div style="flex:1; padding-right:8px; word-break:break-all; color:var(--text-color);">♥${act.content}♥</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editAction(${act.id})">修改</button>
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteAction(${act.id})">删除</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="editAction(${act.id})">修改</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="confirmDeleteAction(${act.id})">删除</button>
                     </div>
                 `;
                 listContainer.appendChild(item);
@@ -2759,8 +2758,8 @@
                 item.innerHTML = `
                     <div style="flex:1; padding-right:8px; word-break:break-all; color:var(--text-color);">${moodText}</div>
                     <div style="display:flex; gap:4px; flex-shrink:0;">
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="editMood(${index})">修改</button>
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteMood(${index})">删除</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="editMood(${index})">修改</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="confirmDeleteMood(${index})">删除</button>
                     </div>
                 `;
                 listContainer.appendChild(item);
@@ -2838,7 +2837,7 @@
                         <span style="font-size:12px; color:var(--sub-text);">表情 #${index + 1}</span>
                     </div>
                     <div>
-                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="confirmDeleteLibEmoji(${index})">删除</button>
+                        <button class="btn" style="padding:4px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="confirmDeleteLibEmoji(${index})">删除</button>
                     </div>
                 `;
                 listContainer.appendChild(item);
@@ -2895,7 +2894,7 @@
                 </div>
                 <div style="padding:10px; display:flex; flex-direction:column; gap:10px; width:100%; box-sizing:border-box;">
                     <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 180px; max-height: 250px; width:100%; box-sizing:border-box;"></textarea>
-                    <button class="btn" style="width:100%;">寄出信件</button>
+                    <button class="btn" style="width:100%;" onclick="sendLetter()">寄出信件</button>
                 </div>
                 <div style="font-size:12px; color:var(--sub-text); padding:0 10px; margin-top:4px;">我寄出的所有信件：</div>
                 <div id="letterTabContentArea" style="flex:1; display:flex; flex-direction:column; padding:10px; gap:10px; overflow-y:auto; position:relative; width:100%; box-sizing:border-box;"></div>
@@ -3047,8 +3046,8 @@
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">给他的信写回信：</div>
                     <textarea id="modalLetterReplyInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmReplyToPartnerLetter(${id})">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmReplyToPartnerLetter(${id})">好</button>
                     </div>
                 </div>
             `;
@@ -3102,8 +3101,8 @@
                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">回信：</div>
                     <textarea id="modalLetterContinueInput" placeholder="写下你的回信..." style="height: 180px; min-height: 140px; resize: none; width:100%; box-sizing:border-box;"></textarea>
                     <div class="love-modal-buttons">
-                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
-                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmContinueReplyLetter(${id})">好</button>
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green) !important; border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff !important; border-radius:10px;" onclick="confirmContinueReplyLetter(${id})">好</button>
                     </div>
                 </div>
             `;
@@ -3326,7 +3325,7 @@
                             <span style="color:${heartColor}; font-size:16px; line-height:1; display:inline-block;">♥</span>
                             <span style="font-size:11px; color:var(--sub-text);">${topTimeText}</span>
                         </div>
-                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="deleteLetter(${item.id})">删除</button>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="deleteLetter(${item.id})">删除</button>
                     </div>
                     ${cardContentHTML}
                 `;
@@ -3574,8 +3573,8 @@
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div style="font-size:14px; text-align:right; color:var(--text-color);">${label}<br><strong style="font-size:16px; color:var(--text-color);">${diffDays}</strong> 天</div>
-                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color); cursor:pointer;" onclick="editAnniversary(${item.id})">修改</button>
-                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color); cursor:pointer;" onclick="deleteAnniversary(${item.id})">删除</button>
+                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important; cursor:pointer;" onclick="editAnniversary(${item.id})">修改</button>
+                        <button class="btn" style="padding:4px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important; cursor:pointer;" onclick="deleteAnniversary(${item.id})">删除</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -4153,7 +4152,7 @@
             } else {
                 controlsHTML = `
                     <div style="display:flex; gap:10px; width:100%; max-width:240px; justify-content:center;">
-                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color); border-radius:10px;" onclick="toggleSiShouPause()">${sishouData.isPaused ? '继续' : '暂停'}</button>
+                        <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color) !important; border-radius:10px;" onclick="toggleSiShouPause()">${sishouData.isPaused ? '继续' : '暂停'}</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="finishSiShouSession('stopped')">停止</button>
                     </div>
                 `;
@@ -4194,19 +4193,21 @@
             const totalSecs = mode === 'countup' ? Math.floor((Date.now() - sishouData.startTime)/1000) : (sishouData.targetSeconds - sishouCountdownRemaining);
             const totalSecsFinal = mode === 'countup' ? totalSecs : sishouData.targetSeconds;
 
-            if (status === 'stopped' && mode === 'countdown' && type === '放松') {
-                sishouData = { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
+            // 1. 倒计时未结束就按暂停 -> 仅暂停，不弹窗
+            if (mode === 'countdown' && status === 'paused') {
+                sishouData.isPaused = true;
                 saveData();
-                initSiShou(document.getElementById('subPageContent'));
-                showLoveModal('宝贝你又要去忙了吗？老公等你回来。', []);
+                updateSiShouActiveUI();
                 return;
             }
 
-            if (status === 'stopped' && mode === 'countdown') {
+            // 2. 倒计时未结束就按停止
+            if (mode === 'countdown' && status === 'stopped' && totalSecs < sishouData.targetSeconds) {
                 let stopMsg = '';
                 if (type === '学习' || type === '工作') stopMsg = '乖宝又想跑到哪里去？';
                 else if (type === '运动') stopMsg = '真的吗？乖宝真的要丢下老公一个人？';
-                
+                else stopMsg = '乖宝又想跑到哪里去？';
+
                 sishouData = { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
                 saveData();
                 initSiShou(document.getElementById('subPageContent'));
@@ -4214,62 +4215,68 @@
                 return;
             }
 
+            // 3. 正计时暂停 -> 无特殊语句
+            if (mode === 'countup' && status === 'paused') {
+                sishouData.isPaused = true;
+                saveData();
+                updateSiShouActiveUI();
+                return;
+            }
+
+            // 4. 正计时停止（或倒计时完全结束）的台词逻辑
+            const totalMins = totalSecsFinal / 60;
+            let msg = '';
+
+            if (type === '学习' || type === '工作') {
+                if (mode === 'countdown' && totalSecsFinal >= sishouData.targetSeconds) {
+                    msg = '恭喜我可爱的妻子又和丈夫一起完成了一项任务！';
+                } else {
+                    if (totalMins <= 15) msg = '可爱的老婆就这么坐不住吗？';
+                    else if (totalMins <= 30) msg = '我可爱的妻子真是越来越棒啦！';
+                    else if (totalMins <= 45) msg = '我的宝贝就快要完成任务了呀！';
+                    else if (totalMins <= 60) msg = '我可爱的妻子怎么这么厉害呀！';
+                    else msg = '请问这是神吗？我简直认不出我可爱的妻子了！';
+                }
+            } else if (type === '运动') {
+                if (mode === 'countdown' && totalSecsFinal >= sishouData.targetSeconds) {
+                    msg = '恭喜我可爱的妻子又和丈夫一起变得更健康啦！';
+                } else {
+                    if (totalMins <= 15) msg = '喂喂，才刚开始就要丢下老公吗？';
+                    else if (totalMins <= 30) msg = '加油！等下老公给你摸胸肌！';
+                    else if (totalMins <= 45) msg = '坚持住！奖励加码了！想不想再摸老公的腹肌？';
+                    else if (totalMins <= 60) msg = '不愧是我可爱的妻子！连丈夫都要甘拜下风！';
+                    else msg = '这具强悍的身体从此任由我可爱的妻子摆布了！';
+                }
+            } else if (type === '放松') {
+                if (totalMins <= 15) msg = '乖宝宝放松点，老公给你按按肩。';
+                else if (totalMins <= 30) msg = '和老公这样待在一起舒服吗？再抱紧点好不好？';
+                else if (totalMins <= 45) msg = '最喜欢和乖宝在一起的时光了。';
+                else if (totalMins <= 60) msg = '好幸福，老婆今天陪了我好久。';
+                else msg = '妻子一直在我身边，丈夫已经幸福到快要晕过去了。';
+            } else if (type === '共眠') {
+                msg = '和老婆一起睡觉好幸福，根本舍不得起床。';
+            } else if (type === '缱绻') {
+                msg = '和老公在一起的时光就是最幸福的，我是世界上最幸福的男人。';
+            }
+
+            const partnerNameStr = settings.partnerName || '老公';
+            const categorySymbols = { '学习': '⭐', '工作': '🌙', '运动': '⭐', '放松': '🌙', '共眠': '⭐', '缱绻': '🌙' };
+            const symbol = categorySymbols[type] || '⭐';
+
             const hCount = Math.floor(totalSecsFinal / 3600);
             const mCount = Math.floor((totalSecsFinal % 3600) / 60);
             const sCount = totalSecsFinal % 60;
-            
             let timeFormattedStr = '';
             if (hCount > 0) timeFormattedStr += `${hCount}小时`;
             if (mCount > 0 || hCount > 0) timeFormattedStr += `${mCount}分钟`;
             timeFormattedStr += `${sCount}秒`;
             if (totalSecsFinal === 0) timeFormattedStr = '0秒';
 
-            const partnerNameStr = settings.partnerName || '老公';
-            
-            const categorySymbols = {
-                '学习': '⭐',
-                '工作': '🌙',
-                '运动': '⭐',
-                '放松': '🌙',
-                '共眠': '⭐',
-                '缱绻': '🌙'
-            };
-            const symbol = categorySymbols[type] || '⭐';
-            
             let recordText = `${symbol} 和${partnerNameStr}一起${type}的时间总计${timeFormattedStr}`;
-            
             if (!sishouCategoryTotals[type]) sishouCategoryTotals[type] = 0;
             sishouCategoryTotals[type] += totalSecsFinal;
 
             sishouRecords.push({ id: Date.now(), text: recordText, durationSeconds: totalSecsFinal });
-
-            const totalMins = totalSecsFinal / 60;
-            const totalHours = totalSecsFinal / 3600;
-
-            let msg = recordText;
-
-            if (type === '放松') {
-                if (mode === 'countdown' && status === 'completed') {
-                    msg = '幸福的时光总是那么短暂，但我们以后还会有很多很多幸福。';
-                } else {
-                    if (totalMins <= 15) msg = '乖宝宝放松点，老公给你按按肩。';
-                    else if (totalMins <= 30) msg = '和老公这样待在一起舒服吗？再抱紧点好不好？';
-                    else if (totalMins <= 45) msg = '最喜欢和乖宝在一起的时光了。';
-                    else if (totalMins <= 60) msg = '好幸福，老婆今天陪了我好久。';
-                    else msg = '妻子一直在我身边，丈夫已经幸福到快要晕过去了。';
-                }
-            } else if (type === '共眠') {
-                if (totalHours < 5) msg = '老婆你是不想和我共度一生了吗？不许糟蹋自己的身体！';
-                else if (totalHours < 6) msg = '老婆你的睡眠时间严重不足，老公心疼坏了！';
-                else if (totalHours < 7) msg = '老婆今天睡得还行，但是还可以在老公怀里多睡一会。';
-                else if (totalHours < 8) msg = '和老婆一起睡觉好幸福，根本舍不得起床。';
-                else msg = '老婆你熟睡的样子太可爱了，我偷偷亲了你好几次！';
-            } else if (type === '缱绻') {
-                if (totalMins <= 30) msg = '老婆虽然我还没有黏够你，但是你要是有事就先去忙吧k，老公一直都在。';
-                else if (totalMins <= 60) msg = '和老公在一起的时光就是最幸福的，我是世界上最幸福的男人。';
-                else if (totalMins <= 120) msg = '老婆今天难得有空陪我这么久，老公幸福得要晕过去了！';
-                else msg = '我要和老婆生生世世永远在一起，谁都别想把我和老婆分开！';
-            }
 
             sishouData = { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
             saveData();
@@ -4406,8 +4413,8 @@
                 </div>
                 <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
                     <span style="cursor:pointer; display:flex; align-items:center; font-size:18px;" onclick="toggleTodoImportant(${item.id}, event)" title="标记重要">${starSymbol}</span>
-                    <button class="btn" style="padding:2px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="openTodoDetailPage(${item.id})">编辑</button>
-                    <button class="btn" style="padding:2px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text);" onclick="deleteTodoItem(${item.id})">删除</button>
+                    <button class="btn" style="padding:2px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="openTodoDetailPage(${item.id})">编辑</button>
+                    <button class="btn" style="padding:2px 6px; font-size:11px; background:none; border:1px solid var(--border-color); color:var(--sub-text) !important;" onclick="deleteTodoItem(${item.id})">删除</button>
                 </div>
             `;
             return div;
@@ -4701,7 +4708,7 @@
                                 <span>对方气泡文字色：</span>
                                 <input type="color" id="set_partnerBubbleText" value="${tempSettings.partnerBubbleText || '#111111'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
                             </div>
-                            <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetBubbleColors()">恢复默认气泡颜色</button>
+                            <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="resetBubbleColors()">恢复默认气泡颜色</button>
                         </div>
                     </div>
 
@@ -4716,7 +4723,7 @@
                                 <span>心情栏文字颜色：</span>
                                 <input type="color" id="set_moodTextColor" value="${tempSettings.moodTextColor || '#666666'}" style="width:60px; height:32px; padding:0; border:none; cursor:pointer;">
                             </div>
-                            <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="resetMoodColors()">恢复默认心情栏颜色</button>
+                            <button class="btn" style="padding:4px 8px; font-size:11px; margin-top:4px; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="resetMoodColors()">恢复默认心情栏颜色</button>
                         </div>
                     </div>
 
@@ -4731,8 +4738,8 @@
                     <div class="setting-group">
                         <div class="setting-label">数据恢复与备份</div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="exportData()">手动导出备份</button>
-                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color);" onclick="document.getElementById('importFile').click()">导入备份恢复</button>
+                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="exportData()">手动导出备份</button>
+                            <button class="btn" style="flex:1; background:none; border:1px solid var(--border-color); color:var(--text-color) !important;" onclick="document.getElementById('importFile').click()">导入备份恢复</button>
                             <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
                         </div>
                     </div>
