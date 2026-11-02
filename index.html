@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -475,9 +474,9 @@
             padding-left: 4px;
         }
 
-        /* 视频通话悬浮窗 */
+        /* 视频通话悬浮窗全局层级 */
         .video-modal {
-            position: absolute;
+            position: fixed;
             top: 60px;
             left: 20px;
             width: 200px;
@@ -486,7 +485,7 @@
             backdrop-filter: blur(12px);
             border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 16px;
-            z-index: 9999;
+            z-index: 999999;
             display: flex;
             flex-direction: column;
             resize: both;
@@ -719,6 +718,7 @@
             padding: 24px;
             width: 86%;
             max-width: 320px;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -754,6 +754,7 @@
             align-items: center;
             gap: 12px;
             z-index: 999999;
+            cursor: pointer;
             animation: slideDownTopBanner 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         @keyframes slideDownTopBanner {
@@ -890,7 +891,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* 大爱心分类视图样式 */
         .big-heart-container {
             position: relative;
             width: 280px;
@@ -950,8 +950,6 @@
             </div>
             <div class="sub-page-content" id="subPageContent"></div>
         </div>
-
-        <div id="phoneVideoLayer"></div>
 
     </div>
 
@@ -1086,7 +1084,7 @@
         }
         applySettings();
 
-        // 核心定时器：仅在蜜语界面内触发来电与背景主动互动
+        // 核心定时器
         setInterval(() => {
             if (currentCallStatus === 'idle' && activeAppId === 'chat') {
                 if (Math.random() < 0.05) {
@@ -1145,14 +1143,14 @@
                     if (!isNaN(targetTime) && now >= targetTime) {
                         item.alerted = true;
                         hasAlert = true;
-                        showTopReminderBanner(`“${item.text}” 的时间到啦！`);
+                        showTopReminderBanner(`“${item.text}” 的时间到啦！`, item.id);
                     }
                 }
             });
             if (hasAlert) saveData();
         }
 
-        function showTopReminderBanner(msgText) {
+        function showTopReminderBanner(msgText, itemId) {
             let existing = document.getElementById('topReminderBannerEl');
             if (existing) existing.remove();
 
@@ -1162,8 +1160,15 @@
             banner.innerHTML = `
                 <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.8" fill="none"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 16"></polyline><path d="M5.22 5.22l1.56 1.56"></path><path d="M18.78 5.22l-1.56 1.56"></path></svg>
                 <div style="flex:1; font-size:14px; font-weight:bold; color:var(--text-color);">${msgText}</div>
-                <button class="btn" style="padding:4px 10px; font-size:12px; border-radius:12px;" onclick="document.getElementById('topReminderBannerEl').remove()">知道了</button>
+                <button class="btn" style="padding:4px 10px; font-size:12px; border-radius:12px;" onclick="event.stopPropagation(); document.getElementById('topReminderBannerEl').remove()">知道了</button>
             `;
+            banner.onclick = () => {
+                banner.remove();
+                openApp('todo', '流年');
+                setTimeout(() => {
+                    openTodoDetailPage(itemId);
+                }, 50);
+            };
             document.body.appendChild(banner);
             setTimeout(() => {
                 const b = document.getElementById('topReminderBannerEl');
@@ -1293,7 +1298,6 @@
         }
 
         function closeApp() {
-            closeVideoModal();
             activeAppId = null;
             const subPage = document.getElementById('subPage');
             if(subPage) subPage.classList.remove('active');
@@ -1529,9 +1533,6 @@
         }
 
         function startVideoCall() {
-            const phoneLayer = document.getElementById('phoneVideoLayer');
-            if(!phoneLayer) return;
-            
             let modal = document.getElementById('videoModal');
             if(modal) modal.remove();
 
@@ -1553,8 +1554,8 @@
                 </div>
                 <div class="video-body" id="videoBodyContent"></div>
             `;
-            phoneLayer.appendChild(modal);
-            makeDraggableInPhoneBox(modal, document.getElementById('videoModalHeader'));
+            document.body.appendChild(modal);
+            makeDraggableGlobal(modal, document.getElementById('videoModalHeader'));
             isVideoFullScreen = false;
             renderVideoBodyContent();
 
@@ -1628,8 +1629,8 @@
 
                 modal.style.top = '10px';
                 modal.style.left = '10px';
-                modal.style.width = 'calc(100% - 20px)';
-                modal.style.height = 'calc(100% - 20px)';
+                modal.style.width = 'calc(100vw - 20px)';
+                modal.style.height = 'calc(100vh - 20px)';
                 isVideoFullScreen = true;
                 el.innerText = '🗗';
             } else {
@@ -1643,7 +1644,7 @@
             renderVideoBodyContent();
         }
 
-        function makeDraggableInPhoneBox(elmnt, header) {
+        function makeDraggableGlobal(elmnt, header) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
             header.onmousedown = dragMouseDown;
             header.ontouchstart = dragMouseDown;
@@ -1674,15 +1675,12 @@
                 let newTop = elmnt.offsetTop - pos2;
                 let newLeft = elmnt.offsetLeft - pos1;
 
-                const phoneBox = document.getElementById('phoneContainer');
-                if (phoneBox) {
-                    const maxTop = phoneBox.clientHeight - elmnt.clientHeight - 10;
-                    const maxLeft = phoneBox.clientWidth - elmnt.clientWidth - 10;
-                    if (newTop < 10) newTop = 10;
-                    if (newTop > maxTop) newTop = maxTop;
-                    if (newLeft < 10) newLeft = 10;
-                    if (newLeft > maxLeft) newLeft = maxLeft;
-                }
+                const maxTop = window.innerHeight - elmnt.clientHeight - 10;
+                const maxLeft = window.innerWidth - elmnt.clientWidth - 10;
+                if (newTop < 10) newTop = 10;
+                if (newTop > maxTop) newTop = maxTop;
+                if (newLeft < 10) newLeft = 10;
+                if (newLeft > maxLeft) newLeft = maxLeft;
 
                 elmnt.style.top = newTop + "px";
                 elmnt.style.left = newLeft + "px";
@@ -1698,10 +1696,6 @@
 
         let callTimeoutTimer = null;
         function triggerIncomingCallFromPartner() {
-            if (activeAppId !== 'chat') return; // 严格限制仅在蜜语界面触发
-
-            const phoneLayer = document.getElementById('phoneVideoLayer');
-            if(!phoneLayer) return;
             let modal = document.getElementById('videoModal');
             if(modal) modal.remove();
 
@@ -1723,8 +1717,8 @@
                 </div>
                 <div class="video-body" id="videoBodyContent"></div>
             `;
-            phoneLayer.appendChild(modal);
-            makeDraggableInPhoneBox(modal, document.getElementById('videoModalHeader'));
+            document.body.appendChild(modal);
+            makeDraggableGlobal(modal, document.getElementById('videoModalHeader'));
             isVideoFullScreen = false;
             renderVideoBodyContent();
 
@@ -2796,7 +2790,7 @@
             }
         }
 
-        // --- 3. 锦书模块 (回信时间 8~12 小时) ---
+        // --- 3. 锦书模块 (重构为独立界面，完美遵守两边逻辑) ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
@@ -2824,13 +2818,15 @@
             if (currentLetterTab === 'sent') {
                 area.innerHTML = `
                     <div style="padding-bottom:4px;">
-                        <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 240px; max-height: 450px;"></textarea>
+                        <textarea id="letterInput" placeholder="写下你的心事与信件..." style="min-height: 200px; max-height: 350px;"></textarea>
                         <button class="btn" style="width:100%; margin-top:8px;" onclick="sendLetter()">寄出信件</button>
                     </div>
+                    <div style="font-size:12px; color:var(--sub-text); margin-top:4px;">我寄出的所有信件：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
                 `;
             } else {
                 area.innerHTML = `
+                    <div style="font-size:12px; color:var(--sub-text); margin-top:4px;">收到的所有回信及主动来信：</div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;" id="letterListContainer"></div>
                 `;
             }
@@ -2934,8 +2930,8 @@
             if (!text) return;
 
             const now = Date.now();
-            const minMs = 8 * 60 * 60 * 1000;   // 8小时
-            const maxMs = 12 * 60 * 60 * 1000;  // 12小时
+            const minMs = 8 * 60 * 60 * 1000;
+            const maxMs = 12 * 60 * 60 * 1000;
             const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 
             const d = new Date();
@@ -3093,7 +3089,7 @@
             sortedLetters.forEach(item => {
                 const div = document.createElement('div');
                 div.id = `letter-item-${item.id}`;
-                div.style.cssText = "margin: 0 8px; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
+                div.style.cssText = "margin: 0 4px; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s;";
                 
                 let heartColor = '';
                 let topTimeText = '';
@@ -3221,7 +3217,7 @@
             }
         }
 
-        // --- 4. 良辰模块 ---
+        // --- 4. 良辰模块 (含拖动排序与文本输入框) ---
         function checkAndExecutePartnerAnnivCheckIn() {
             const todayStr = new Date().toISOString().slice(0, 10);
             if (annivCheckInData.partnerLastCheckInDate !== todayStr) {
@@ -3264,7 +3260,7 @@
             const partnerAvatarImg = settings.partnerAvatar ? `<img src="${settings.partnerAvatar}" style="width:100%;height:100%;object-fit:cover;">` : '<svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
 
             container.innerHTML = `
-                <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;" autocomplete="off">
+                <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
                     <div style="border:1px solid var(--border-color); padding:16px; border-radius:12px; background:var(--bg-color); display:flex; flex-direction:column; justify-content:space-between; height:150px; flex-shrink:0;">
                         <div style="display:flex; align-items:center; justify-content:center; gap:20px;">
                             <div style="display:flex; align-items:center;">
@@ -3285,27 +3281,53 @@
                         </div>
                     </div>
 
-                    <form autocomplete="off" onsubmit="return false;" style="display:flex; flex-direction:column; gap:6px;">
-                        <input type="text" id="annivName" placeholder="记录我们相爱的每时每刻" autocomplete="off" autocapitalize="off" spellcheck="false" name="no-autofill-name">
-                        <input type="date" id="annivDate" autocomplete="off" name="no-autofill-date">
-                        <button class="btn" style="width:100%; margin-top:2px;" onclick="addAnniversary()">保存良辰</button>
-                    </form>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); width:100%; text-align:left; padding:10px 12px; border-radius:8px; cursor:pointer;" onclick="openAddAnniversaryModal()">记录我们相爱的每时每刻</button>
+                    </div>
                     <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;" id="anniversaryContainer"></div>
                 </div>
             `;
             updateAnniversaryList();
         }
 
-        function addAnniversary() {
-            const nameEl = document.getElementById('annivName');
-            const dateEl = document.getElementById('annivDate');
+        function openAddAnniversaryModal() {
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            const todayStr = new Date().toISOString().slice(0, 10);
+
+            overlay.innerHTML = `
+                <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto;">
+                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">添加纪念日</div>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <input type="text" id="modalAnnivName" placeholder="纪念日名称 (例如: 第一次约会)">
+                        <input type="date" id="modalAnnivDate" value="${todayStr}">
+                    </div>
+                    <div class="love-modal-buttons" style="margin-top:12px;">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmAddAnniversary()">确定</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function confirmAddAnniversary() {
+            const nameEl = document.getElementById('modalAnnivName');
+            const dateEl = document.getElementById('modalAnnivDate');
             if (!nameEl || !dateEl) return;
-            
+
             const name = nameEl.value.trim();
             const date = dateEl.value;
-            if (!name || !date) { alert('请填写完整的名字和日期！'); return; }
+            if (!name || !date) { alert('请填写完整的名称和日期！'); return; }
+
             anniversaries.push({ id: Date.now(), name, date });
             saveData();
+            closeLoveModal();
             initAnniversary(document.getElementById('subPageContent'));
         }
 
@@ -3340,7 +3362,7 @@
             const yyyy = now.getFullYear();
             const todayTime = new Date(yyyy, now.getMonth(), now.getDate()).getTime();
 
-            anniversaries.forEach((item) => {
+            anniversaries.forEach((item, index) => {
                 const parts = item.date.split('-').map(Number);
                 const targetTime = new Date(parts[0], parts[1] - 1, parts[2]).getTime();
 
@@ -3367,10 +3389,34 @@
 
                 const div = document.createElement('div');
                 div.className = 'anniv-item-card';
+                div.draggable = true;
+                div.dataset.index = index;
+
+                div.ondragstart = (e) => {
+                    e.dataTransfer.setData('text/plain', index);
+                };
+                div.ondragover = (e) => {
+                    e.preventDefault();
+                };
+                div.ondrop = (e) => {
+                    e.preventDefault();
+                    const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIdx = index;
+                    if (fromIdx !== toIdx) {
+                        const movedItem = anniversaries.splice(fromIdx, 1)[0];
+                        anniversaries.splice(toIdx, 0, movedItem);
+                        saveData();
+                        updateAnniversaryList();
+                    }
+                };
+
                 div.innerHTML = `
-                    <div style="flex:1; overflow:hidden; padding-right:8px;">
-                        <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
-                        <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
+                    <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden;">
+                        <span style="color:#888888; font-size:16px; cursor:grab; line-height:1; user-select:none;" title="长按拖动排序">≡</span>
+                        <div style="flex:1; overflow:hidden; padding-right:8px;">
+                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+                            <div style="font-size:11px; color:var(--sub-text); margin-top:2px;">日期：${item.date}</div>
+                        </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <div style="font-size:14px; text-align:right;">${label}<br><strong style="font-size:16px;">${diffDays}</strong> 天</div>
@@ -3382,7 +3428,7 @@
             });
         }
 
-        // --- 5. 厮守模块与马卡龙色大爱心分类总计 ---
+        // --- 5. 厮守模块 ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
@@ -3398,7 +3444,6 @@
                         <div class="avatar-box" style="width:84px; height:84px; border-radius:50%;" id="sishouMyAvatarBox" onclick="handleMyAvatarClick()" title="点击拍一拍自己"></div>
                     </div>
 
-                    <!-- 保持每行两个，一共三行 -->
                     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;">
                         <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('学习')">学习</button>
                         <button class="btn" style="background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); padding:12px; font-size:14px; font-weight:normal; border-radius:12px;" onclick="startSiShouFlow('工作')">工作</button>
@@ -3410,7 +3455,6 @@
 
                     <div id="sishouActiveArea" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--border-color); border-radius:12px; background:var(--bg-color); padding:10px; margin-top:4px;"></div>
 
-                    <!-- 纯净呼吸灯悬浮星球按钮 -->
                     <div class="floating-planet-btn" onclick="openSishouUniverseModal()" title="愿我如星君如月">
                         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
                     </div>
@@ -3519,7 +3563,6 @@
             universeAnimationId = requestAnimationFrame(runUniversePhysicsLoop);
         }
 
-        // 打开大爱心分类视图 (6个马卡龙色系爱心)
         function openBigHeartCategoriesModal() {
             let overlay = document.getElementById('universeModalOverlay');
             if(overlay) {
@@ -3530,7 +3573,6 @@
             const categories = ['学习', '工作', '运动', '放松', '共眠', '缱绻'];
             const macaronColors = ['#ffb5a7', '#fcd5ce', '#f8edeb', '#f9dcc4', '#fec89a', '#b5e2fa'];
 
-            // 计算每个分类的总时间 (无上限)
             const categoryTotals = {};
             categories.forEach(cat => categoryTotals[cat] = 0);
 
@@ -3791,7 +3833,7 @@
             minsHTML += '<div class="picker-wheel-spacer"></div>';
 
             overlay.innerHTML = `
-                <div class="love-modal-card" style="width: 90%; max-width: 340px;">
+                <div class="love-modal-card" style="width: 90%; max-width: 320px;">
                     <div style="font-size:16px;">选择倒计时时长 (最高72小时)</div>
                     <div class="picker-wheel-container">
                         <div class="picker-wheel-highlight"></div>
@@ -3934,7 +3976,6 @@
 
         function toggleSiShouPause() {
             if (sishouData.mode === 'countdown') {
-                // 倒计时未结束时按暂停：时间暂停，无对话框弹出
                 sishouData.isPaused = !sishouData.isPaused;
                 saveData();
                 updateSiShouActiveUI();
@@ -3962,7 +4003,6 @@
             const totalSecsFinal = mode === 'countup' ? totalSecs : sishouData.targetSeconds;
 
             if (status === 'stopped' && mode === 'countdown') {
-                // 倒计时未结束就按停止
                 let stopMsg = '';
                 if (type === '学习' || type === '工作') stopMsg = '乖宝又想跑到哪里去？';
                 else if (type === '运动') stopMsg = '真的吗？乖宝真的要丢下老公一个人？';
@@ -4031,7 +4071,7 @@
             showLoveModal(msg, [{ text: '确定', primary: true, onclick: 'closeLoveModal()' }]);
         }
 
-        // --- 6. 流年模块 (删除拖动与长按，增加编辑按钮) ---
+        // --- 6. 流年模块 (修正弹窗宽度、按钮颜色及文字) ---
         let currentTodoTab = 'todolist';
 
         const encouragementQuotes = [
@@ -4093,7 +4133,7 @@
             compSec.innerHTML = '';
 
             if (uncompletedItems.length === 0) {
-                const emptyText = currentTodoTab === 'wish' ? '暂无未完成心愿' : '暂无未完成项目~';
+                const emptyText = currentTodoTab === 'wish' ? '暂无未完成心愿' : '暂无未完成项目';
                 uncompSec.innerHTML = `<div style="text-align:center; color:var(--sub-text); font-size:12px; padding:15px; border:1px dashed var(--border-color); border-radius:8px;">${emptyText}</div>`;
             } else {
                 uncompletedItems.forEach((item) => {
@@ -4161,16 +4201,38 @@
         }
 
         function deleteTodoItem(id) {
-            if (confirm("确定要删除这条日程吗？")) {
-                todoList = todoList.filter(t => t.id !== id);
-                saveData();
-                const subContent = document.getElementById('subPageContent');
-                if(subContent) renderTodoMainPage(subContent);
-            }
+            const item = todoList.find(t => t.id === id);
+            const itemTypeLabel = item && item.category === 'wish' ? '心愿' : '日程';
+            
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            overlay.innerHTML = `
+                <div class="love-modal-card">
+                    <div class="love-modal-text">确定要删除这条${itemTypeLabel}吗？</div>
+                    <div class="love-modal-buttons">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmDeleteTodo(${id})">好</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function confirmDeleteTodo(id) {
+            todoList = todoList.filter(t => t.id !== id);
+            saveData();
+            closeLoveModal();
+            const subContent = document.getElementById('subPageContent');
+            if(subContent) renderTodoMainPage(subContent);
         }
 
         function openAddTodoModal() {
-            const tabName = currentTodoTab === 'todolist' ? '新日程' : '新心愿';
+            const tabName = currentTodoTab === 'todolist' ? '添加新日程' : '添加新心愿';
             
             let overlay = document.getElementById('loveCustomModal');
             if(overlay) overlay.remove();
@@ -4181,7 +4243,7 @@
 
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto;">
-                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:4px;">添加${tabName}：</div>
+                    <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:4px;">${tabName}</div>
                     <div>
                         <textarea id="modalTodoInput" placeholder="请输入内容..." style="height: 120px; min-height: 100px; resize: none;"></textarea>
                     </div>
@@ -4278,17 +4340,17 @@
             overlay.innerHTML = `
                 <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">选择日期和时间</div>
-                    <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
-                        <div style="width:100%;">
+                    <div style="display:flex; flex-direction:column; gap:10px; width:100%; box-sizing:border-box;">
+                        <div style="width:100%; box-sizing:border-box;">
                             <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择日期：</label>
                             <input type="date" id="pickerDateInput" value="${defaultDateStr}" style="width:100%; box-sizing:border-box;">
                         </div>
-                        <div style="width:100%;">
+                        <div style="width:100%; box-sizing:border-box;">
                             <label style="font-size:12px; color:var(--sub-text); display:block; margin-bottom:4px;">选择时间 (可选)：</label>
                             <input type="time" id="pickerTimeInput" value="09:00" style="width:100%; box-sizing:border-box;">
                         </div>
                     </div>
-                    <div class="love-modal-buttons" style="margin-top:12px; width:100%;">
+                    <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
                         <button class="btn" style="flex:1; border-radius:10px;" onclick="confirmTaskDateTimePicker(${id})">确定</button>
                     </div>
