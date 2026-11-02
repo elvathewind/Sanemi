@@ -719,7 +719,7 @@
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 16px;
-            padding: 24px;
+            padding: 24px 20px;
             width: 86%;
             max-width: 320px;
             box-sizing: border-box;
@@ -3374,8 +3374,8 @@
                 <div class="love-modal-card" style="width: 90%; max-width: 320px; text-align:left; margin:auto; box-sizing:border-box;">
                     <div style="font-size:16px; font-weight:bold; text-align:center; margin-bottom:8px;">添加纪念日</div>
                     <div style="display:flex; flex-direction:column; gap:8px; width:100%; box-sizing:border-box;">
-                        <input type="text" id="modalAnnivName" placeholder="纪念日名称 (例如: 第一次约会)">
-                        <input type="date" id="modalAnnivDate" value="${todayStr}">
+                        <input type="text" id="modalAnnivName" placeholder="纪念日名称 (例如: 第一次约会)" style="width:100%; box-sizing:border-box;">
+                        <input type="date" id="modalAnnivDate" value="${todayStr}" style="width:100%; box-sizing:border-box;">
                     </div>
                     <div class="love-modal-buttons" style="margin-top:12px; width:100%; box-sizing:border-box;">
                         <button class="btn" style="flex:1; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
@@ -3416,11 +3416,30 @@
         }
 
         function deleteAnniversary(id) {
-            if (confirm("确定要删除这个良辰纪念日吗？")) {
-                anniversaries = anniversaries.filter(a => a.id !== id);
-                saveData();
-                initAnniversary(document.getElementById('subPageContent'));
-            }
+            let overlay = document.getElementById('loveCustomModal');
+            if(overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'loveCustomModal';
+            overlay.className = 'love-modal-overlay';
+
+            overlay.innerHTML = `
+                <div class="love-modal-card">
+                    <div class="love-modal-text">确定要删除这个良辰纪念日吗？</div>
+                    <div class="love-modal-buttons">
+                        <button class="btn" style="flex:1; background:var(--bg-color); color:var(--pine-green); border:1px solid var(--border-color); border-radius:10px;" onclick="closeLoveModal()">取消</button>
+                        <button class="btn" style="flex:1; background:var(--pine-green); color:#ffffff; border-radius:10px;" onclick="confirmDeleteAnniversary(${id})">好</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function confirmDeleteAnniversary(id) {
+            anniversaries = anniversaries.filter(a => a.id !== id);
+            saveData();
+            closeLoveModal();
+            initAnniversary(document.getElementById('subPageContent'));
         }
 
         function updateAnniversaryList() {
