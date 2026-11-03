@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -717,8 +718,9 @@
             width: 100%;
             max-width: 100%;
             box-sizing: border-box;
-            overflow: hidden;
+            overflow: visible;
             color: var(--text-color);
+            min-height: 48px;
         }
 
         @keyframes clockShake {
@@ -1000,6 +1002,18 @@
             text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
         .macaron-heart-node:hover { transform: scale(1.15); z-index: 10; }
+
+        .todo-text-span {
+            word-break: break-all;
+            font-size: var(--font-size);
+            color: var(--text-color) !important;
+            display: block;
+            flex: 1;
+            min-width: 0;
+            overflow: visible;
+            white-space: normal;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -1092,7 +1106,9 @@
         let annivCheckInData = JSON.parse(localStorage.getItem('annivCheckInData')) || {
             totalDays: 0,
             myLastCheckInDate: '',
-            partnerLastCheckInDate: ''
+            partnerLastCheckInDate: '',
+            lastResetDate: '',
+            partnerCheckTimeToday: 0
         };
 
         let tempSettings = JSON.parse(JSON.stringify(settings));
@@ -1174,6 +1190,9 @@
                 }
             }
             checkTodoReminders();
+            processPendingLetterReplies();
+            checkAndGeneratePartnerInitiatedLetter();
+            checkPartnerAnnivCheckInBackground();
         }, 30000);
 
         setInterval(() => {
@@ -2925,10 +2944,11 @@
             updateEmojiList();
         }
 
-        // --- 3. 锦书模块 ---
+        // --- 3. 锦书模块 (已修复) ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
+            processPendingLetterReplies();
             checkAndGeneratePartnerInitiatedLetter();
             container.innerHTML = `
                 <div style="padding:12px 20px; background:var(--pine-green); color:#ffffff; text-align:center; font-size:14px; letter-spacing:2px; border-bottom:1px solid var(--border-color); width:100%; box-sizing:border-box;">
@@ -2952,21 +2972,13 @@
             updateLettersList();
         }
 
-        function checkAndGeneratePartnerInitiatedLetter() {
+        function processPendingLetterReplies() {
             const now = Date.now();
-            let lastPartnerLetterTime = Number(localStorage.getItem('lastPartnerLetterTime')) || 0;
-            
-            if (!lastPartnerLetterTime) {
-                lastPartnerLetterTime = now;
-                localStorage.setItem('lastPartnerLetterTime', lastPartnerLetterTime);
-            }
+            let changed = false;
 
-            const elapsed = now - lastPartnerLetterTime;
-            const randomTargetInterval = (Math.random() * (168 - 72) + 72) * 60 * 60 * 1000;
-
-            if (elapsed >= randomTargetInterval) {
-                if (cardLibrary.length > 0) {
-                    const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (15 - 5 + 1)) + 5);
+            letters.forEach(item => {
+                if (!item.isPartnerInitiated && !item.reply && cardLibrary.length > 0 && item.replyTimestamp && now >= item.replyTimestamp) {
+                    const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
                     let selected = [];
                     let tempLib = [...cardLibrary];
                     for (let i = 0; i < count; i++) {
@@ -2974,28 +2986,97 @@
                         selected.push(tempLib[idx].content);
                         tempLib.splice(idx, 1);
                     }
-                    const partnerLetterContent = selected.join(' ');
-
+                    item.reply = selected.join(' ');
                     const d = new Date();
-                    const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-
-                    letters.push({
-                        id: now,
-                        isPartnerInitiated: true,
-                        myLetter: '',
-                        reply: partnerLetterContent,
-                        time: timeStr,
-                        estTime: '8到12小时之内',
-                        replyTimestamp: now,
-                        isRead: false,
-                        partnerLetterTime: timeStr,
-                        myReplyToPartner: '',
-                        continuationReplies: []
-                    });
-
-                    localStorage.setItem('lastPartnerLetterTime', now);
-                    saveData();
+                    item.replyTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                    item.isRead = false;
+                    changed = true;
                 }
+
+                if (item.isPartnerInitiated && item.myReplyToPartner && !item.partnerReplyContent && cardLibrary.length > 0 && item.partnerReplyTimestamp && now >= item.partnerReplyTimestamp) {
+                    const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
+                    let selected = [];
+                    let tempLib = [...cardLibrary];
+                    for (let i = 0; i < count; i++) {
+                        const idx = Math.floor(Math.random() * tempLib.length);
+                        selected.push(tempLib[idx].content);
+                        tempLib.splice(idx, 1);
+                    }
+                    item.partnerReplyContent = selected.join(' ');
+                    const d = new Date();
+                    item.partnerReplyActualTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                    item.isRead = false;
+                    changed = true;
+                }
+
+                if (item.continuationReplies && item.continuationReplies.length > 0) {
+                    item.continuationReplies.forEach(cr => {
+                        if (!cr.replyContent && cardLibrary.length > 0 && cr.replyTimestamp && now >= cr.replyTimestamp) {
+                            const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
+                            let selected = [];
+                            let tempLib = [...cardLibrary];
+                            for (let i = 0; i < count; i++) {
+                                const idx = Math.floor(Math.random() * tempLib.length);
+                                selected.push(tempLib[idx].content);
+                                tempLib.splice(idx, 1);
+                            }
+                            cr.replyContent = selected.join(' ');
+                            const d = new Date();
+                            cr.replyTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                            item.isRead = false;
+                            changed = true;
+                        }
+                    });
+                }
+            });
+
+            if (changed) saveData();
+        }
+
+        function checkAndGeneratePartnerInitiatedLetter() {
+            if (cardLibrary.length === 0) return;
+
+            const now = Date.now();
+            let lastPartnerLetterTime = Number(localStorage.getItem('lastPartnerLetterTime')) || 0;
+
+            if (!lastPartnerLetterTime) {
+                lastPartnerLetterTime = now - (Math.random() * 2 + 1) * 24 * 60 * 60 * 1000;
+                localStorage.setItem('lastPartnerLetterTime', lastPartnerLetterTime);
+            }
+
+            const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+            const elapsed = now - lastPartnerLetterTime;
+
+            if (elapsed >= threeDaysMs) {
+                const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (15 - 5 + 1)) + 5);
+                let selected = [];
+                let tempLib = [...cardLibrary];
+                for (let i = 0; i < count; i++) {
+                    const idx = Math.floor(Math.random() * tempLib.length);
+                    selected.push(tempLib[idx].content);
+                    tempLib.splice(idx, 1);
+                }
+                const partnerLetterContent = selected.join(' ');
+
+                const d = new Date();
+                const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+                letters.push({
+                    id: now,
+                    isPartnerInitiated: true,
+                    myLetter: '',
+                    reply: partnerLetterContent,
+                    time: timeStr,
+                    estTime: '不久的将来',
+                    replyTimestamp: now,
+                    isRead: false,
+                    partnerLetterTime: timeStr,
+                    myReplyToPartner: '',
+                    continuationReplies: []
+                });
+
+                localStorage.setItem('lastPartnerLetterTime', now);
+                saveData();
             }
         }
 
@@ -3048,7 +3129,7 @@
 
             const now = Date.now();
             const minMs = 8 * 60 * 60 * 1000;
-            const maxMs = 12 * 60 * 60 * 1000;
+            const maxMs = 24 * 60 * 60 * 1000;
             const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 
             const d = new Date();
@@ -3060,7 +3141,7 @@
                 myLetter: text,
                 reply: '',
                 time: timeStr,
-                estTime: '8到12小时之内',
+                estTime: '不久的将来',
                 replyTimestamp: now + randomDelay,
                 isRead: false,
                 replyTime: '',
@@ -3111,7 +3192,7 @@
 
             const now = Date.now();
             const minMs = 8 * 60 * 60 * 1000;
-            const maxMs = 12 * 60 * 60 * 1000;
+            const maxMs = 24 * 60 * 60 * 1000;
             const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 
             const d = new Date();
@@ -3120,7 +3201,7 @@
             letter.myReplyToPartner = text;
             letter.myReplyTime = timeStr;
             letter.partnerReplyTimestamp = now + randomDelay;
-            letter.partnerEstTime = '8到12小时之内';
+            letter.partnerEstTime = '不久的将来';
             letter.partnerReplyContent = '';
             saveData();
             closeLoveModal();
@@ -3166,7 +3247,7 @@
 
             const now = Date.now();
             const minMs = 8 * 60 * 60 * 1000;
-            const maxMs = 12 * 60 * 60 * 1000;
+            const maxMs = 24 * 60 * 60 * 1000;
             const randomDelay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 
             const d = new Date();
@@ -3176,7 +3257,7 @@
             letter.continuationReplies.push({
                 text: text,
                 time: timeStr,
-                estTime: '8到12小时之内',
+                estTime: '不久的将来',
                 replyTimestamp: now + randomDelay,
                 replyContent: '',
                 replyTime: ''
@@ -3191,69 +3272,7 @@
             if (!container) return;
             container.innerHTML = '';
 
-            const now = Date.now();
-            let hasNewUnread = false;
-
-            letters.forEach(item => {
-                if (!item.isPartnerInitiated && !item.reply && cardLibrary.length > 0 && now >= item.replyTimestamp) {
-                    const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
-                    let selected = [];
-                    let tempLib = [...cardLibrary];
-                    for (let i = 0; i < count; i++) {
-                        const idx = Math.floor(Math.random() * tempLib.length);
-                        selected.push(tempLib[idx].content);
-                        tempLib.splice(idx, 1);
-                    }
-                    item.reply = selected.join(' ');
-                    
-                    const d = new Date();
-                    item.replyTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                    item.isRead = false;
-                    saveData();
-                }
-
-                if (item.isPartnerInitiated && item.myReplyToPartner && !item.partnerReplyContent && cardLibrary.length > 0 && item.partnerReplyTimestamp && now >= item.partnerReplyTimestamp) {
-                    const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
-                    let selected = [];
-                    let tempLib = [...cardLibrary];
-                    for (let i = 0; i < count; i++) {
-                        const idx = Math.floor(Math.random() * tempLib.length);
-                        selected.push(tempLib[idx].content);
-                        tempLib.splice(idx, 1);
-                    }
-                    item.partnerReplyContent = selected.join(' ');
-                    const d = new Date();
-                    item.partnerReplyActualTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                    item.isRead = false;
-                    saveData();
-                }
-
-                if (item.continuationReplies && item.continuationReplies.length > 0) {
-                    item.continuationReplies.forEach(cr => {
-                        if (!cr.replyContent && cardLibrary.length > 0 && cr.replyTimestamp && now >= cr.replyTimestamp) {
-                            const count = Math.min(cardLibrary.length, Math.floor(Math.random() * (20 - 5 + 1)) + 5);
-                            let selected = [];
-                            let tempLib = [...cardLibrary];
-                            for (let i = 0; i < count; i++) {
-                                const idx = Math.floor(Math.random() * tempLib.length);
-                                selected.push(tempLib[idx].content);
-                                tempLib.splice(idx, 1);
-                            }
-                            cr.replyContent = selected.join(' ');
-                            const d = new Date();
-                            cr.replyTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                            item.isRead = false;
-                            saveData();
-                        }
-                    });
-                }
-
-                if ((item.reply && !item.isRead && !item.isPartnerInitiated) ||
-                    (item.isPartnerInitiated && (item.partnerReplyContent && !item.isRead || (!item.myReplyToPartner && !item.isRead))) ||
-                    (item.continuationReplies && item.continuationReplies.some(cr => cr.replyContent && !item.isRead))) {
-                    hasNewUnread = true;
-                }
-            });
+            processPendingLetterReplies();
 
             const sortedLetters = [...letters].sort((a, b) => b.id - a.id);
 
@@ -3262,7 +3281,15 @@
                 return;
             }
 
+            let hasNewUnread = false;
+
             sortedLetters.forEach(item => {
+                if ((item.reply && !item.isRead && !item.isPartnerInitiated) ||
+                    (item.isPartnerInitiated && (item.partnerReplyContent && !item.isRead || (!item.myReplyToPartner && !item.isRead))) ||
+                    (item.continuationReplies && item.continuationReplies.some(cr => cr.replyContent && !item.isRead))) {
+                    hasNewUnread = true;
+                }
+
                 const div = document.createElement('div');
                 div.id = `letter-item-${item.id}`;
                 div.style.cssText = "margin: 0; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; transition:border-color 0.3s; width:100%; box-sizing:border-box; color:var(--text-color);";
@@ -3280,7 +3307,7 @@
                         if (item.partnerReplyContent) {
                             partnerReplyHTML = `
                                 <div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">
-                                    <div style="font-size:11px; color:var(--sub-text); margin-bottom:2px;">回信时间: ${item.partnerReplyActualTime || item.partnerEstTime}</div>
+                                    <div style="font-size:11px; color:var(--sub-text); margin-bottom:2px;">回信时间: ${item.partnerReplyActualTime || item.partnerEstTime || '不久的将来'}</div>
                                     <strong>他的回信：</strong>
                                     <div style="max-height: 240px; overflow-y: auto; margin-top: 4px; white-space: pre-wrap; color:var(--text-color);">${item.partnerReplyContent}</div>
                                 </div>
@@ -3288,7 +3315,7 @@
                         } else {
                             partnerReplyHTML = `
                                 <div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">
-                                    <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.myReplyTime} | 预计回信时间: ${item.partnerEstTime || '8到12小时之内'}</div>
+                                    <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${item.myReplyTime} | 预计回信时间: 不久的将来</div>
                                     <div style="margin-top:4px; color:var(--text-color);"><strong>我的回信:</strong> ${item.myReplyToPartner}</div>
                                 </div>
                             `;
@@ -3308,7 +3335,7 @@
                     `;
                 } else if (!item.reply) {
                     heartColor = '#ff8787';
-                    topTimeText = `寄出时间: ${item.time} | 预计回信时间: ${item.estTime || '8到12小时之内'}`;
+                    topTimeText = `寄出时间: ${item.time} | 预计回信时间: 不久的将来`;
                     cardContentHTML = `
                         <div style="color:var(--text-color);"><strong>我:</strong> ${item.myLetter}</div>
                         <div style="font-size:12px; color:var(--sub-text); font-style:italic; border-top:1px dashed var(--border-color); padding-top:6px;">真羡慕这封信，可以比我更早见到你</div>
@@ -3324,7 +3351,7 @@
                             if (cr.replyContent) {
                                 crReplyBlock = `
                                     <div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">
-                                        <div style="font-size:11px; color:var(--sub-text); margin-bottom:2px;">回信时间: ${cr.replyTime || cr.estTime}</div>
+                                        <div style="font-size:11px; color:var(--sub-text); margin-bottom:2px;">回信时间: ${cr.replyTime || '不久的将来'}</div>
                                         <strong>他的回信：</strong>
                                         <div style="white-space:pre-wrap; margin-top:2px; color:var(--text-color);">${cr.replyContent}</div>
                                     </div>
@@ -3332,7 +3359,7 @@
                             } else {
                                 crReplyBlock = `
                                     <div style="margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">
-                                        <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${cr.time} | 预计回信时间: ${cr.estTime || '8到12小时之内'}</div>
+                                        <div style="font-size:11px; color:var(--sub-text);">寄出时间: ${cr.time} | 预计回信时间: 不久的将来</div>
                                         <div style="margin-top:2px; color:var(--text-color);"><strong>回信:</strong> ${cr.text}</div>
                                     </div>
                                 `;
@@ -3402,22 +3429,27 @@
             }
         }
 
-        // --- 4. 良辰模块 ---
-        function checkAndExecutePartnerAnnivCheckIn() {
+        // --- 4. 良辰模块 (已修复打卡) ---
+        function checkPartnerAnnivCheckInBackground() {
             const todayStr = new Date().toISOString().slice(0, 10);
-            
+            const now = Date.now();
+
             if (annivCheckInData.lastResetDate !== todayStr) {
                 annivCheckInData.lastResetDate = todayStr;
                 annivCheckInData.myLastCheckInDate = '';
                 annivCheckInData.partnerLastCheckInDate = '';
+                const startOfDay = new Date(todayStr).getTime();
+                const randomOffset = Math.floor(Math.random() * 24 * 60 * 60 * 1000);
+                annivCheckInData.partnerCheckTimeToday = startOfDay + randomOffset;
                 saveData();
             }
 
-            if (!annivCheckInData.partnerLastCheckInDate) {
-                if (Math.random() < 0.8) {
-                    annivCheckInData.partnerLastCheckInDate = todayStr;
-                    saveData();
-                }
+            if (annivCheckInData.partnerLastCheckInDate === todayStr) return;
+            if (!annivCheckInData.partnerCheckTimeToday) return;
+
+            if (now >= annivCheckInData.partnerCheckTimeToday) {
+                annivCheckInData.partnerLastCheckInDate = todayStr;
+                saveData();
             }
         }
 
@@ -3428,20 +3460,14 @@
                 return;
             }
 
-            const wasPartnerCheckedToday = (annivCheckInData.partnerLastCheckInDate === todayStr);
             annivCheckInData.myLastCheckInDate = todayStr;
-
-            if (!wasPartnerCheckedToday) {
-                annivCheckInData.partnerLastCheckInDate = todayStr;
-            }
-
             annivCheckInData.totalDays += 1;
             saveData();
             initAnniversary(document.getElementById('subPageContent'));
         }
 
         function initAnniversary(container) {
-            checkAndExecutePartnerAnnivCheckIn();
+            checkPartnerAnnivCheckInBackground();
             
             const todayStr = new Date().toISOString().slice(0, 10);
             const myChecked = annivCheckInData.myLastCheckInDate === todayStr;
@@ -4266,17 +4292,11 @@
 
             const type = sishouData.type;
             const mode = sishouData.mode;
-            const totalSecs = mode === 'countup' ? Math.floor((Date.now() - sishouData.startTime)/1000) : (sishouData.targetSeconds - sishouCountdownRemaining);
-            const totalSecsFinal = mode === 'countup' ? totalSecs : sishouData.targetSeconds;
+            const actualSecs = mode === 'countup' 
+                ? Math.floor((Date.now() - sishouData.startTime)/1000) 
+                : (sishouData.targetSeconds - sishouCountdownRemaining);
 
-            if (mode === 'countdown' && status === 'paused') {
-                sishouData.isPaused = true;
-                saveData();
-                updateSiShouActiveUI();
-                return;
-            }
-
-            if (mode === 'countdown' && status === 'stopped' && totalSecs < sishouData.targetSeconds) {
+            if (mode === 'countdown' && status === 'stopped' && actualSecs < sishouData.targetSeconds) {
                 let stopMsg = '';
                 if (type === '学习' || type === '工作') stopMsg = '乖宝又想跑到哪里去？';
                 else if (type === '运动') stopMsg = '真的吗？乖宝真的要丢下老公一个人？';
@@ -4289,18 +4309,15 @@
                 return;
             }
 
-            if (mode === 'countup' && status === 'paused') {
-                sishouData.isPaused = true;
-                saveData();
-                updateSiShouActiveUI();
-                return;
-            }
+            let totalSecsFinal = (mode === 'countdown' && status === 'completed') 
+                ? sishouData.targetSeconds 
+                : Math.max(0, actualSecs);
 
             const totalMins = totalSecsFinal / 60;
             let msg = '';
 
             if (type === '学习' || type === '工作') {
-                if (mode === 'countdown' && totalSecsFinal >= sishouData.targetSeconds) {
+                if (mode === 'countdown' && status === 'completed') {
                     msg = '恭喜我可爱的妻子又和丈夫一起完成了一项任务！';
                 } else {
                     if (totalMins <= 15) msg = '可爱的老婆就这么坐不住吗？';
@@ -4310,7 +4327,7 @@
                     else msg = '请问这是神吗？我简直认不出我可爱的妻子了！';
                 }
             } else if (type === '运动') {
-                if (mode === 'countdown' && totalSecsFinal >= sishouData.targetSeconds) {
+                if (mode === 'countdown' && status === 'completed') {
                     msg = '恭喜我可爱的妻子又和丈夫一起变得更健康啦！';
                 } else {
                     if (totalMins <= 15) msg = '喂喂，才刚开始就要丢下老公吗？';
@@ -4326,9 +4343,27 @@
                 else if (totalMins <= 60) msg = '好幸福，老婆今天陪了我好久。';
                 else msg = '妻子一直在我身边，丈夫已经幸福到快要晕过去了。';
             } else if (type === '共眠') {
-                msg = '和老婆一起睡觉好幸福，根本舍不得起床。';
+                if (totalMins < 5 * 60) {
+                    msg = '就这点睡眠时间绝对不行！老公要把你按回去继续睡！';
+                } else if (totalMins < 6 * 60) {
+                    msg = '老婆你的睡眠时间严重不足，老公心疼坏了。';
+                } else if (totalMins < 7 * 60) {
+                    msg = '老婆今天睡得还行，但是还可以在老公怀里多睡一会。';
+                } else if (totalMins < 8 * 60) {
+                    msg = '和老婆一起睡觉好幸福，根本舍不得起床。';
+                } else {
+                    msg = '老婆你熟睡的样子太可爱了，我偷偷亲了你好几次！';
+                }
             } else if (type === '缱绻') {
-                msg = '和老婆在一起的日子里，每一个瞬间都闪闪发光，有你真好。';
+                if (totalMins <= 30) {
+                    msg = '老婆虽然我还没有黏够你，但是你要是有事就先去忙吧，老公一直都在。';
+                } else if (totalMins <= 60) {
+                    msg = '和老婆在一起的时光就是最幸福的，我是世界上最幸福的男人。';
+                } else if (totalMins <= 120) {
+                    msg = '老婆今天难得有空陪我这么久，老公幸福得要晕过去了！';
+                } else {
+                    msg = '我要和老婆生生世世永远在一起，谁都别想把我和老婆分开！';
+                }
             }
 
             const partnerNameStr = settings.partnerName || '老公';
@@ -4346,11 +4381,10 @@
 
             let recordText = `${symbol} 和${partnerNameStr}一起${type}的时间总计${timeFormattedStr}`;
 
-            if (mode === 'countup') {
-                if (!sishouCategoryTotals[type]) sishouCategoryTotals[type] = 0;
-                sishouCategoryTotals[type] += totalSecsFinal;
-                sishouRecords.push({ id: Date.now(), text: recordText, durationSeconds: totalSecsFinal });
-            }
+            // 正计时和倒计时都计入
+            if (!sishouCategoryTotals[type]) sishouCategoryTotals[type] = 0;
+            sishouCategoryTotals[type] += totalSecsFinal;
+            sishouRecords.push({ id: Date.now(), text: recordText, durationSeconds: totalSecsFinal });
 
             sishouData = { active: false, type: '', mode: 'countup', startTime: 0, targetSeconds: 0, pausedSeconds: 0, isPaused: false };
             saveData();
@@ -4359,7 +4393,7 @@
             showLoveModal(msg, []);
         }
 
-        // --- 6. 流年模块 ---
+        // --- 6. 流年模块 (文字显示已修复) ---
         const encouragementQuotes = [
             "老婆太厉害啦！又完成一项！❤️",
             "这是谁家宝贝怎么这么厉害呀！❤️",
@@ -4477,12 +4511,12 @@
             let starSymbol = item.important ? '⭐' : '☆';
 
             div.innerHTML = `
-                <div style="display:flex; align-items:center; gap:8px; flex:1; overflow:hidden;">
-                    <span style="color:#888888; font-size:16px; cursor:grab; line-height:1; user-select:none;" title="长按拖动排序">≡</span>
-                    <input type="checkbox" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green);" onclick="toggleTodoComplete(${item.id})">
-                    <div style="display:flex; align-items:center; flex:1; overflow:hidden;">
+                <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:visible;">
+                    <span style="color:#888888; font-size:16px; cursor:grab; line-height:1; user-select:none; flex-shrink:0;" title="长按拖动排序">≡</span>
+                    <input type="checkbox" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green); flex-shrink:0;" onclick="toggleTodoComplete(${item.id})">
+                    <div style="display:flex; align-items:center; flex:1; min-width:0; overflow:visible;">
                         ${timeBadge}
-                        <span style="word-break:break-all; font-size:var(--font-size); color:var(--text-color); display:inline-block; flex:1;">${item.text}</span>
+                        <span class="todo-text-span">${item.text || ''}</span>
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
@@ -4967,7 +5001,6 @@
             reader.onload = function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    if (imported.cardLibrary) cardLibrary = imported.cardLibrary;
                     if (imported.cardLibrary) cardLibrary = imported.cardLibrary;
                     if (imported.actionLibrary) actionLibrary = imported.actionLibrary;
                     if (imported.chatMessages) chatMessages = imported.chatMessages;
