@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -43,15 +42,13 @@
             --pine-green: #5c946e;
         }
 
-         * {
+        * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             font-family: var(--custom-font);
             font-size: var(--font-size);
             -webkit-tap-highlight-color: transparent;
-            writing-mode: horizontal-tb;
-            -webkit-writing-mode: horizontal-tb;
         }
 
         body {
@@ -1006,20 +1003,17 @@
         }
         .macaron-heart-node:hover { transform: scale(1.15); z-index: 10; }
 
-     .todo-text-span {
+        .todo-text-span {
             writing-mode: horizontal-tb !important;
-            -webkit-writing-mode: horizontal-tb !important;
-            direction: ltr !important;
-            unicode-bidi: normal !important;
-            word-break: break-all !important;
-            white-space: pre-wrap !important;
-            font-size: var(--font-size) !important;
+            word-break: break-all;
+            font-size: var(--font-size);
             color: var(--text-color) !important;
-            display: inline-block !important;
-            flex: 1 !important;
-            min-width: 0 !important;
-            overflow: visible !important;
-            line-height: 1.4 !important;
+            display: block;
+            flex: 1;
+            min-width: 0;
+            overflow: visible;
+            white-space: normal;
+            line-height: 1.4;
         }
     </style>
 </head>
