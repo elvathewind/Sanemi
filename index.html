@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -41,13 +42,15 @@
             --pine-green: #5c946e;
         }
 
-        * {
+         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             font-family: var(--custom-font);
             font-size: var(--font-size);
             -webkit-tap-highlight-color: transparent;
+            writing-mode: horizontal-tb;
+            -webkit-writing-mode: horizontal-tb;
         }
 
         body {
@@ -720,7 +723,6 @@
             overflow: visible;
             color: var(--text-color);
             min-height: 48px;
-            gap: 8px;
         }
 
         @keyframes clockShake {
@@ -1003,18 +1005,17 @@
         }
         .macaron-heart-node:hover { transform: scale(1.15); z-index: 10; }
 
-        /* 流年文字横向正常显示修复 */
         .todo-text-span {
-            word-break: break-word;
-            overflow-wrap: break-word;
+            writing-mode: horizontal-tb;
+            word-break: break-all;
+            white-space: pre-wrap;
             font-size: var(--font-size);
             color: var(--text-color) !important;
-            display: inline;
-            flex: 1 1 auto;
+            display: block;
+            flex: 1;
             min-width: 0;
-            white-space: normal;
+            overflow: visible;
             line-height: 1.4;
-            text-align: left;
         }
     </style>
 </head>
@@ -1048,7 +1049,6 @@
     </div>
 
     <script>
-        // ========== 数据初始化 ==========
         let cardLibrary = JSON.parse(localStorage.getItem('cardLibrary')) || [
             { id: 1, content: '今天过得怎么样？' },
             { id: 2, content: '今天天气很好。' },
@@ -1186,7 +1186,6 @@
         }
         applySettings();
 
-        // 后台定时任务
         setInterval(() => {
             if (currentCallStatus === 'idle' && activeAppId === 'chat') {
                 if (Math.random() < 0.05) {
@@ -1423,7 +1422,6 @@
             return phrases[hourIndex];
         }
 
-        // ========== 蜜语相关 ==========
         let callTimerInterval = null;
         let callSeconds = 0;
         let currentCallStatus = 'idle';
@@ -1497,6 +1495,7 @@
             }
         }
 
+        // --- 1. 蜜语模块 ---
         function initChat(container) {
             currentReplyingTo = null;
             container.innerHTML = `
@@ -2127,7 +2126,7 @@
             }
         }
 
-        // ========== 心迹 ==========
+        // --- 2. 心迹模块 ---
         function initHeartMoments(container) {
             checkAndGenerateBackgroundHeartMoments();
             checkAndProcessPendingHeartInteractions(); 
@@ -2562,7 +2561,7 @@
             renderHeartMomentsList();
         }
 
-        // ========== 字库 ==========
+        // --- 字库模块 ---
         let currentLibTab = 'cards';
 
         function initCards(container) {
@@ -2948,7 +2947,7 @@
             updateEmojiList();
         }
 
-        // ========== 锦书 ==========
+        // --- 3. 锦书模块 ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
@@ -3433,7 +3432,7 @@
             }
         }
 
-        // ========== 良辰 ==========
+        // --- 4. 良辰模块 ---
         function checkPartnerAnnivCheckInBackground() {
             const todayStr = new Date().toISOString().slice(0, 10);
             const now = Date.now();
@@ -3661,7 +3660,7 @@
             });
         }
 
-        // ========== 厮守 ==========
+        // --- 5. 厮守模块 ---
         let liveSiShouInterval = null;
         let sishouSecondsElapsed = 0;
         let sishouCountdownRemaining = 0;
@@ -4288,7 +4287,6 @@
             }
         }
 
-        // ★ 关键：正计时 + 倒计时 都会完整计入漂浮星月 + 各项总时间
         function finishSiShouSession(status) {
             if(liveSiShouInterval) {
                 clearInterval(liveSiShouInterval);
@@ -4301,7 +4299,6 @@
                 ? Math.floor((Date.now() - sishouData.startTime)/1000) 
                 : (sishouData.targetSeconds - sishouCountdownRemaining);
 
-            // 倒计时提前停止的特殊提示（不记录）
             if (mode === 'countdown' && status === 'stopped' && actualSecs < sishouData.targetSeconds) {
                 let stopMsg = '';
                 if (type === '学习' || type === '工作') stopMsg = '乖宝又想跑到哪里去？';
@@ -4315,7 +4312,6 @@
                 return;
             }
 
-            // 最终使用的秒数
             let totalSecsFinal = (mode === 'countdown' && status === 'completed') 
                 ? sishouData.targetSeconds 
                 : Math.max(0, actualSecs);
@@ -4388,7 +4384,6 @@
 
             let recordText = `${symbol} 和${partnerNameStr}一起${type}的时间总计${timeFormattedStr}`;
 
-            // ★ 正计时和倒计时都写入记录和总计
             if (!sishouCategoryTotals[type]) sishouCategoryTotals[type] = 0;
             sishouCategoryTotals[type] += totalSecsFinal;
             sishouRecords.push({ id: Date.now(), text: recordText, durationSeconds: totalSecsFinal });
@@ -4400,7 +4395,7 @@
             showLoveModal(msg, []);
         }
 
-        // ========== 流年（文字横向显示修复） ==========
+        // --- 6. 流年模块 ---
         const encouragementQuotes = [
             "老婆太厉害啦！又完成一项！❤️",
             "这是谁家宝贝怎么这么厉害呀！❤️",
@@ -4483,7 +4478,6 @@
             }
         }
 
-        // ★ 流年卡片布局修复：文字正常横向显示
         function createTodoCardElement(item, isCompleted, index) {
             const div = document.createElement('div');
             div.id = `todo-card-${item.id}`;
@@ -4515,19 +4509,16 @@
                 }
             };
             
-            let timeBadge = item.timeStr ? `<span style="font-size:11px; background:${isCompleted?'var(--sub-text)':'var(--pine-green)'}; color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0; white-space:nowrap;">${item.timeStr}</span>` : '';
+            let timeBadge = item.timeStr ? `<span style="font-size:11px; background:${isCompleted?'var(--sub-text)':'var(--pine-green)'}; color:#fff; padding:2px 6px; border-radius:4px; margin-right:6px; flex-shrink:0;">${item.timeStr}</span>` : '';
             let starSymbol = item.important ? '⭐' : '☆';
 
-            // 重新组织布局：左侧内容区（拖动手柄+复选框+文字），右侧操作区
             div.innerHTML = `
-                <div style="display:flex; align-items:flex-start; gap:8px; flex:1; min-width:0;">
-                    <span style="color:#888888; font-size:16px; cursor:grab; line-height:1.4; user-select:none; flex-shrink:0; margin-top:2px;" title="长按拖动排序">≡</span>
-                    <input type="checkbox" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green); flex-shrink:0; margin-top:3px;" onclick="toggleTodoComplete(${item.id})">
-                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">
-                        <div style="display:flex; align-items:flex-start; gap:4px; flex-wrap:wrap;">
-                            ${timeBadge}
-                            <span class="todo-text-span">${item.text || ''}</span>
-                        </div>
+                <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:visible;">
+                    <span style="color:#888888; font-size:16px; cursor:grab; line-height:1; user-select:none; flex-shrink:0;" title="长按拖动排序">≡</span>
+                    <input type="checkbox" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:var(--pine-green); flex-shrink:0;" onclick="toggleTodoComplete(${item.id})">
+                    <div style="display:flex; align-items:center; flex:1; min-width:0; overflow:visible;">
+                        ${timeBadge}
+                        <span class="todo-text-span">${item.text || ''}</span>
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
@@ -4751,7 +4742,7 @@
             openTodoDetailPage(id);
         }
 
-        // ========== 设置 ==========
+        // --- 设置模块 ---
         function initSettings(container) {
             container.innerHTML = `
                 <div style="padding: 12px; display: flex; flex-direction: column; gap: 12px; height: 100%; width: 100%; box-sizing: border-box;">
