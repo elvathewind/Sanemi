@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1004,7 +1003,6 @@
         .macaron-heart-node:hover { transform: scale(1.15); z-index: 10; }
 
         .todo-text-span {
-            writing-mode: horizontal-tb !important;
             word-break: break-all;
             font-size: var(--font-size);
             color: var(--text-color) !important;
@@ -2945,7 +2943,7 @@
             updateEmojiList();
         }
 
-        // --- 3. 锦书模块 ---
+        // --- 3. 锦书模块 (已修复) ---
         let activeFlyingEnvelopeEl = null;
 
         function initLetters(container) {
@@ -3430,7 +3428,7 @@
             }
         }
 
-        // --- 4. 良辰模块 ---
+        // --- 4. 良辰模块 (已修复打卡) ---
         function checkPartnerAnnivCheckInBackground() {
             const todayStr = new Date().toISOString().slice(0, 10);
             const now = Date.now();
@@ -4382,6 +4380,7 @@
 
             let recordText = `${symbol} 和${partnerNameStr}一起${type}的时间总计${timeFormattedStr}`;
 
+            // 正计时和倒计时都计入
             if (!sishouCategoryTotals[type]) sishouCategoryTotals[type] = 0;
             sishouCategoryTotals[type] += totalSecsFinal;
             sishouRecords.push({ id: Date.now(), text: recordText, durationSeconds: totalSecsFinal });
@@ -4393,7 +4392,7 @@
             showLoveModal(msg, []);
         }
 
-        // --- 6. 流年模块 ---
+        // --- 6. 流年模块 (文字显示已修复) ---
         const encouragementQuotes = [
             "老婆太厉害啦！又完成一项！❤️",
             "这是谁家宝贝怎么这么厉害呀！❤️",
